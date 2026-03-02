@@ -1,0 +1,275 @@
+/* Google Font Import */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+:root {
+    /* Color Palette - Modern Corporate Blue/Indigo */
+    --body-color: #ffffff;
+    --sidebar-color: #FFF;
+    --primary-color: #695CFE;
+    --primary-light: #F6F5FF;
+    --toggle-color: #DDD;
+    --text-color: #707070;
+    
+    /* Transitions */
+    --tran-03: all 0.3s ease;
+    --tran-04: all 0.3s ease;
+    --tran-05: all 0.3s ease;
+}
+
+body {
+    min-height: 100vh;
+    background-color: var(--body-color);
+    transition: var(--tran-05);
+}
+
+/* SIDEBAR CONFIG */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    padding: 10px 14px;
+    background: var(--sidebar-color);
+    transition: var(--tran-05);
+    z-index: 100;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.05); /* Subtle shadow for depth */
+}
+
+/* COLLAPSED STATE LOGIC */
+.sidebar.close {
+    width: 88px;
+}
+
+/* HEADER styling */
+.sidebar header {
+    position: relative;
+}
+
+.sidebar .image-text {
+    display: flex;
+    align-items: center;
+}
+
+.sidebar header .image {
+    min-width: 60px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar header .image i {
+    font-size: 32px;
+    color: var(--primary-color);
+}
+
+.sidebar header .text {
+    display: flex;
+    flex-direction: column;
+}
+
+.name {
+    margin-top: 2px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+.profession {
+    font-size: 13px;
+    margin-top: -2px;
+    color: var(--text-color);
+}
+
+.sidebar.close .text {
+    opacity: 0;
+}
+
+/* TOGGLE BUTTON (Chevron) */
+.sidebar .toggle {
+    position: absolute;
+    top: 50%;
+    right: -25px;
+    transform: translateY(-50%) rotate(180deg);
+    height: 25px;
+    width: 25px;
+    background-color: var(--primary-color);
+    color: var(--sidebar-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: var(--tran-05);
+}
+
+.sidebar.close .toggle {
+    transform: translateY(-50%) rotate(0deg);
+}
+
+/* MENU STYLING */
+.sidebar .menu {
+    margin-top: 20px;
+}
+
+/* Profile Snippet Style */
+.profile-snippet {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: var(--primary-light);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.profile-snippet img {
+    height: 40px;
+    width: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 12px;
+}
+
+.profile-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user_name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.user_role {
+    font-size: 11px;
+    color: var(--text-color);
+}
+
+.sidebar.close .profile-snippet {
+    background: none;
+    padding: 0;
+    justify-content: center;
+}
+.sidebar.close .profile-details {
+    display: none;
+}
+.sidebar.close .profile-snippet img {
+    margin-right: 0;
+}
+
+
+/* LINKS & ICONS */
+.sidebar li {
+    height: 50px;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.sidebar li .icon {
+    min-width: 60px;
+    border-radius: 6px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.sidebar li .icon,
+.sidebar li .text {
+    color: var(--text-color);
+    transition: var(--tran-03);
+}
+
+.sidebar li a {
+    list-style: none;
+    height: 100%;
+    background-color: transparent;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: var(--tran-03);
+}
+
+.sidebar li a:hover {
+    background-color: var(--primary-color);
+}
+
+.sidebar li a:hover .icon,
+.sidebar li a:hover .text {
+    color: var(--sidebar-color);
+}
+
+/* ACTIVE STATE Styling */
+.sidebar li.active a {
+    background-color: var(--primary-color);
+}
+.sidebar li.active .icon, 
+.sidebar li.active .text {
+    color: var(--sidebar-color);
+}
+
+.sidebar .menu-bar {
+    height: calc(100% - 55px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: scroll;
+}
+.menu-bar::-webkit-scrollbar{
+    display: none;
+}
+
+.sidebar.close .text {
+    opacity: 0;
+}
+
+/* Content Area Adjustment */
+.home {
+    position: relative;
+    left: 250px;
+    height: 100vh;
+    width: calc(100% - 250px);
+    background-color: var(--body-color);
+    transition: var(--tran-05);
+    padding: 20px;
+}
+
+.sidebar.close ~ .home {
+    left: 88px;
+    height: 100vh;
+    width: calc(100% - 88px);
+}
+
+.sidebar {
+    width: 250px;
+    transition: width 0.3s ease;
+}
+
+.sidebar.close {
+    width: 78px;
+}
+
+.sidebar .text {
+    transition: opacity 0.2s ease;
+}
+
+.sidebar.close .text {
+    opacity: 0;
+    pointer-events: none;
+}
