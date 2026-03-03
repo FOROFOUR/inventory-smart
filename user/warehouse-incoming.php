@@ -522,13 +522,14 @@ $countStmt->close();
             </td>
             <td>
               <div class="action-wrap">
-                <button class="btn-confirm"
-                  onclick="openConfirmModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($assetName)) ?>', '<?= htmlspecialchars(addslashes($row['requested_by'] ?? '')) ?>', '<?= $row['date_needed'] ? date('M j, Y', strtotime($row['date_needed'])) : '—' ?>')">
-                  <i class='bx bx-check'></i> Confirm
-                </button>
+                
                 <button class="btn-reject"
                   onclick="openRejectModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($assetName)) ?>')">
                   <i class='bx bx-x'></i> Reject
+                </button>
+                   <button class="btn-confirm"
+                  onclick="openConfirmModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($assetName)) ?>', '<?= htmlspecialchars(addslashes($row['requested_by'] ?? '')) ?>', '<?= $row['date_needed'] ? date('M j, Y', strtotime($row['date_needed'])) : '—' ?>')">
+                  <i class='bx bx-check'></i> Confirm
                 </button>
               </div>
             </td>

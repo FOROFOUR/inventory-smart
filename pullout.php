@@ -288,9 +288,17 @@ $stats       = $statsResult->fetch_assoc();
             <i class='bx bx-search'></i>
             <input type="text" id="searchInput" placeholder="Search by asset, requester, purpose, location...">
         </div>
+        <div style="position:relative;">
+            <i class='bx bx-map-pin' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
+            <select id="locationFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
+                <option value="">All Locations</option>
+            </select>
+        </div>
         <div class="filter-group">
             <button class="btn btn-filter active" data-status="">All</button>
-            <button class="btn btn-filter" data-status="PENDING">Pending</button>
+            <button class="btn btn-filter" data-status="PENDING" id="btnPending">
+                Pending <span id="pendingCount" style="display:none; background:var(--warning); color:white; border-radius:20px; padding:1px 8px; font-size:0.75rem; margin-left:2px;"></span>
+            </button>
             <button class="btn btn-filter" data-status="RELEASED">Received</button>
             <button class="btn btn-filter" data-status="RETURNED">Returned</button>
             <button class="btn btn-filter" data-status="CANCELLED">Cancelled</button>
@@ -346,15 +354,46 @@ $stats       = $statsResult->fetch_assoc();
 </div>
 
 <script>
-    let pulloutData   = [];
-    let currentFilter = '';
-    let currentId     = null;
+    let pulloutData    = [];
+    let currentFilter  = '';
+    let currentLocation = '';
+    let currentId      = null;
+
+    // ── LOAD LOCATIONS ────────────────────────────────────
+    async function loadLocations() {
+        try {
+            const res    = await fetch('pullout_api.php?action=get_locations');
+            const result = await res.json();
+            if (!result.success) return;
+            const select = document.getElementById('locationFilter');
+            result.data.forEach(item => {
+                const opt       = document.createElement('option');
+                opt.value       = item.location;
+                opt.textContent = item.pending_count > 0
+                    ? `${item.location}  (${item.pending_count})`
+                    : item.location;
+                if (item.pending_count > 0) opt.style.fontWeight = '600';
+                select.appendChild(opt);
+            });
+        } catch(e) { console.error('loadLocations:', e); }
+    }
+
+    // ── APPLY FILTERS (called by location dropdown change) ──
+    function applyFilters() {
+        currentLocation = document.getElementById('locationFilter').value;
+        loadPullouts();
+    }
 
     // ── LOAD ──────────────────────────────────────────────
     async function loadPullouts() {
         try {
             const search = document.getElementById('searchInput').value;
-            const params = new URLSearchParams({ action: 'get_pullouts', search, status: currentFilter });
+            const params = new URLSearchParams({
+                action  : 'get_pullouts',
+                search,
+                status  : currentFilter,
+                location: currentLocation
+            });
             const res    = await fetch(`pullout_api.php?${params}`);
             const result = await res.json();
             if (result.success) {
@@ -375,11 +414,21 @@ $stats       = $statsResult->fetch_assoc();
             const res    = await fetch('pullout_api.php?action=get_pullouts&search=&status=');
             const result = await res.json();
             if (!result.success) return;
-            const all = result.data;
+            const all     = result.data;
+            const pending = all.filter(r => r.status === 'PENDING').length;
             document.getElementById('statTotal').textContent    = all.length;
-            document.getElementById('statPending').textContent  = all.filter(r => r.status === 'PENDING').length;
+            document.getElementById('statPending').textContent  = pending;
             document.getElementById('statReleased').textContent = all.filter(r => r.status === 'RELEASED').length;
             document.getElementById('statReturned').textContent = all.filter(r => r.status === 'RETURNED').length;
+
+            // Update pending badge on filter button
+            const badge = document.getElementById('pendingCount');
+            if (pending > 0) {
+                badge.textContent = pending;
+                badge.style.display = 'inline';
+            } else {
+                badge.style.display = 'none';
+            }
         } catch(e) {}
     }
 
@@ -683,6 +732,9 @@ $stats       = $statsResult->fetch_assoc();
                             : 'RETURNED';
                 showNotification(`Transfer marked as ${label}`, 'success');
                 closeModal();
+                // Refresh both table and location counts
+                document.getElementById('locationFilter').innerHTML = '<option value="">All Locations</option>';
+                loadLocations();
                 loadPullouts();
             } else {
                 showNotification(result.error || 'Failed to update', 'error');
@@ -728,7 +780,10 @@ $stats       = $statsResult->fetch_assoc();
         if (e.target === this) closeModal();
     });
 
-    document.addEventListener('DOMContentLoaded', loadPullouts);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadLocations();
+        loadPullouts();
+    });
 
     const _style = document.createElement('style');
     _style.textContent = `@keyframes slideInRight { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }`;

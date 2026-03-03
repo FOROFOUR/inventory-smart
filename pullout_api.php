@@ -31,6 +31,7 @@ try {
         case 'get_pullouts':        getPullouts($conn);       break;
         case 'get_pullout_details': getPulloutDetails($conn); break;
         case 'update_status':       updateStatus($conn);      break;
+        case 'get_locations':       getLocations($conn);      break;
         default:
             echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
@@ -42,8 +43,9 @@ try {
 // GET PULLOUTS
 // =============================================================================
 function getPullouts($conn) {
-    $search = trim($_GET['search'] ?? '');
-    $status = trim($_GET['status'] ?? '');
+    $search   = trim($_GET['search']   ?? '');
+    $status   = trim($_GET['status']   ?? '');
+    $location = trim($_GET['location'] ?? '');
 
     try {
         $sql = "SELECT 
@@ -98,6 +100,14 @@ function getPullouts($conn) {
             $sql    .= " AND p.status = ?";
             $params[] = $status;
             $types  .= 's';
+        }
+
+        // Location filter — matches main location even if sub-location is appended (e.g. "QC WareHouse / C1-S3")
+        if (!empty($location)) {
+            $locLike = $location . '%';
+            $sql .= " AND (p.from_location LIKE ? OR p.to_location LIKE ? OR p.location_received LIKE ?)";
+            $params = array_merge($params, [$locLike, $locLike, $locLike]);
+            $types .= 'sss';
         }
 
         $sql .= " ORDER BY p.id DESC";
@@ -425,5 +435,55 @@ function updateStatus($conn) {
 
     } catch (Exception $e) {
         echo json_encode(['success' => false, 'error' => 'updateStatus error: ' . $e->getMessage()]);
+    }
+}
+
+// =============================================================================
+// GET LOCATIONS — distinct main locations, pending count from from_location only
+// =============================================================================
+function getLocations($conn) {
+    try {
+        // Step 1: Get all unique main locations
+        $locSql = "
+            SELECT DISTINCT TRIM(SUBSTRING_INDEX(loc, ' / ', 1)) AS main_loc
+            FROM (
+                SELECT from_location     AS loc FROM pull_out_transactions WHERE from_location     IS NOT NULL AND from_location     != ''
+                UNION ALL
+                SELECT to_location       AS loc FROM pull_out_transactions WHERE to_location       IS NOT NULL AND to_location       != ''
+                UNION ALL
+                SELECT location_received AS loc FROM pull_out_transactions WHERE location_received IS NOT NULL AND location_received != ''
+            ) AS combined
+            ORDER BY main_loc ASC
+        ";
+        $locResult = $conn->query($locSql);
+        $locations = [];
+        $seen      = [];
+        while ($row = $locResult->fetch_assoc()) {
+            $loc = trim($row['main_loc']);
+            if ($loc === '' || isset($seen[$loc])) continue;
+            $seen[$loc] = true;
+
+            // Step 2: Count PENDING where FROM this location only
+            $countStmt = $conn->prepare("
+                SELECT COUNT(*) AS cnt
+                FROM pull_out_transactions
+                WHERE status = 'PENDING'
+                  AND (from_location = ? OR from_location LIKE ?)
+            ");
+            $exact = $loc;
+            $like  = $loc . ' /%';
+            $countStmt->bind_param("ss", $exact, $like);
+            $countStmt->execute();
+            $countRow     = $countStmt->get_result()->fetch_assoc();
+            $pendingCount = (int)($countRow['cnt'] ?? 0);
+
+            $locations[] = [
+                'location'      => $loc,
+                'pending_count' => $pendingCount
+            ];
+        }
+        echo json_encode(['success' => true, 'data' => $locations]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => 'getLocations error: ' . $e->getMessage()]);
     }
 }

@@ -34,7 +34,7 @@ function isActive($page) {
     return ($currentPage === $page) ? 'active' : '';
 }
 
-// ─── NOTIFICATION COUNT ───────────────────────────────────────────────────────
+// ─── NOTIFICATION COUNTS ──────────────────────────────────────────────────────
 $pendingCount = 0;
 $notifStmt = $conn->prepare(
     "SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING'"
@@ -42,6 +42,15 @@ $notifStmt = $conn->prepare(
 if ($notifStmt && $notifStmt->execute()) {
     $notifRow     = $notifStmt->get_result()->fetch_assoc();
     $pendingCount = (int)($notifRow['cnt'] ?? 0);
+}
+
+$confirmedCount = 0;
+$confStmt = $conn->prepare(
+    "SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'CONFIRMED'"
+);
+if ($confStmt && $confStmt->execute()) {
+    $confRow        = $confStmt->get_result()->fetch_assoc();
+    $confirmedCount = (int)($confRow['cnt'] ?? 0);
 }
 // ─────────────────────────────────────────────────────────────────────────────
 ?>
@@ -55,8 +64,8 @@ if ($notifStmt && $notifStmt->execute()) {
 :root {
     --body-color: #ffffff;
     --sidebar-color: #FFF;
-    --primary-color: #f39c12;        /* Warehouse amber instead of admin purple */
-    --primary-light: #fef9ed;        /* Amber tint */
+    --primary-color: #f39c12;
+    --primary-light: #fef9ed;
     --toggle-color: #DDD;
     --text-color: #707070;
     --tran-03: all 0.3s ease;
@@ -72,210 +81,94 @@ body {
 
 .sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 250px;
+    top: 0; left: 0;
+    height: 100%; width: 250px;
     padding: 10px 14px;
     background: var(--sidebar-color);
     transition: var(--tran-05);
     z-index: 100;
     box-shadow: 4px 0 10px rgba(0,0,0,0.05);
 }
-
 .sidebar.close { width: 88px; }
-
 .sidebar header { position: relative; }
-
-.sidebar .image-text {
-    display: flex;
-    align-items: center;
-}
-
-.sidebar header .image {
-    min-width: 60px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.sidebar header .image i {
-    font-size: 32px;
-    color: var(--primary-color);
-}
-
-.sidebar header .text {
-    display: flex;
-    flex-direction: column;
-}
-
-.name {
-    margin-top: 2px;
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-}
-
-.profession {
-    font-size: 13px;
-    margin-top: -2px;
-    color: var(--text-color);
-}
-
+.sidebar .image-text { display: flex; align-items: center; }
+.sidebar header .image { min-width: 60px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.sidebar header .image i { font-size: 32px; color: var(--primary-color); }
+.sidebar header .text { display: flex; flex-direction: column; }
+.name { margin-top: 2px; font-size: 18px; font-weight: 600; color: #333; }
+.profession { font-size: 13px; margin-top: -2px; color: var(--text-color); }
 .sidebar.close .text { opacity: 0; }
 
 .sidebar .toggle {
-    position: absolute;
-    top: 50%;
-    right: -25px;
+    position: absolute; top: 50%; right: -25px;
     transform: translateY(-50%) rotate(180deg);
-    height: 25px;
-    width: 25px;
-    background-color: var(--primary-color);
-    color: var(--sidebar-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    cursor: pointer;
-    transition: var(--tran-05);
+    height: 25px; width: 25px;
+    background-color: var(--primary-color); color: var(--sidebar-color);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; cursor: pointer; transition: var(--tran-05);
 }
-
 .sidebar.close .toggle { transform: translateY(-50%) rotate(0deg); }
 
 .sidebar .menu { margin-top: 20px; }
 
 .profile-snippet {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    background: var(--primary-light);
-    border-radius: 8px;
-    margin-bottom: 20px;
-    overflow: hidden;
-    white-space: nowrap;
+    display: flex; align-items: center; padding: 10px;
+    background: var(--primary-light); border-radius: 8px;
+    margin-bottom: 20px; overflow: hidden; white-space: nowrap;
 }
-
-.profile-snippet img {
-    height: 40px;
-    width: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-right: 12px;
-}
-
+.profile-snippet img { height: 40px; width: 40px; border-radius: 50%; object-fit: cover; margin-right: 12px; }
 .profile-details { display: flex; flex-direction: column; }
 .user_name { font-size: 14px; font-weight: 600; color: #333; }
 .user_role { font-size: 11px; color: var(--text-color); }
-
 .sidebar.close .profile-snippet { background: none; padding: 0; justify-content: center; }
 .sidebar.close .profile-details { display: none; }
 .sidebar.close .profile-snippet img { margin-right: 0; }
 
-.sidebar li {
-    height: 50px;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    margin-top: 10px;
-}
-
-.sidebar li .icon {
-    min-width: 60px;
-    border-radius: 6px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-}
-
-.sidebar li .icon,
-.sidebar li .text {
-    color: var(--text-color);
-    transition: var(--tran-03);
-}
+.sidebar li { height: 50px; list-style: none; display: flex; align-items: center; margin-top: 10px; }
+.sidebar li .icon { min-width: 60px; border-radius: 6px; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.sidebar li .icon, .sidebar li .text { color: var(--text-color); transition: var(--tran-03); }
 
 .sidebar li a {
-    list-style: none;
-    height: 100%;
-    background-color: transparent;
-    display: flex;
-    align-items: center;
-    width: 100%;
-    border-radius: 6px;
-    text-decoration: none;
-    transition: var(--tran-03);
-    position: relative;
-    overflow: visible;
+    list-style: none; height: 100%; background-color: transparent;
+    display: flex; align-items: center; width: 100%; border-radius: 6px;
+    text-decoration: none; transition: var(--tran-03);
+    position: relative; overflow: visible; /* critical for badge */
 }
-
 .sidebar li a:hover { background-color: var(--primary-color); }
-.sidebar li a:hover .icon,
-.sidebar li a:hover .text { color: var(--sidebar-color); }
-
+.sidebar li a:hover .icon, .sidebar li a:hover .text { color: var(--sidebar-color); }
 .sidebar li.active a { background-color: var(--primary-color); }
-.sidebar li.active .icon,
-.sidebar li.active .text { color: var(--sidebar-color); }
+.sidebar li.active .icon, .sidebar li.active .text { color: var(--sidebar-color); }
 
 .sidebar .menu-bar {
-    height: calc(100% - 55px);
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    overflow-y: scroll;
+    height: calc(100% - 55px); display: flex; flex-direction: column;
+    justify-content: space-between; overflow-y: scroll;
 }
 .menu-bar::-webkit-scrollbar { display: none; }
-
 .sidebar.close .text { opacity: 0; pointer-events: none; }
 
-/* Content area */
-.home {
-    position: relative;
-    left: 250px;
-    height: 100vh;
-    width: calc(100% - 250px);
-    background-color: #f4f6f9;
-    transition: var(--tran-05);
-    padding: 20px;
-}
-.sidebar.close ~ .home {
-    left: 88px;
-    width: calc(100% - 88px);
-}
+.home { position: relative; left: 250px; height: 100vh; width: calc(100% - 250px); background-color: #f4f6f9; transition: var(--tran-05); padding: 20px; }
+.sidebar.close ~ .home { left: 88px; width: calc(100% - 88px); }
 
-/* ── Notification Badge ── */
+/* ── Notification Badges ── */
 .nav-link .badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: 999px;
-    background: #e74c3c;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
-    margin-left: auto;
-    flex-shrink: 0;
-    z-index: 10;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+    background: #e74c3c; color: #fff;
+    font-size: 11px; font-weight: 700; line-height: 1;
+    margin-left: auto; flex-shrink: 0; z-index: 10;
     box-shadow: 0 2px 6px rgba(231,76,60,0.5);
     animation: badgePop .3s cubic-bezier(.36,.07,.19,.97);
+}
+/* Purple badge for Preparing/CONFIRMED */
+.nav-link .badge.badge-confirmed {
+    background: #e74c3c;
+    box-shadow: 0 2px 6px rgba(142,68,173,0.5);
 }
 
 .sidebar.close .nav-link .badge {
     position: absolute !important;
-    top: 2px;
-    right: 2px;
-    margin-left: 0;
-    min-width: 17px;
-    height: 17px;
-    font-size: 9px;
-    padding: 0 4px;
+    top: 2px; right: 2px; margin-left: 0;
+    min-width: 17px; height: 17px; font-size: 9px; padding: 0 4px;
 }
 
 @keyframes badgePop {
@@ -284,47 +177,26 @@ body {
     100% { transform: scale(1) rotate(0deg); }
 }
 
-/* Badge tooltip on collapsed hover */
 .nav-link .badge-tooltip {
-    display: none;
-    position: absolute;
-    left: calc(100% + 14px);
-    top: 50%;
-    transform: translateY(-50%);
-    background: #1a1a2e;
-    color: #fff;
-    font-size: 11px;
-    white-space: nowrap;
-    padding: 5px 12px;
-    border-radius: 6px;
-    pointer-events: none;
-    z-index: 9999;
-    box-shadow: 0 4px 14px rgba(0,0,0,.3);
+    display: none; position: absolute;
+    left: calc(100% + 14px); top: 50%; transform: translateY(-50%);
+    background: #1a1a2e; color: #fff; font-size: 11px; white-space: nowrap;
+    padding: 5px 12px; border-radius: 6px; pointer-events: none;
+    z-index: 9999; box-shadow: 0 4px 14px rgba(0,0,0,.3);
 }
 .nav-link .badge-tooltip::before {
-    content: '';
-    position: absolute;
-    right: 100%; top: 50%;
-    transform: translateY(-50%);
-    border: 5px solid transparent;
+    content: ''; position: absolute; right: 100%; top: 50%;
+    transform: translateY(-50%); border: 5px solid transparent;
     border-right-color: #1a1a2e;
 }
 .sidebar.close .nav-link:hover .badge-tooltip { display: block; }
 
-/* Main content margin sync */
 .main-content {
-    position: relative;
-    left: 250px;
-    width: calc(100% - 250px);
-    min-height: 100vh;
-    background-color: #f4f6f9;
-    transition: var(--tran-05);
-    padding: 28px 32px;
+    position: relative; left: 250px; width: calc(100% - 250px);
+    min-height: 100vh; background-color: #f4f6f9;
+    transition: var(--tran-05); padding: 28px 32px;
 }
-.sidebar.close ~ .main-content {
-    left: 88px;
-    width: calc(100% - 88px);
-}
+.sidebar.close ~ .main-content { left: 88px; width: calc(100% - 88px); }
 </style>
 
 <nav class="sidebar close">
@@ -359,8 +231,9 @@ body {
                     </a>
                 </li>
 
+                <!-- Incoming Orders — PENDING badge (red) -->
                 <li class="nav-link <?php echo isActive('warehouse-incoming.php'); ?>">
-                    <a href="warehouse-incoming.php">
+                    <a href="warehouse-incoming.php" id="incomingNavLink">
                         <i class='bx bx-box icon'></i>
                         <span class="text nav-text">Incoming Orders</span>
                         <?php if ($pendingCount > 0): ?>
@@ -372,10 +245,17 @@ body {
                     </a>
                 </li>
 
+                <!-- Preparing — CONFIRMED badge (purple) -->
                 <li class="nav-link <?php echo isActive('warehouse-preparing.php'); ?>">
-                    <a href="warehouse-preparing.php">
+                    <a href="warehouse-preparing.php" id="preparingNavLink">
                         <i class='bx bx-loader-circle icon'></i>
                         <span class="text nav-text">Preparing</span>
+                        <?php if ($confirmedCount > 0): ?>
+                            <span class="badge badge-confirmed"><?php echo $confirmedCount > 99 ? '99+' : $confirmedCount; ?></span>
+                            <span class="badge-tooltip">
+                                <?php echo $confirmedCount; ?> item<?php echo $confirmedCount > 1 ? 's' : ''; ?> being prepared
+                            </span>
+                        <?php endif; ?>
                     </a>
                 </li>
 
@@ -407,15 +287,60 @@ let hoverTimeout;
 toggle.addEventListener("click", () => {
     sidebar.classList.toggle("close");
 });
-
 sidebar.addEventListener("mouseenter", () => {
     clearTimeout(hoverTimeout);
     sidebar.classList.remove("close");
 });
-
 sidebar.addEventListener("mouseleave", () => {
-    hoverTimeout = setTimeout(() => {
-        sidebar.classList.add("close");
-    }, 300);
+    hoverTimeout = setTimeout(() => sidebar.classList.add("close"), 300);
 });
+
+// ── Real-time badge polling every 15 seconds ──────────────────────
+(function pollWarehouseBadges() {
+    let lastPending   = <?php echo $pendingCount; ?>;
+    let lastConfirmed = <?php echo $confirmedCount; ?>;
+
+    function renderBadge(linkId, count, extraClass, tooltipFn) {
+        const link = document.getElementById(linkId);
+        if (!link) return;
+        link.querySelectorAll('.badge, .badge-tooltip').forEach(el => el.remove());
+        if (count > 0) {
+            const badge = document.createElement('span');
+            badge.className   = 'badge' + (extraClass ? ' ' + extraClass : '');
+            badge.textContent = count > 99 ? '99+' : count;
+
+            const tip = document.createElement('span');
+            tip.className   = 'badge-tooltip';
+            tip.textContent = tooltipFn(count);
+
+            link.appendChild(badge);
+            link.appendChild(tip);
+        }
+    }
+
+    async function updateBadges() {
+        try {
+            const res    = await fetch('../pullout_api.php?action=get_pullouts&search=&status=');
+            const result = await res.json();
+            if (!result.success) return;
+
+            const all       = result.data;
+            const pending   = all.filter(r => r.status === 'PENDING').length;
+            const confirmed = all.filter(r => r.status === 'CONFIRMED').length;
+
+            if (pending !== lastPending) {
+                lastPending = pending;
+                renderBadge('incomingNavLink', pending, '',
+                    c => `${c} pending request${c > 1 ? 's' : ''}`);
+            }
+            if (confirmed !== lastConfirmed) {
+                lastConfirmed = confirmed;
+                renderBadge('preparingNavLink', confirmed, 'badge-confirmed',
+                    c => `${c} item${c > 1 ? 's' : ''} being prepared`);
+            }
+        } catch(e) { /* silent */ }
+    }
+
+    setInterval(updateBadges, 15000);
+})();
 </script>
