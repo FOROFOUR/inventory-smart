@@ -21,8 +21,8 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-$userName = $user['name'];
-$userRole = $user['role'];
+$userName   = $user['name'];
+$userRole   = $user['role'];
 $profilePic = !empty($user['profile_pic'])
     ? 'uploads/' . $user['profile_pic']
     : 'https://i.pravatar.cc/150?img=12';
@@ -34,10 +34,7 @@ function isActive($page) {
     return ($currentPage === $page) ? 'active' : '';
 }
 
-// ─── NOTIFICATION COUNT ───────────────────────────────────────────────────────
-// FIX: Tama na ang table at status value (UPPERCASE based sa pullout_api.php)
-// Table: pull_out_transactions
-// Status values: PENDING, RELEASED, RETURNED, CANCELLED
+// Initial pending count (PHP) — JS polling will keep this updated after load
 $pendingCount = 0;
 $notifStmt = $conn->prepare(
     "SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING'"
@@ -46,21 +43,18 @@ if ($notifStmt && $notifStmt->execute()) {
     $notifRow     = $notifStmt->get_result()->fetch_assoc();
     $pendingCount = (int)($notifRow['cnt'] ?? 0);
 }
-// ─────────────────────────────────────────────────────────────────────────────
 ?>
-<!-- NOW HTML CAN START -->
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+<link rel="stylesheet" href="css/style.css">
 
 <style>
-/* ── Notification badge ───────────────────────────────────────────── */
-
-/* Make sure the <a> tag inside nav-link supports badge positioning */
+/* ── Notification badge ─────────────────────────────────────────── */
 .nav-link a {
     position: relative !important;
     display: flex !important;
     align-items: center !important;
-    overflow: visible !important;   /* critical — hindi magttatago ng badge */
+    overflow: visible !important;
 }
 
 /* Badge — expanded state */
@@ -80,11 +74,11 @@ if ($notifStmt && $notifStmt->execute()) {
     margin-left: auto;
     flex-shrink: 0;
     z-index: 10;
-    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.5);
+    box-shadow: 0 2px 6px rgba(231,76,60,0.5);
     animation: badgePop .3s cubic-bezier(.36,.07,.19,.97);
 }
 
-/* Badge — collapsed state: lumalabas sa ibabaw ng icon */
+/* Badge — collapsed state */
 .sidebar.close .nav-link .badge {
     position: absolute !important;
     top: 2px;
@@ -102,7 +96,7 @@ if ($notifStmt && $notifStmt->execute()) {
     100% { transform: scale(1) rotate(0deg); }
 }
 
-/* Tooltip — only visible on collapsed + hover */
+/* Tooltip — collapsed + hover only */
 .nav-link .badge-tooltip {
     display: none;
     position: absolute;
@@ -123,19 +117,15 @@ if ($notifStmt && $notifStmt->execute()) {
 .nav-link .badge-tooltip::before {
     content: '';
     position: absolute;
-    right: 100%;
-    top: 50%;
+    right: 100%; top: 50%;
     transform: translateY(-50%);
     border: 5px solid transparent;
     border-right-color: #1a1a2e;
 }
-.sidebar.close .nav-link:hover .badge-tooltip {
-    display: block;
-}
+.sidebar.close .nav-link:hover .badge-tooltip { display: block; }
 </style>
 
 <nav class="sidebar close">
-
     <header>
         <div class="image-text">
             <span class="image">
@@ -174,17 +164,53 @@ if ($notifStmt && $notifStmt->execute()) {
                     </a>
                 </li>
 
-                <!-- ── Asset Transfer with PENDING notification badge ── -->
+                <!-- Asset Transfer with PENDING notification badge -->
                 <li class="nav-link <?php echo isActive('pullout.php'); ?>">
-                    <a href="pullout.php">
+                    <a href="pullout.php" id="pulloutNavLink">
                         <i class='bx bx-transfer-alt icon'></i>
                         <span class="text nav-text">Asset Transfer</span>
                         <?php if ($pendingCount > 0): ?>
-                            <span class="badge"><?php echo $pendingCount > 99 ? '99+' : $pendingCount; ?></span>
-                            <span class="badge-tooltip">
+                            <span class="badge" id="sidebarBadge"><?php echo $pendingCount > 99 ? '99+' : $pendingCount; ?></span>
+                            <span class="badge-tooltip" id="sidebarTooltip">
                                 <?php echo $pendingCount; ?> pending transfer<?php echo $pendingCount > 1 ? 's' : ''; ?>
                             </span>
                         <?php endif; ?>
+                    </a>
+                </li>
+
+                <!-- Transfer Management sub-section -->
+                <li class="nav-link <?php echo isActive('admin-incoming.php'); ?>">
+                    <a href="admin-incoming.php" id="adminIncomingLink">
+                        <i class='bx bx-box icon' style="font-size:1.05rem; padding-left:10px;"></i>
+                        <span class="text nav-text" style="font-size:.88rem; opacity:.9;">↳ Incoming Orders</span>
+                        <?php if ($pendingCount > 0): ?>
+                            <span class="badge"><?php echo $pendingCount > 99 ? '99+' : $pendingCount; ?></span>
+                            <span class="badge-tooltip"><?php echo $pendingCount; ?> pending</span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+
+                <li class="nav-link <?php echo isActive('admin-preparing.php'); ?>">
+                    <a href="admin-preparing.php" id="adminPreparingLink">
+                        <i class='bx bx-loader-circle icon' style="font-size:1.05rem; padding-left:10px;"></i>
+                        <span class="text nav-text" style="font-size:.88rem; opacity:.9;">↳ Preparing</span>
+                        <?php
+                        $prepCount = 0;
+                        $prepStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'CONFIRMED'");
+                        if ($prepStmt && $prepStmt->execute()) {
+                            $prepCount = (int)($prepStmt->get_result()->fetch_assoc()['cnt'] ?? 0);
+                        }
+                        if ($prepCount > 0): ?>
+                            <span class="badge" style="background:#8e44ad; box-shadow:0 2px 6px rgba(142,68,173,.5);"><?php echo $prepCount > 99 ? '99+' : $prepCount; ?></span>
+                            <span class="badge-tooltip"><?php echo $prepCount; ?> being prepared</span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+
+                <li class="nav-link <?php echo isActive('admin-completed.php'); ?>">
+                    <a href="admin-completed.php">
+                        <i class='bx bx-check-circle icon' style="font-size:1.05rem; padding-left:10px;"></i>
+                        <span class="text nav-text" style="font-size:.88rem; opacity:.9;">↳ Completed</span>
                     </a>
                 </li>
 
@@ -225,21 +251,59 @@ if ($notifStmt && $notifStmt->execute()) {
 <script>
 const sidebar = document.querySelector(".sidebar");
 const toggle  = document.querySelector(".toggle");
-
 let hoverTimeout;
 
-toggle.addEventListener("click", () => {
-    sidebar.classList.toggle("close");
-});
+toggle.addEventListener("click", () => sidebar.classList.toggle("close"));
 
 sidebar.addEventListener("mouseenter", () => {
     clearTimeout(hoverTimeout);
     sidebar.classList.remove("close");
 });
-
 sidebar.addEventListener("mouseleave", () => {
-    hoverTimeout = setTimeout(() => {
-        sidebar.classList.add("close");
-    }, 300);
+    hoverTimeout = setTimeout(() => sidebar.classList.add("close"), 300);
 });
+
+// ── Real-time pending badge — polls every 15 seconds ─────────────
+(function pollPendingBadge() {
+    let lastCount = <?php echo $pendingCount; ?>;
+
+    async function updateBadge() {
+        try {
+            const res    = await fetch('pullout_api.php?action=get_pullouts&status=PENDING&search=');
+            const result = await res.json();
+            if (!result.success) return;
+
+            const count   = result.count ?? 0;
+            const navLink = document.getElementById('pulloutNavLink');
+            if (!navLink) return;
+
+            // Only re-render if count changed
+            if (count === lastCount) return;
+            lastCount = count;
+
+            // Remove old badge + tooltip
+            navLink.querySelectorAll('.badge, .badge-tooltip').forEach(el => el.remove());
+
+            if (count > 0) {
+                const label = count > 99 ? '99+' : count;
+
+                const badge = document.createElement('span');
+                badge.className   = 'badge';
+                badge.id          = 'sidebarBadge';
+                badge.textContent = label;
+
+                const tooltip = document.createElement('span');
+                tooltip.className   = 'badge-tooltip';
+                tooltip.id          = 'sidebarTooltip';
+                tooltip.textContent = `${count} pending transfer${count > 1 ? 's' : ''}`;
+
+                navLink.appendChild(badge);
+                navLink.appendChild(tooltip);
+            }
+        } catch(e) { /* silent fail — no network errors shown to user */ }
+    }
+
+    // Poll every 15 seconds
+    setInterval(updateBadge, 15000);
+})();
 </script>

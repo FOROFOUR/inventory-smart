@@ -129,7 +129,7 @@ imageInputs.forEach(input => {
 document.getElementById('manualAssetForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const formData = new FormData(this);
-    uploadedImages.forEach(file => { if (file) formData.append('images[]', file); });
+    // images[] are already included via name="images[]" on file inputs
 
     try {
         const response = await fetch('api/add-asset.php', { method: 'POST', body: formData });

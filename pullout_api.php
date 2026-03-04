@@ -61,6 +61,7 @@ function getPullouts($conn) {
                     p.location_received,
                     p.date_needed,
                     p.status,
+                    p.prep_step,
                     p.created_at,
                     p.released_at,
                     p.returned_at,
@@ -168,6 +169,7 @@ function getPulloutDetails($conn) {
     try {
         $sql = "SELECT 
                     p.*,
+                    p.prep_step,
                     a.brand,
                     a.model,
                     a.serial_number,
@@ -301,78 +303,103 @@ function updateStatus($conn) {
             $stmt->bind_param("i", $id);
             $stmt->execute();
 
-            // Get source asset
+            // Get source asset (full row)
             $assetStmt = $conn->prepare("SELECT * FROM assets WHERE id = ?");
             $assetStmt->bind_param("i", $assetId);
             $assetStmt->execute();
             $srcAsset = $assetStmt->get_result()->fetch_assoc();
 
-            // Deduct from source
-            $newSrcBal = max(0, intval($srcAsset['beg_balance_count']) - $quantity);
-            $updSrc = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-            $updSrc->bind_param("ii", $newSrcBal, $assetId);
-            $updSrc->execute();
+            $srcBalance = intval($srcAsset['beg_balance_count']);
+            $newSrcBal  = max(0, $srcBalance - $quantity);
 
-            // Find existing asset at destination
-            $findStmt = $conn->prepare(
-                "SELECT id, beg_balance_count FROM assets 
-                 WHERE location = ? AND sub_category_id = ? AND id != ? 
-                 ORDER BY id LIMIT 1"
-            );
-            $findStmt->bind_param("sii", $toLocation, $srcAsset['sub_category_id'], $assetId);
-            $findStmt->execute();
-            $destAsset = $findStmt->get_result()->fetch_assoc();
+            // FIX: Split "MainLoc / SubLoc" stored in to_location/from_location columns
+            // e.g. "CFE / Shelf 3" -> location="CFE", sub_location="Shelf 3"
+            $toParts        = explode(' / ', $toLocation, 2);
+            $toMainLocation = trim($toParts[0]);
+            $toSubLocation  = isset($toParts[1]) ? trim($toParts[1]) : '';
 
-            if ($destAsset) {
-                $newDestBal = intval($destAsset['beg_balance_count']) + $quantity;
-                $updDest = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                $updDest->bind_param("ii", $newDestBal, $destAsset['id']);
-                $updDest->execute();
-                $destAssetId = $destAsset['id'];
+            $fromParts        = explode(' / ', $fromLocation, 2);
+            $fromMainLocation = trim($fromParts[0]);
+
+            // Case A: Full transfer -- move the asset record itself to new location
+            if ($newSrcBal === 0) {
+                $updSrc = $conn->prepare("
+                    UPDATE assets
+                    SET location = ?, sub_location = ?, beg_balance_count = ?, updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $updSrc->bind_param("ssii", $toMainLocation, $toSubLocation, $quantity, $assetId);
+                $updSrc->execute();
+                $destAssetId = $assetId;
+
+            // Case B: Partial transfer -- deduct source, add to dest
             } else {
-                // Create new asset record at destination
-                $ins = $conn->prepare(
-                    "INSERT INTO assets 
-                        (category_id, sub_category_id, brand, model, serial_number,
-                         `condition`, status, location, sub_location, description,
-                         beg_balance_count, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())"
-                );
-                $ins->bind_param(
-                    "iissssssssi",
-                    $srcAsset['category_id'], $srcAsset['sub_category_id'],
-                    $srcAsset['brand'],       $srcAsset['model'],
-                    $srcAsset['serial_number'], $srcAsset['condition'],
-                    $srcAsset['status'],      $toLocation,
-                    $srcAsset['sub_location'], $srcAsset['description'],
-                    $quantity
-                );
-                $ins->execute();
-                $destAssetId = $conn->insert_id;
+                $updSrc = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
+                $updSrc->bind_param("ii", $newSrcBal, $assetId);
+                $updSrc->execute();
 
-                // Copy images
-                $imgStmt = $conn->prepare("SELECT image_path FROM asset_images WHERE asset_id = ?");
-                $imgStmt->bind_param("i", $assetId);
-                $imgStmt->execute();
-                $imgs  = $imgStmt->get_result();
-                $cpImg = $conn->prepare("INSERT INTO asset_images (asset_id, image_path) VALUES (?,?)");
-                while ($img = $imgs->fetch_assoc()) {
-                    $cpImg->bind_param("is", $destAssetId, $img['image_path']);
-                    $cpImg->execute();
+                // Find existing asset at destination (same subcategory + brand + main location)
+                $findStmt = $conn->prepare("
+                    SELECT id, beg_balance_count FROM assets
+                    WHERE location = ? AND sub_category_id = ? AND brand = ? AND id != ?
+                    ORDER BY id LIMIT 1
+                ");
+                $findStmt->bind_param("sisi", $toMainLocation, $srcAsset['sub_category_id'], $srcAsset['brand'], $assetId);
+                $findStmt->execute();
+                $destAsset = $findStmt->get_result()->fetch_assoc();
+
+                if ($destAsset) {
+                    $newDestBal = intval($destAsset['beg_balance_count']) + $quantity;
+                    $updDest    = $conn->prepare("
+                        UPDATE assets
+                        SET beg_balance_count = ?, location = ?, sub_location = ?, updated_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $updDest->bind_param("issi", $newDestBal, $toMainLocation, $toSubLocation, $destAsset['id']);
+                    $updDest->execute();
+                    $destAssetId = $destAsset['id'];
+                } else {
+                    $ins = $conn->prepare("
+                        INSERT INTO assets
+                            (category_id, sub_category_id, brand, model, serial_number,
+                             `condition`, status, location, sub_location, description,
+                             beg_balance_count, created_at, updated_at)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())
+                    ");
+                    $ins->bind_param(
+                        "iissssssssi",
+                        $srcAsset['category_id'],   $srcAsset['sub_category_id'],
+                        $srcAsset['brand'],         $srcAsset['model'],
+                        $srcAsset['serial_number'], $srcAsset['condition'],
+                        $srcAsset['status'],        $toMainLocation,
+                        $toSubLocation,             $srcAsset['description'],
+                        $quantity
+                    );
+                    $ins->execute();
+                    $destAssetId = $conn->insert_id;
+
+                    $imgStmt = $conn->prepare("SELECT image_path FROM asset_images WHERE asset_id = ?");
+                    $imgStmt->bind_param("i", $assetId);
+                    $imgStmt->execute();
+                    $imgs  = $imgStmt->get_result();
+                    $cpImg = $conn->prepare("INSERT INTO asset_images (asset_id, image_path) VALUES (?,?)");
+                    while ($img = $imgs->fetch_assoc()) {
+                        $cpImg->bind_param("is", $destAssetId, $img['image_path']);
+                        $cpImg->execute();
+                    }
                 }
             }
 
-            // FIX: Store dest asset ID in its own column instead of appending to purpose
-            // Update: save dest_asset_id reference cleanly
+            // Save dest_asset_id reference for RETURNED reversal
             $updTxn = $conn->prepare("
-                UPDATE pull_out_transactions 
+                UPDATE pull_out_transactions
                 SET purpose = CONCAT(COALESCE(purpose,''), ' [dest:$destAssetId]')
                 WHERE id = ?
             ");
             $updTxn->bind_param("i", $id);
             $updTxn->execute();
 
-            $desc = "Transfer #$id RECEIVED: Asset #$assetId -$quantity → {$toLocation} (dest asset #$destAssetId +$quantity)";
+            $desc = "Transfer #$id RELEASED: Asset #$assetId -{$quantity} @ {$fromMainLocation} to {$toMainLocation} (dest #{$destAssetId} +{$quantity})";
 
         // ── RETURNED ──────────────────────────────────────────────────────
         } elseif ($newStatus === 'RETURNED') {
@@ -387,35 +414,48 @@ function updateStatus($conn) {
                 $destAssetId = intval($dm[1]);
             }
 
-            if ($destAssetId) {
-                $destStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
-                $destStmt->bind_param("i", $destAssetId);
-                $destStmt->execute();
-                $destRow    = $destStmt->get_result()->fetch_assoc();
-                $newDestBal = max(0, intval($destRow['beg_balance_count']) - $quantity);
+            // ── Case A: Full transfer was done (dest = same asset, just moved)
+            // dest_asset_id === asset_id means location was changed, just revert it
+            if ($destAssetId && $destAssetId === $assetId) {
+                $updSrc = $conn->prepare("UPDATE assets SET location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
+                $updSrc->bind_param("sii", $fromLocation, $quantity, $assetId);
+                $updSrc->execute();
 
-                if ($newDestBal === 0) {
-                    $delDest = $conn->prepare("DELETE FROM assets WHERE id = ?");
-                    $delDest->bind_param("i", $destAssetId);
-                    $delDest->execute();
-                } else {
-                    $updDest = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                    $updDest->bind_param("ii", $newDestBal, $destAssetId);
-                    $updDest->execute();
+            // ── Case B: Partial transfer — separate dest asset was created/updated
+            } else {
+                if ($destAssetId) {
+                    $destStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
+                    $destStmt->bind_param("i", $destAssetId);
+                    $destStmt->execute();
+                    $destRow    = $destStmt->get_result()->fetch_assoc();
+                    $newDestBal = max(0, intval($destRow['beg_balance_count'] ?? 0) - $quantity);
+
+                    if ($newDestBal === 0) {
+                        // Remove dest asset entirely
+                        $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?")->bind_param("i", $destAssetId);
+                        $delImg = $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?");
+                        $delImg->bind_param("i", $destAssetId); $delImg->execute();
+                        $delDest = $conn->prepare("DELETE FROM assets WHERE id = ?");
+                        $delDest->bind_param("i", $destAssetId); $delDest->execute();
+                    } else {
+                        $updDest = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
+                        $updDest->bind_param("ii", $newDestBal, $destAssetId);
+                        $updDest->execute();
+                    }
                 }
+
+                // Restore source balance
+                $srcStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
+                $srcStmt->bind_param("i", $assetId);
+                $srcStmt->execute();
+                $srcRow    = $srcStmt->get_result()->fetch_assoc();
+                $newSrcBal = intval($srcRow['beg_balance_count'] ?? 0) + $quantity;
+                $updSrc    = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
+                $updSrc->bind_param("ii", $newSrcBal, $assetId);
+                $updSrc->execute();
             }
 
-            // Restore source
-            $srcStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
-            $srcStmt->bind_param("i", $assetId);
-            $srcStmt->execute();
-            $srcRow    = $srcStmt->get_result()->fetch_assoc();
-            $newSrcBal = intval($srcRow['beg_balance_count']) + $quantity;
-            $updSrc    = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-            $updSrc->bind_param("ii", $newSrcBal, $assetId);
-            $updSrc->execute();
-
-            $desc = "Transfer #$id RETURNED: $quantity pcs back to $fromLocation (source asset #$assetId)";
+            $desc = "Transfer #$id RETURNED: {$quantity} pcs back to {$fromLocation} (source asset #{$assetId})";
 
         // ── CANCELLED ─────────────────────────────────────────────────────
         } else {

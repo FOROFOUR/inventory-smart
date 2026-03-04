@@ -307,27 +307,63 @@ $conn = getDBConnection();
             .qr-print-item { page-break-inside: avoid; }
         }
         .print-area { display: none; }
-        .qr-print-item {
-            text-align: center;
-            padding: 16px;
-            border: 2px solid #000;
-            margin: 8px;
-            display: inline-block;
-            border-radius: 8px;
-        }
-        .qr-print-item canvas { display: block; margin: 0 auto 8px; }
-        .qr-print-item .asset-info { font-size: 13px; font-weight: 700; }
-        .qr-print-item .asset-sub  { font-size: 11px; color: #555; margin-top: 3px; }
-        .qr-print-item .qr-code-text { font-size: 10px; font-family: monospace; margin-top: 4px; color: #777; }
+     .qr-print-item {    
+    text-align: center;
+    margin: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+}
 
-        /* ── Animations ── */
-        @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-        @keyframes popIn   { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+/* Vertical company name on the left */
+.qr-company-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 10px;
+    font-weight: 1000;
+    font-family: Arial, sans-serif;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #111;
+    margin-right: 0;
+padding: 8px 1px;
+    margin-top: -30px;
+    white-space: nowrap;
 
-        @media (max-width: 768px) {
-            .content { margin-left: 0; padding: 1rem; }
-        }
+
+}
+/* QR + label wrapper */
+.qr-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Only the QR image has the border */
+.qr-image-box {
+    border: 3.5px solid #000;
+    border-radius: 10px;
+    padding: 3px;
+    background: #fff;
+    display: inline-block;
+}
+
+.qr-print-item .asset-info {
+    font-size: 12px;
+    font-weight: 700;
+    font-family: Arial, sans-serif;
+    margin-top: 6px;
+    text-align: center;
+}
+.qr-print-item .asset-sub {
+    font-size: 10px;
+    color: #555;
+    margin-top: 2px;
+    font-family: Arial, sans-serif;
+}
+
+
+        
     </style>
 </head>
 <body>
@@ -338,10 +374,10 @@ $conn = getDBConnection();
     <div class="page-header">
         <h1><i class='bx bx-qr' style="vertical-align:middle;margin-right:0.5rem;"></i>Generate QR</h1>
         <p>Scan any QR code to instantly view asset details on your phone or tablet.</p>
-        <div class="network-badge">
-            <span class="dot"></span>
-            LAN: 10.20.80.43 &nbsp;•&nbsp; Same Wi-Fi required to scan
-        </div>
+       <div class="network-badge">
+    <span class="dot"></span>
+    LAN: <span id="currentIP"></span> • Same Wi-Fi required to scan
+</div>
     </div>
 
     <!-- Bulk Actions -->
@@ -374,10 +410,8 @@ $conn = getDBConnection();
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
-                        <th>Asset</th>
-                        <th>Category</th>
-                        <th>Brand / Model</th>
-                        <th>Serial No</th>
+                     <th>Asset / Category</th>
+<th>Brand / Model & Serial</th>
                         <th>Status</th>
                         <th>QR URL</th>
                         <th>QR Preview</th>
@@ -486,10 +520,16 @@ function renderTable() {
         row.innerHTML = `
             <td><input type="checkbox" class="asset-checkbox" value="${asset.id}"
                     onchange="toggleAssetSelection(${asset.id})" ${checked}></td>
-            <td><strong>${asset.asset_type || '—'}</strong></td>
-            <td>${asset.category || '—'}</td>
-            <td>${[asset.brand, asset.model].filter(Boolean).join(' ') || '—'}</td>
-            <td><code style="background:#f0f0f0;padding:3px 7px;border-radius:5px;font-size:0.82rem;">${asset.serial_number || 'N/A'}</code></td>
+        <td>
+  <div style="font-weight:600;font-size:0.92rem;">${asset.asset_type || '—'}</div>
+  <div style="font-size:0.78rem;color:#636e72;margin-top:3px;">${asset.category || '—'}</div>
+</td>
+<td>
+  <div style="font-weight:500;">${[asset.brand, asset.model].filter(Boolean).join(' ') || '—'}</div>
+  <div style="margin-top:3px;">
+    <code style="background:#f0f0f0;padding:2px 6px;border-radius:5px;font-size:0.78rem;">${asset.serial_number || 'N/A'}</code>
+  </div>
+</td>
             <td>${statusBadge(asset.status)}</td>
             <td>
                 <span class="url-chip" title="${url}">
@@ -506,6 +546,10 @@ function renderTable() {
                 <button class="print-btn" onclick="printSingleQR(${asset.id})">
                     <i class='bx bx-printer'></i> Print
                 </button>
+                  <button class="print-btn" style="margin-left:5px;"
+        onclick="downloadQR(${asset.id})">
+        <i class='bx bx-download'></i> Download
+    </button>
             </td>`;
 
         tbody.appendChild(row);
@@ -513,7 +557,7 @@ function renderTable() {
         // Generate QR preview — use qr_url (LAN URL), fallback to asset ID
         const qrContent = asset.qr_url
             || asset.qr_code
-            || `http://10.20.80.43/inventory-smart/asset-view.php?id=${asset.id}`;
+           || `${window.location.origin}/inventory-smart/asset-view.php?id=${asset.id}`;
 
         setTimeout(() => {
             const canvas = document.getElementById(qrId);
@@ -541,7 +585,7 @@ function openModal(assetId) {
     const canvas = document.getElementById('modalCanvas');
     const modalQrContent = modalAsset.qr_url
         || modalAsset.qr_code
-        || `http://10.20.80.43/inventory-smart/asset-view.php?id=${modalAsset.id}`;
+        || `${window.location.origin}/inventory-smart/asset-view.php?id=${modalAsset.id}`;
     QRCode.toCanvas(canvas, modalQrContent, { width:220, margin:2 });
 
     document.getElementById('qrModal').classList.add('active');
@@ -602,20 +646,41 @@ function generatePrintContent(assets) {
         const item = document.createElement('div');
         item.className = 'qr-print-item';
 
+        // Left vertical company name
+        const companyLabel = document.createElement('div');
+        companyLabel.className = 'qr-company-label';
+        companyLabel.textContent = 'The Table Group Inc.';
+
+        // Right side: QR + asset name
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'qr-content-wrapper';
+
+        // QR image inside border box
+        const imageBox = document.createElement('div');
+        imageBox.className = 'qr-image-box';
+
         const img = document.createElement('img');
         img.src = `generate_qr.php?id=${asset.id}`;
-        img.style.width = "200px";
-        img.style.display = "block";
-        img.style.margin = "0 auto 8px";
+        img.style.width = '180px';
+        img.style.display = 'block';
 
+        imageBox.appendChild(img);
+
+        // Asset name OUTSIDE the border
         const info = document.createElement('div');
-        info.innerHTML = `
-            <div class="asset-info">${asset.category || ''} — ${asset.asset_type || ''}</div>
-            <div class="asset-sub">${[asset.brand, asset.model].filter(Boolean).join(' ') || ''}</div>
-            <div class="qr-code-text">${asset.qr_label || ''}</div>`;
+        info.className = 'asset-info';
+        info.textContent = `${asset.asset_type || ''} ${asset.category || ''}`.trim();
 
-        item.appendChild(img);
-        item.appendChild(info);
+        const sub = document.createElement('div');
+        sub.className = 'asset-sub';
+        sub.textContent = [asset.brand, asset.model].filter(Boolean).join(' ') || '';
+
+        contentWrapper.appendChild(imageBox);
+        contentWrapper.appendChild(info);
+        if (sub.textContent) contentWrapper.appendChild(sub);
+
+        item.appendChild(companyLabel);
+        item.appendChild(contentWrapper);
         printArea.appendChild(item);
     });
 }
@@ -657,10 +722,22 @@ window.addEventListener('afterprint', () => {
     document.getElementById('printArea').style.display = 'none';
 });
 
+function downloadQR(assetId) {
+    const link = document.createElement('a');
+    link.href = `generate_qr.php?id=${assetId}`;
+    link.download = `QR-ASSET-${assetId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadCategories();
     loadAssets();
+
+    // Auto detect current IP / host
+    document.getElementById('currentIP').textContent = window.location.host;
 });
 </script>
 

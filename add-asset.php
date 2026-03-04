@@ -39,7 +39,7 @@ try {
         exit();
     }
 
-    // sub_category_id: accept numeric ID (from fixed JS) or fallback to name lookup
+    // sub_category_id: accept numeric ID or fallback to name lookup
     $sub_category_id = NULL;
     $sub_cat_raw     = trim($_POST['sub_category_id'] ?? '');
 
@@ -60,6 +60,11 @@ try {
         }
     }
 
+    if (!$sub_category_id) {
+        echo json_encode(['success' => false, 'message' => 'Please select a sub-category.']);
+        exit();
+    }
+
     $brand         = trim($_POST['brand']           ?? '');
     $model         = trim($_POST['model']           ?? '');
     $serial_number = trim($_POST['serial_number']   ?? '');
@@ -74,7 +79,7 @@ try {
 
     $condition = in_array($_POST['condition'] ?? '', $allowed_conditions)
         ? $_POST['condition'] : 'NEW';
-    $status    = in_array($_POST['status'] ?? '', $allowed_statuses)
+    $status    = in_array($_POST['status']    ?? '', $allowed_statuses)
         ? $_POST['status']    : 'WORKING';
 
     if (empty($location)) {
@@ -83,7 +88,6 @@ try {
     }
 
     // ── 2. DUPLICATE SERIAL NUMBER CHECK ─────────────────────────────────────
-    // Only check if serial number is provided (it is optional)
     if (!empty($serial_number)) {
         $dupStmt = $conn->prepare(
             "SELECT id, brand, model FROM assets WHERE serial_number = ? LIMIT 1"
@@ -106,30 +110,53 @@ try {
     $qr_code = 'ASSET-BULK-' . time() . rand(100, 999);
 
     // ── 4. INSERT ASSET ───────────────────────────────────────────────────────
-    $sql  = "INSERT INTO assets 
+    // Columns:  category_id  sub_category_id  brand  model  serial_number
+    //           description  tracking_type  condition  status
+    //           location  sub_location  beg_balance_count  qr_code
+    //
+    // Types:    i            i                s      s      s
+    //           s            s              s          s
+    //           s         s             i                  s
+    //
+    // Full type string: i i s s s s s s s s s i s  (13 params)
+    $sql = "INSERT INTO assets 
                 (category_id, sub_category_id, brand, model, serial_number,
                  description, tracking_type, `condition`, status,
                  location, sub_location, beg_balance_count, qr_code)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
 
+    // Param order must EXACTLY match the column order above:
+    // 1.  category_id      → i
+    // 2.  sub_category_id  → i
+    // 3.  brand            → s
+    // 4.  model            → s
+    // 5.  serial_number    → s
+    // 6.  description      → s
+    // 7.  tracking_type    → s
+    // 8.  condition        → s
+    // 9.  status           → s
+    // 10. location         → s
+    // 11. sub_location     → s  ← was missing/shifted before
+    // 12. beg_balance      → i
+    // 13. qr_code          → s
     $stmt->bind_param(
         "iisssssssssis",
-        $category_id,
-        $sub_category_id,
-        $brand,
-        $model,
-        $serial_number,
-        $description,
-        $tracking_type,
-        $condition,
-        $status,
-        $location,
-        $sub_location,
-        $beg_balance,
-        $qr_code
+        $category_id,       // i
+        $sub_category_id,   // i
+        $brand,             // s
+        $model,             // s
+        $serial_number,     // s
+        $description,       // s
+        $tracking_type,     // s
+        $condition,         // s
+        $status,            // s
+        $location,          // s
+        $sub_location,      // s  ← was missing before
+        $beg_balance,       // i
+        $qr_code            // s
     );
 
     if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);

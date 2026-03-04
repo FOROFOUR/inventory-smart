@@ -157,6 +157,8 @@ $stats       = $statsResult->fetch_assoc();
         }
         tbody tr { border-bottom: 1px solid var(--border); transition: all 0.2s; cursor: pointer; }
         tbody tr:hover { background: #f0f4ff; }
+        tbody tr.row-ready { border-left: 3px solid #27ae60; }
+        tbody tr.row-ready:hover { background: #f0fff4; }
         tbody td { padding: 1rem 0.9rem; white-space: nowrap; }
         tbody td.wrap { white-space: normal; max-width: 180px; }
 
@@ -198,6 +200,7 @@ $stats       = $statsResult->fetch_assoc();
         .badge-returned  { background: #d1ecf1; color: #0c5460; }
         .badge-cancelled { background: #f8d7da; color: #721c24; }
         .badge-confirmed { background: #e8daef; color: #6c3483; }
+        .badge-ready     { background: #d5f5e3; color: #1e8449; }
 
         .action-btn { padding: 0.45rem; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.15rem; border-radius: 6px; transition: all 0.2s; }
         .action-btn:hover { background: var(--bg-main); color: var(--primary); transform: scale(1.1); }
@@ -359,6 +362,25 @@ $stats       = $statsResult->fetch_assoc();
     let currentLocation = '';
     let currentId      = null;
 
+    // ── STATUS RENDERER ───────────────────────────────────
+    function renderStatus(item) {
+        const s    = item.status;
+        const step = parseInt(item.prep_step ?? 0);
+
+        // CONFIRMED + step 4 = show Ready instead
+        if (s === 'CONFIRMED' && step >= 4) {
+            return `<span class="badge badge-ready" style="font-size:.78rem; padding:.35rem .8rem;">✓ Ready to Release</span>`;
+        }
+
+        const label =
+            s === 'RELEASED'  ? 'RECEIVED'  :
+            s === 'RETURNED'  ? 'RETURNED'  :
+            s === 'CANCELLED' ? 'CANCELLED' :
+            s === 'CONFIRMED' ? 'CONFIRMED' : s;
+
+        return `<span class="badge badge-${s.toLowerCase()}">${label}</span>`;
+    }
+
     // ── LOAD LOCATIONS ────────────────────────────────────
     async function loadLocations() {
         try {
@@ -499,6 +521,9 @@ $stats       = $statsResult->fetch_assoc();
                 : `<div class="thumb-placeholder"><i class='bx bx-image-alt'></i></div>`;
 
             const row = document.createElement('tr');
+            if (item.status === 'CONFIRMED' && parseInt(item.prep_step ?? 0) >= 4) {
+                row.classList.add('row-ready');
+            }
             row.onclick = () => openViewModal(item.id);
             row.innerHTML = `
                 <td class="thumb-cell">${thumbHtml}</td>
@@ -522,13 +547,7 @@ $stats       = $statsResult->fetch_assoc();
                 <td>${hl(item.requested_by, term) || '—'}</td>
                 <td>${hl(cleanReceivedBy(item.released_by), term)}</td>
                 <td>${formatDate(item.date_needed)}</td>
-                <td><span class="badge badge-${item.status.toLowerCase()}">${
-                    item.status === 'RELEASED'  ? 'RECEIVED'  :
-                    item.status === 'RETURNED'  ? 'RETURNED'  :
-                    item.status === 'CANCELLED' ? 'CANCELLED' :
-                    item.status === 'CONFIRMED' ? 'CONFIRMED' :
-                    item.status
-                }</span></td>
+                <td>${renderStatus(item)}</td>
             `;
             tbody.appendChild(row);
         });
@@ -632,13 +651,7 @@ $stats       = $statsResult->fetch_assoc();
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Status</div>
-                    <div class="detail-value"><span class="badge badge-${item.status.toLowerCase()}">${
-                        item.status === 'RELEASED'  ? 'RECEIVED'  :
-                        item.status === 'RETURNED'  ? 'RETURNED'  :
-                        item.status === 'CANCELLED' ? 'CANCELLED' :
-                        item.status === 'CONFIRMED' ? 'CONFIRMED' :
-                        item.status
-                    }</span></div>
+                    <div class="detail-value">${renderStatus(item)}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Received At</div>

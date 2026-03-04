@@ -145,7 +145,8 @@ function getInventory($conn) {
                 $imgStmt->execute();
                 $imgResult = $imgStmt->get_result();
                 $images    = [];
-                while ($img = $imgResult->fetch_assoc()) $images[] = $img['image_path'];
+                while ($img = $imgResult->fetch_assoc()) $images[] = '/' . ltrim($img['image_path'], '/');
+
                 $row['images'] = $images;
             } else {
                 $row['images'] = [];
@@ -198,7 +199,8 @@ function getAssetDetails($conn) {
             $imgStmt->execute();
             $imgResult = $imgStmt->get_result();
             $images    = [];
-            while ($img = $imgResult->fetch_assoc()) $images[] = $img['image_path'];
+          while ($img = $imgResult->fetch_assoc()) $images[] = '/' . ltrim($img['image_path'], '/');
+
             $asset['images'] = $images;
 
             echo json_encode(['success' => true, 'data' => $asset]);

@@ -29,15 +29,23 @@ if (!$asset) {
     die('<div style="text-align:center;padding:3rem;font-family:sans-serif;"><h2>❌ Asset Not Found</h2></div>');
 }
 
-// Fetch images
-$images = [];
+// Fetch images — build absolute URL from server root
+$images  = [];
+$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+         . '://' . $_SERVER['HTTP_HOST'];
+
+// Detect the subfolder this project lives in (e.g. /inventory-smart)
+$scriptDir  = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])); // e.g. /inventory-smart
+$projectUrl = rtrim($baseUrl . $scriptDir, '/');                        // e.g. http://localhost/inventory-smart
+
 $imgStmt = $conn->prepare("SELECT image_path FROM asset_images WHERE asset_id = ? ORDER BY id ASC LIMIT 3");
 if ($imgStmt) {
     $imgStmt->bind_param('i', $assetId);
     $imgStmt->execute();
     $imgResult = $imgStmt->get_result();
     while ($row = $imgResult->fetch_assoc()) {
-        $images[] = $row['image_path'];
+        // Stored as "uploads/assets/filename.jpg" — prefix with project URL
+        $images[] = $projectUrl . '/' . ltrim($row['image_path'], '/');
     }
     $imgStmt->close();
 }
@@ -305,7 +313,8 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
         <div class="image-slides" id="imageSlides">
             <?php foreach ($images as $img): ?>
             <div class="image-slide">
-                <img src="<?php echo htmlspecialchars($img); ?>" alt="Asset Image">
+                <img src="<?php echo htmlspecialchars($img); ?>" alt="Asset Image"
+                     onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:#c4b5fd;font-size:0.85rem;\'>⚠️ Image not found</div>'">
             </div>
             <?php endforeach; ?>
         </div>
@@ -424,7 +433,7 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
 <div class="footer">
     <p>📍 Scanned via QR Code &nbsp;•&nbsp; Inventory Smart</p>
     <p style="margin-top:0.25rem;">© <?php echo date('Y'); ?> — Internal Use Only</p>
-</div> 
+</div>
 
 <script>
 let currentSlide = 0;

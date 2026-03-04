@@ -257,7 +257,8 @@ $userName = $user['name'];
                                 <div class="image-upload-grid" id="imageGrid">
 
                                     <label class="upload-box active" id="uploadBox1">
-                                        <input type="file" class="image-input" accept="image/*" data-index="0">
+                                  <input type="file" class="image-input" name="images[]" accept="image/*" data-index="0">
+
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
@@ -270,7 +271,8 @@ $userName = $user['name'];
                                     </label>
 
                                     <label class="upload-box" id="uploadBox2">
-                                        <input type="file" class="image-input" accept="image/*" data-index="1">
+                                       <input type="file" class="image-input" name="images[]" accept="image/*" data-index="1">
+
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
@@ -283,7 +285,8 @@ $userName = $user['name'];
                                     </label>
 
                                     <label class="upload-box" id="uploadBox3">
-                                        <input type="file" class="image-input" accept="image/*" data-index="2">
+                                       <input type="file" class="image-input" name="images[]" accept="image/*" data-index="2">
+
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
