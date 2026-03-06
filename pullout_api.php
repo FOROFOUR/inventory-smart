@@ -57,6 +57,7 @@ function getPullouts($conn) {
                     p.to_location,
                     p.requested_by,
                     p.released_by,
+                    p.delivered_by,
                     p.received_by,
                     p.location_received,
                     p.date_needed,
@@ -88,13 +89,14 @@ function getPullouts($conn) {
                         sc.name             LIKE ? OR
                         p.requested_by      LIKE ? OR
                         p.released_by       LIKE ? OR
+                        p.delivered_by      LIKE ? OR
                         p.purpose           LIKE ? OR
                         p.from_location     LIKE ? OR
                         p.to_location       LIKE ?
                     )";
             $s      = "%$search%";
-            $params = array_merge($params, [$s,$s,$s,$s,$s,$s,$s,$s,$s]);
-            $types .= 'sssssssss';
+            $params = array_merge($params, [$s,$s,$s,$s,$s,$s,$s,$s,$s,$s]);
+            $types .= 'ssssssssss';
         }
 
         if (!empty($status)) {
@@ -103,7 +105,6 @@ function getPullouts($conn) {
             $types  .= 's';
         }
 
-        // Location filter — matches main location even if sub-location is appended (e.g. "QC WareHouse / C1-S3")
         if (!empty($location)) {
             $locLike = $location . '%';
             $sql .= " AND (p.from_location LIKE ? OR p.to_location LIKE ? OR p.location_received LIKE ?)";
@@ -122,12 +123,9 @@ function getPullouts($conn) {
         $rows   = [];
 
         while ($row = $result->fetch_assoc()) {
-            // Clean up any legacy [dest:xxx] tags from released_by or purpose
             $row['released_by'] = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $row['released_by'] ?? ''));
             $row['purpose']     = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $row['purpose'] ?? ''));
 
-            // FIX: For old records where from_location/to_location is NULL,
-            // fall back to parsing from purpose field
             if (empty($row['from_location']) && !empty($row['purpose'])) {
                 if (preg_match('/From:\s*(.+?)\s*→/', $row['purpose'], $m)) {
                     $row['from_location'] = trim($m[1]);
@@ -144,7 +142,7 @@ function getPullouts($conn) {
                 $imgStmt->bind_param("i", $row['asset_id']);
                 $imgStmt->execute();
                 $imgRow = $imgStmt->get_result()->fetch_assoc();
-                $row['thumbnail'] = $imgRow['image_path'] ?? null;
+                $row['thumbnail'] = $imgRow ? '/' . ltrim($imgRow['image_path'], '/') : null;
             }
             $rows[] = $row;
         }
@@ -170,6 +168,7 @@ function getPulloutDetails($conn) {
         $sql = "SELECT 
                     p.*,
                     p.prep_step,
+                    p.delivered_by,
                     a.brand,
                     a.model,
                     a.serial_number,
@@ -195,11 +194,9 @@ function getPulloutDetails($conn) {
             return;
         }
 
-        // Clean up legacy tags
         $item['released_by'] = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $item['released_by'] ?? ''));
         $item['purpose']     = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $item['purpose'] ?? ''));
 
-        // FIX: Fallback parse for old records
         if (empty($item['from_location']) && !empty($item['purpose'])) {
             if (preg_match('/From:\s*(.+?)\s*→/', $item['purpose'], $m)) {
                 $item['from_location'] = trim($m[1]);
@@ -216,7 +213,8 @@ function getPulloutDetails($conn) {
         $imgStmt->execute();
         $imgResult = $imgStmt->get_result();
         $images    = [];
-        while ($img = $imgResult->fetch_assoc()) $images[] = $img['image_path'];
+        while ($img = $imgResult->fetch_assoc()) $images[] = '/' . ltrim($img['image_path'], '/');
+
         $item['images'] = $images;
 
         echo json_encode(['success' => true, 'data' => $item]);
@@ -228,10 +226,6 @@ function getPulloutDetails($conn) {
 
 // =============================================================================
 // UPDATE STATUS
-//
-// FIX: Now reads from_location and to_location directly from their columns
-//      instead of regex-parsing the purpose field.
-//      Falls back to purpose parsing for old/legacy records.
 // =============================================================================
 function updateStatus($conn) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -265,11 +259,9 @@ function updateStatus($conn) {
         $purpose       = $txn['purpose'];
         $currentStatus = $txn['status'];
 
-        // FIX: Use dedicated columns directly
         $fromLocation = $txn['from_location'] ?? '';
         $toLocation   = $txn['to_location']   ?? $txn['location_received'] ?? '';
 
-        // Fallback: parse from purpose for legacy records
         if (empty($fromLocation) && !empty($purpose)) {
             if (preg_match('/From:\s*(.+?)\s*→/', $purpose, $m)) {
                 $fromLocation = trim($m[1]);
@@ -296,14 +288,13 @@ function updateStatus($conn) {
 
             $desc = "Transfer #$id CONFIRMED by $userName";
 
-        // ── RELEASED (Mark as Received) ───────────────────────────────────
+        // ── RELEASED ─────────────────────────────────────────────────────────
         } elseif ($newStatus === 'RELEASED') {
 
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'RELEASED', released_at = NOW() WHERE id = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
 
-            // Get source asset (full row)
             $assetStmt = $conn->prepare("SELECT * FROM assets WHERE id = ?");
             $assetStmt->bind_param("i", $assetId);
             $assetStmt->execute();
@@ -312,8 +303,6 @@ function updateStatus($conn) {
             $srcBalance = intval($srcAsset['beg_balance_count']);
             $newSrcBal  = max(0, $srcBalance - $quantity);
 
-            // FIX: Split "MainLoc / SubLoc" stored in to_location/from_location columns
-            // e.g. "CFE / Shelf 3" -> location="CFE", sub_location="Shelf 3"
             $toParts        = explode(' / ', $toLocation, 2);
             $toMainLocation = trim($toParts[0]);
             $toSubLocation  = isset($toParts[1]) ? trim($toParts[1]) : '';
@@ -321,24 +310,16 @@ function updateStatus($conn) {
             $fromParts        = explode(' / ', $fromLocation, 2);
             $fromMainLocation = trim($fromParts[0]);
 
-            // Case A: Full transfer -- move the asset record itself to new location
             if ($newSrcBal === 0) {
-                $updSrc = $conn->prepare("
-                    UPDATE assets
-                    SET location = ?, sub_location = ?, beg_balance_count = ?, updated_at = NOW()
-                    WHERE id = ?
-                ");
+                $updSrc = $conn->prepare("UPDATE assets SET location = ?, sub_location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
                 $updSrc->bind_param("ssii", $toMainLocation, $toSubLocation, $quantity, $assetId);
                 $updSrc->execute();
                 $destAssetId = $assetId;
-
-            // Case B: Partial transfer -- deduct source, add to dest
             } else {
                 $updSrc = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
                 $updSrc->bind_param("ii", $newSrcBal, $assetId);
                 $updSrc->execute();
 
-                // Find existing asset at destination (same subcategory + brand + main location)
                 $findStmt = $conn->prepare("
                     SELECT id, beg_balance_count FROM assets
                     WHERE location = ? AND sub_category_id = ? AND brand = ? AND id != ?
@@ -350,11 +331,7 @@ function updateStatus($conn) {
 
                 if ($destAsset) {
                     $newDestBal = intval($destAsset['beg_balance_count']) + $quantity;
-                    $updDest    = $conn->prepare("
-                        UPDATE assets
-                        SET beg_balance_count = ?, location = ?, sub_location = ?, updated_at = NOW()
-                        WHERE id = ?
-                    ");
+                    $updDest    = $conn->prepare("UPDATE assets SET beg_balance_count = ?, location = ?, sub_location = ?, updated_at = NOW() WHERE id = ?");
                     $updDest->bind_param("issi", $newDestBal, $toMainLocation, $toSubLocation, $destAsset['id']);
                     $updDest->execute();
                     $destAssetId = $destAsset['id'];
@@ -390,7 +367,6 @@ function updateStatus($conn) {
                 }
             }
 
-            // Save dest_asset_id reference for RETURNED reversal
             $updTxn = $conn->prepare("
                 UPDATE pull_out_transactions
                 SET purpose = CONCAT(COALESCE(purpose,''), ' [dest:$destAssetId]')
@@ -401,27 +377,22 @@ function updateStatus($conn) {
 
             $desc = "Transfer #$id RELEASED: Asset #$assetId -{$quantity} @ {$fromMainLocation} to {$toMainLocation} (dest #{$destAssetId} +{$quantity})";
 
-        // ── RETURNED ──────────────────────────────────────────────────────
+        // ── RETURNED ──────────────────────────────────────────────────────────
         } elseif ($newStatus === 'RETURNED') {
 
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'RETURNED', returned_at = NOW() WHERE id = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
 
-            // Get dest_asset_id from purpose tag
             $destAssetId = 0;
             if (preg_match('/\[dest:(\d+)\]/', $purpose, $dm)) {
                 $destAssetId = intval($dm[1]);
             }
 
-            // ── Case A: Full transfer was done (dest = same asset, just moved)
-            // dest_asset_id === asset_id means location was changed, just revert it
             if ($destAssetId && $destAssetId === $assetId) {
                 $updSrc = $conn->prepare("UPDATE assets SET location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
                 $updSrc->bind_param("sii", $fromLocation, $quantity, $assetId);
                 $updSrc->execute();
-
-            // ── Case B: Partial transfer — separate dest asset was created/updated
             } else {
                 if ($destAssetId) {
                     $destStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
@@ -431,8 +402,6 @@ function updateStatus($conn) {
                     $newDestBal = max(0, intval($destRow['beg_balance_count'] ?? 0) - $quantity);
 
                     if ($newDestBal === 0) {
-                        // Remove dest asset entirely
-                        $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?")->bind_param("i", $destAssetId);
                         $delImg = $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?");
                         $delImg->bind_param("i", $destAssetId); $delImg->execute();
                         $delDest = $conn->prepare("DELETE FROM assets WHERE id = ?");
@@ -444,7 +413,6 @@ function updateStatus($conn) {
                     }
                 }
 
-                // Restore source balance
                 $srcStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
                 $srcStmt->bind_param("i", $assetId);
                 $srcStmt->execute();
@@ -457,7 +425,7 @@ function updateStatus($conn) {
 
             $desc = "Transfer #$id RETURNED: {$quantity} pcs back to {$fromLocation} (source asset #{$assetId})";
 
-        // ── CANCELLED ─────────────────────────────────────────────────────
+        // ── CANCELLED ─────────────────────────────────────────────────────────
         } else {
 
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'CANCELLED' WHERE id = ?");
@@ -479,11 +447,10 @@ function updateStatus($conn) {
 }
 
 // =============================================================================
-// GET LOCATIONS — distinct main locations, pending count from from_location only
+// GET LOCATIONS
 // =============================================================================
 function getLocations($conn) {
     try {
-        // Step 1: Get all unique main locations
         $locSql = "
             SELECT DISTINCT TRIM(SUBSTRING_INDEX(loc, ' / ', 1)) AS main_loc
             FROM (
@@ -503,7 +470,6 @@ function getLocations($conn) {
             if ($loc === '' || isset($seen[$loc])) continue;
             $seen[$loc] = true;
 
-            // Step 2: Count PENDING where FROM this location only
             $countStmt = $conn->prepare("
                 SELECT COUNT(*) AS cnt
                 FROM pull_out_transactions

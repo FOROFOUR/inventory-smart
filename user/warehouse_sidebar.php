@@ -231,7 +231,7 @@ body {
                     </a>
                 </li>
 
-                <!-- Incoming Orders — PENDING badge (red) -->
+                <!-- Incoming Orders — PENDING badge (red)
                 <li class="nav-link <?php echo isActive('warehouse-incoming.php'); ?>">
                     <a href="warehouse-incoming.php" id="incomingNavLink">
                         <i class='bx bx-box icon'></i>
@@ -243,7 +243,7 @@ body {
                             </span>
                         <?php endif; ?>
                     </a>
-                </li>
+                </li> -->
 
                 <!-- Preparing — CONFIRMED badge (purple) -->
                 <li class="nav-link <?php echo isActive('warehouse-preparing.php'); ?>">

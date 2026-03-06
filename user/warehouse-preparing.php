@@ -1,20 +1,24 @@
 <?php
-session_start();
+ob_start();
+
 require_once '../config.php';
 
+if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user_id'])) {
     header("Location: ../login.php");
     exit();
 }
 
-$conn = getDBConnection();
+$conn      = getDBConnection();
 $user_name = $_SESSION['name'] ?? 'Warehouse Staff';
 
-// ── Handle AJAX ────────────────────────────────────────────────────────────
+// =============================================================================
+// POST HANDLERS
+// =============================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
 
-    $id     = (int)($_POST['id'] ?? 0);
+    $id     = (int) ($_POST['id'] ?? 0);
     $action = $_POST['action'];
 
     if (!$id) {
@@ -22,375 +26,433 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit();
     }
 
-    if ($action === 'release') {
-        $released_by = $user_name;
-        $stmt = $conn->prepare("
-            UPDATE pull_out_transactions
-            SET status = 'RELEASED', released_by = ?, released_at = NOW()
-            WHERE id = ? AND status = 'CONFIRMED'
-        ");
-        $stmt->bind_param("si", $released_by, $id);
+    // ── UPDATE PREP STEP ─────────────────────────────────────────────────────
+    if ($action === 'update_step') {
+        $step   = max(0, min(4, (int) ($_POST['step'] ?? 0)));
+        $labels = ['Not Started', 'Located', 'Checked', 'Packed', 'Ready to Release'];
+
+        $stmt = $conn->prepare("UPDATE pull_out_transactions SET prep_step = ? WHERE id = ? AND status = 'CONFIRMED'");
+        $stmt->bind_param("ii", $step, $id);
         $stmt->execute();
 
-        if ($stmt->affected_rows > 0) {
-            $desc = "Pull-out request #$id marked as RELEASED by $user_name";
-            $log = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'RELEASE_PULLOUT', ?)");
-            $log->bind_param("ss", $user_name, $desc);
-            $log->execute();
-            echo json_encode(['success' => true, 'message' => "Request #$id has been released."]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Update failed. Request may have already been processed.']);
-        }
+        $desc = "Pull-out #$id prep step updated to: {$labels[$step]} by $user_name";
+        $log  = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'PREP_STEP', ?)");
+        $log->bind_param("ss", $user_name, $desc);
+        $log->execute();
 
-    } elseif ($action === 'revert') {
-        // Send back to PENDING (e.g. warehouse made a mistake)
+        echo json_encode(['success' => true, 'step' => $step, 'label' => $labels[$step]]);
+        exit();
+    }
+
+    // ── GET DETAILS (for release modal preview) ───────────────────────────────
+    if ($action === 'get_details') {
         $stmt = $conn->prepare("
-            UPDATE pull_out_transactions
-            SET status = 'PENDING'
-            WHERE id = ? AND status = 'CONFIRMED'
+            SELECT p.*, a.brand, a.model, a.serial_number,
+                   c.name AS category_name, sc.name AS subcategory_name
+            FROM pull_out_transactions p
+            LEFT JOIN assets         a  ON p.asset_id        = a.id
+            LEFT JOIN categories     c  ON a.category_id     = c.id
+            LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
+            WHERE p.id = ? AND p.status = 'CONFIRMED'
         ");
         $stmt->bind_param("i", $id);
         $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
 
-        if ($stmt->affected_rows > 0) {
-            $desc = "Pull-out request #$id reverted to PENDING by $user_name";
-            $log = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'REVERT_PULLOUT', ?)");
+        if (!$row) {
+            echo json_encode(['success' => false, 'message' => 'Not found.']);
+            exit();
+        }
+
+        $row['purpose'] = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $row['purpose'] ?? ''));
+        $row['purpose'] = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i', '', $row['purpose']));
+
+        // Thumbnail
+        $imgStmt = $conn->prepare("SELECT image_path FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 1");
+        $imgStmt->bind_param("i", $row['asset_id']);
+        $imgStmt->execute();
+        $img = $imgStmt->get_result()->fetch_assoc();
+        $row['thumbnail'] = $img ? '/' . ltrim($img['image_path'], '/') : null;
+
+        echo json_encode(['success' => true, 'data' => $row]);
+        exit();
+    }
+
+    // ── RELEASE ───────────────────────────────────────────────────────────────
+    if ($action === 'release') {
+        $released_by = htmlspecialchars(trim($_POST['released_by'] ?? ''));
+        $received_by = htmlspecialchars(trim($_POST['received_by'] ?? ''));
+
+        if (empty($released_by)) {
+            echo json_encode(['success' => false, 'message' => 'Released By is required.']);
+            exit();
+        }
+
+        $txnStmt = $conn->prepare("SELECT * FROM pull_out_transactions WHERE id = ? AND status = 'CONFIRMED'");
+        $txnStmt->bind_param("i", $id);
+        $txnStmt->execute();
+        $txn = $txnStmt->get_result()->fetch_assoc();
+
+        if (!$txn) {
+            echo json_encode(['success' => false, 'message' => 'Already processed or not found.']);
+            exit();
+        }
+
+        // Mark RELEASED
+        $rel = $conn->prepare("
+            UPDATE pull_out_transactions
+            SET status = 'RELEASED', prep_step = 4, released_at = NOW(),
+                released_by = ?, received_by = ?
+            WHERE id = ? AND status = 'CONFIRMED'
+        ");
+        $rel->bind_param("ssi", $released_by, $received_by, $id);
+        $rel->execute();
+
+        if ($rel->affected_rows > 0) {
+            $desc = "Pull-out #$id RELEASED by $released_by" . ($received_by ? ", received by $received_by" : '');
+            $log  = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'RELEASE_PULLOUT', ?)");
             $log->bind_param("ss", $user_name, $desc);
             $log->execute();
-            echo json_encode(['success' => true, 'message' => "Request #$id reverted to Pending."]);
+            echo json_encode(['success' => true, 'message' => "Request #$id has been marked as Released."]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Update failed.']);
+            echo json_encode(['success' => false, 'message' => 'Update failed. Request may have already been processed.']);
         }
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Unknown action.']);
+        exit();
     }
+
+    echo json_encode(['success' => false, 'message' => 'Unknown action.']);
     exit();
 }
 
-// ── Fetch CONFIRMED requests ───────────────────────────────────────────────
-$search     = trim($_GET['search'] ?? '');
-$dateFilter = $_GET['date'] ?? '';
+// =============================================================================
+// PAGE DATA
+// =============================================================================
+$search     = trim($_GET['search']   ?? '');
+$dateFilter = trim($_GET['date']     ?? '');
+$locFilter  = trim($_GET['location'] ?? '');
 
-$sql = "
-    SELECT p.*, a.brand, a.model, a.serial_number, a.location, a.sub_location,
-           c.name AS category_name, sc.name AS subcategory_name
-    FROM pull_out_transactions p
-    LEFT JOIN assets a ON p.asset_id = a.id
-    LEFT JOIN categories c ON a.category_id = c.id
-    LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
-    WHERE p.status = 'CONFIRMED'
-";
-
-$params = []; $types = '';
+$sql    = "SELECT p.*, a.brand, a.model, a.serial_number,
+               c.name AS category_name, sc.name AS subcategory_name
+           FROM pull_out_transactions p
+           LEFT JOIN assets         a  ON p.asset_id        = a.id
+           LEFT JOIN categories     c  ON a.category_id     = c.id
+           LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
+           WHERE p.status = 'CONFIRMED'";
+$params = [];
+$types  = '';
 
 if ($search !== '') {
-    $sql .= " AND (a.brand LIKE ? OR a.model LIKE ? OR p.requested_by LIKE ? OR a.serial_number LIKE ?)";
-    $like = "%$search%";
-    $params = array_merge($params, [$like, $like, $like, $like]);
-    $types .= 'ssss';
+    $sql    .= " AND (a.brand LIKE ? OR a.model LIKE ? OR p.requested_by LIKE ? OR p.from_location LIKE ? OR p.to_location LIKE ?)";
+    $l       = "%$search%";
+    $params  = array_merge($params, [$l, $l, $l, $l, $l]);
+    $types  .= 'sssss';
 }
 if ($dateFilter !== '') {
-    $sql .= " AND DATE(p.created_at) = ?";
+    $sql    .= " AND DATE(p.created_at) = ?";
     $params[] = $dateFilter;
-    $types .= 's';
+    $types  .= 's';
 }
-
-$sql .= " ORDER BY p.created_at ASC";
+if ($locFilter !== '') {
+    $sql    .= " AND (p.from_location LIKE ? OR p.to_location LIKE ?)";
+    $ll      = $locFilter . '%';
+    $params  = array_merge($params, [$ll, $ll]);
+    $types  .= 'ss';
+}
+$sql .= " ORDER BY p.date_needed ASC, p.created_at ASC";
 
 $stmt = $conn->prepare($sql);
 if ($params) $stmt->bind_param($types, ...$params);
 $stmt->execute();
-$requests = $stmt->get_result();
+$result = $stmt->get_result();
+$rows   = [];
+while ($r = $result->fetch_assoc()) $rows[] = $r;
 
-// Count
-$countStmt = $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'CONFIRMED'");
-$countStmt->execute();
-$countStmt->bind_result($totalConfirmed);
-$countStmt->fetch();
-$countStmt->close();
+$totalConfirmed = (int) $conn->query("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'CONFIRMED'")->fetch_row()[0];
+$readyCount     = count(array_filter($rows, fn($r) => ($r['prep_step'] ?? 0) >= 4));
+$notStarted     = count(array_filter($rows, fn($r) => ($r['prep_step'] ?? 0) === 0));
+
+$locRows = $conn->query("
+    SELECT DISTINCT TRIM(SUBSTRING_INDEX(loc, ' / ', 1)) AS main_loc
+    FROM (
+        SELECT from_location AS loc FROM pull_out_transactions WHERE from_location IS NOT NULL AND from_location != '' AND status = 'CONFIRMED'
+        UNION ALL
+        SELECT to_location   AS loc FROM pull_out_transactions WHERE to_location   IS NOT NULL AND to_location   != '' AND status = 'CONFIRMED'
+    ) x ORDER BY main_loc
+");
+$locations = [];
+while ($lr = $locRows->fetch_assoc()) {
+    if ($lr['main_loc']) $locations[] = $lr['main_loc'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preparing — Warehouse</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-<style>
-  :root {
-    --amber: #f39c12;
-    --amber-light: #fef9ed;
-    --bg: #f4f6f9;
-    --white: #ffffff;
-    --text: #2c3e50;
-    --text-muted: #7f8c8d;
-    --border: #e8ecf0;
-    --shadow: 0 2px 12px rgba(0,0,0,.07);
-    --radius: 12px;
-    --green: #27ae60;
-    --blue: #2980b9;
-    --red: #e74c3c;
-    --confirmed: #8e44ad;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparing — QC Warehouse</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --amber:  #f39c12;
+            --green:  #27ae60;
+            --red:    #e74c3c;
+            --bg:     #f4f6f9;
+            --white:  #fff;
+            --text:   #2c3e50;
+            --muted:  #7f8c8d;
+            --border: #e8ecf0;
+            --shadow: 0 2px 12px rgba(0,0,0,.07);
+            --radius: 12px;
+        }
 
-  .main-content {
-    position: relative;
-    left: 250px;
-    width: calc(100% - 250px);
-    min-height: 100vh;
-    background: var(--bg);
-    padding: 28px 32px;
-    transition: all 0.3s ease;
-  }
-  .sidebar.close ~ .main-content {
-    left: 88px;
-    width: calc(100% - 88px);
-  }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', sans-serif; }
+        body { background: var(--bg); color: var(--text); }
 
-  /* ── PAGE HEADER ── */
-  .page-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 24px;
-  }
-  .page-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); }
-  .page-header span { font-size: .875rem; color: var(--text-muted); display: block; margin-top: 2px; }
+        /* ── LAYOUT ── */
+        .main-content {
+            position: relative; left: 250px;
+            width: calc(100% - 250px); min-height: 100vh;
+            background: var(--bg); padding: 2rem;
+            transition: all .3s ease;
+        }
+        .sidebar.close ~ .main-content { left: 88px; width: calc(100% - 88px); }
 
-  .confirmed-badge {
-    background: #f5eef8;
-    color: var(--confirmed);
-    border: 1.5px solid #d2b4de;
-    padding: 6px 18px;
-    border-radius: 20px;
-    font-size: .82rem;
-    font-weight: 600;
-    display: flex; align-items: center; gap: 6px;
-  }
+        /* ── PAGE HEADER ── */
+        .page-header {
+            background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);
+            border-radius: 16px; padding: 2rem 2rem 1.5rem;
+            color: white; margin-bottom: 1.5rem;
+            position: relative; overflow: hidden;
+        }
+        .page-header::before {
+            content: ''; position: absolute; top: -50%; right: -5%;
+            width: 300px; height: 300px;
+            background: rgba(255,255,255,.08); border-radius: 50%;
+        }
+        .page-header h1 {
+            font-size: 1.6rem; font-weight: 700;
+            position: relative; z-index: 1;
+            display: flex; align-items: center; gap: .6rem;
+        }
+        .page-header p {
+            font-size: .9rem; opacity: .85; margin-top: .25rem;
+            position: relative; z-index: 1;
+        }
 
-  /* ── FILTERS ── */
-  .filters {
-    background: var(--white);
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    box-shadow: var(--shadow);
-    display: flex; gap: 12px; align-items: center;
-    margin-bottom: 22px; flex-wrap: wrap;
-  }
-  .filters input {
-    border: 1.5px solid var(--border); border-radius: 8px;
-    padding: 8px 14px; font-size: .84rem;
-    font-family: 'Poppins', sans-serif; color: var(--text);
-    outline: none; transition: border-color .2s;
-  }
-  .filters input:focus { border-color: var(--amber); }
-  .search-wrap { position: relative; flex: 1; min-width: 200px; }
-  .search-wrap i {
-    position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-muted); pointer-events: none;
-  }
-  .search-wrap input { padding-left: 36px; width: 100%; }
+        /* ── STATS ── */
+        .stats-row {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--white); border-radius: var(--radius);
+            padding: 1.25rem 1.5rem; box-shadow: var(--shadow);
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .stat-icon {
+            width: 46px; height: 46px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; flex-shrink: 0;
+        }
+        .stat-icon.amber { background: #fef3cd; color: var(--amber); }
+        .stat-icon.green { background: #d5f5e3; color: var(--green); }
+        .stat-icon.muted { background: #f0f3f6; color: var(--muted); }
+        .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+        .stat-label { font-size: .75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
 
-  .btn {
-    padding: 8px 20px; border-radius: 8px; border: none;
-    font-size: .84rem; font-family: 'Poppins', sans-serif; font-weight: 500;
-    cursor: pointer; transition: all .2s;
-    display: inline-flex; align-items: center; gap: 6px;
-  }
-  .btn-amber  { background: var(--amber); color: #fff; }
-  .btn-amber:hover  { background: #d68910; }
-  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text-muted); }
-  .btn-outline:hover { border-color: var(--amber); color: var(--amber); }
+        /* ── FILTERS ── */
+        .filters {
+            background: var(--white); border-radius: var(--radius);
+            padding: 1rem 1.25rem; box-shadow: var(--shadow);
+            display: flex; gap: .75rem; flex-wrap: wrap; align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .filters input, .filters select {
+            border: 1.5px solid var(--border); border-radius: 8px;
+            padding: .6rem 1rem; font-family: 'Space Grotesk', sans-serif;
+            font-size: .875rem; color: var(--text);
+            outline: none; background: white; transition: border-color .2s;
+        }
+        .filters input:focus, .filters select:focus { border-color: var(--amber); }
+        .search-wrap { position: relative; flex: 1; min-width: 220px; }
+        .search-wrap input { padding-left: 2.4rem; width: 100%; }
+        .search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); }
 
-  /* ── CARDS GRID ── */
-  .cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 18px;
-  }
+        /* ── BUTTONS ── */
+        .btn {
+            padding: .6rem 1.2rem; border: none; border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif; font-size: .875rem; font-weight: 600;
+            cursor: pointer; transition: all .2s;
+            display: inline-flex; align-items: center; gap: .4rem;
+        }
+        .btn:disabled { opacity: .45; cursor: not-allowed; }
+        .btn-success   { background: var(--green); color: white; }
+        .btn-success:hover:not(:disabled) { background: #219a52; }
+        .btn-export    { background: #16a085; color: white; }
+        .btn-export:hover { background: #138d75; }
+        .btn-secondary { background: #ecf0f1; color: var(--text); }
+        .btn-secondary:hover { background: #d5dbdb; }
 
-  .request-card {
-    background: var(--white);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: transform .2s, box-shadow .2s;
-    border-top: 4px solid var(--confirmed);
-  }
-  .request-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 28px rgba(0,0,0,.11);
-  }
+        /* ── CARDS GRID ── */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.25rem;
+        }
 
-  .card-top {
-    padding: 18px 20px 14px;
-  }
+        .prep-card {
+            background: var(--white); border-radius: var(--radius);
+            box-shadow: var(--shadow); border-left: 4px solid var(--amber);
+            padding: 1.25rem 1.5rem;
+            transition: transform .2s, box-shadow .2s, border-left-color .3s;
+        }
+        .prep-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+        .prep-card.step-ready { border-left-color: var(--green); }
 
-  .card-id-row {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px;
-  }
-  .card-id {
-    font-size: .75rem; font-weight: 700;
-    color: var(--confirmed); letter-spacing: .5px; text-transform: uppercase;
-  }
+        .prep-card-header {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            margin-bottom: .9rem;
+        }
+        .req-id    { font-size: .78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-bottom: .15rem; display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+        .req-asset { font-size: 1rem; font-weight: 700; color: var(--text); }
+        .req-model { font-size: .82rem; color: var(--muted); }
 
-  .urgency-badge {
-    padding: 3px 10px; border-radius: 20px;
-    font-size: .71rem; font-weight: 600;
-  }
-  .urgency-today  { background: #fdedec; color: #c0392b; }
-  .urgency-soon   { background: #fef9ed; color: #d68910; }
-  .urgency-normal { background: #eafaf1; color: #1e8449; }
+        /* ── STEP PROGRESS ── */
+        .step-progress { margin: .85rem 0 1rem; }
+        .step-track { display: flex; align-items: center; margin-bottom: .5rem; }
 
-  .asset-name {
-    font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 4px;
-  }
-  .asset-serial {
-    font-size: .75rem; color: var(--text-muted);
-  }
+        .step-node {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: #e8ecf0; color: var(--muted);
+            display: flex; align-items: center; justify-content: center;
+            font-size: .78rem; font-weight: 700; flex-shrink: 0;
+            cursor: pointer; transition: all .22s;
+            position: relative; z-index: 1;
+            border: 2px solid #e8ecf0; user-select: none;
+        }
+        .step-node.done   { background: var(--amber); color: white; border-color: var(--amber); }
+        .step-node.ready  { background: var(--green); color: white; border-color: var(--green); }
+        .step-node.active { border-color: var(--amber); background: white; color: var(--amber); box-shadow: 0 0 0 3px rgba(243,156,18,.2); }
+        .step-node:hover  { transform: scale(1.12); }
 
-  .card-divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+        .step-line { flex: 1; height: 3px; background: #e8ecf0; transition: background .3s; }
+        .step-line.done  { background: var(--amber); }
+        .step-line.ready { background: var(--green); }
 
-  .card-info-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 10px; padding: 0 20px 14px;
-  }
-  .info-item .info-label {
-    font-size: .7rem; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px;
-  }
-  .info-item .info-val {
-    font-size: .82rem; font-weight: 600; color: var(--text);
-  }
-  .info-item.full { grid-column: 1 / -1; }
+        .step-labels { display: flex; justify-content: space-between; margin-top: .3rem; }
+        .step-label { font-size: .68rem; color: var(--muted); text-align: center; flex: 1; line-height: 1.2; font-weight: 500; }
+        .step-label.done  { color: var(--amber); font-weight: 600; }
+        .step-label.ready { color: var(--green);  font-weight: 600; }
 
-  .location-arrow {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  }
-  .location-tag {
-    background: #f0f3f6; color: var(--text-muted);
-    padding: 2px 8px; border-radius: 4px; font-size: .72rem;
-  }
+        .step-status-text {
+            text-align: center; font-size: .82rem; font-weight: 600;
+            margin-top: .5rem; padding: .35rem .75rem; border-radius: 6px;
+            background: #fef9ed; color: var(--amber);
+        }
+        .step-status-text.ready { background: #d5f5e3; color: #1e8449; }
 
-  /* Checklist */
-  .checklist {
-    padding: 0 20px 14px;
-  }
-  .checklist-title {
-    font-size: .74rem; font-weight: 600; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px;
-  }
-  .checklist-item {
-    display: flex; align-items: center; gap: 8px;
-    font-size: .8rem; color: var(--text); margin-bottom: 5px;
-    cursor: pointer; user-select: none;
-  }
-  .checklist-item input[type="checkbox"] {
-    accent-color: var(--confirmed);
-    width: 15px; height: 15px; cursor: pointer;
-  }
-  .checklist-item.checked { color: var(--text-muted); text-decoration: line-through; }
+        /* ── ROUTE ── */
+        .prep-route {
+            display: flex; align-items: center; gap: .6rem;
+            background: #f8f9fa; border-radius: 8px;
+            padding: .7rem 1rem; margin: .75rem 0;
+        }
+        .prep-route .loc      { flex: 1; }
+        .prep-route .loc-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+        .prep-route .loc-value { font-size: .9rem; font-weight: 600; }
+        .prep-route .arrow    { color: var(--amber); font-size: 1.2rem; }
 
-  /* Card Footer */
-  .card-footer {
-    padding: 14px 20px;
-    border-top: 1px solid var(--border);
-    background: #fafbfc;
-    display: flex; gap: 8px;
-  }
-  .card-footer .btn { flex: 1; justify-content: center; font-size: .8rem; padding: 8px; }
+        /* ── META GRID ── */
+        .prep-meta { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; font-size: .82rem; margin-bottom: 1rem; }
+        .prep-meta-item .mlabel { color: var(--muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .4px; }
+        .prep-meta-item .mvalue { font-weight: 600; color: var(--text); }
 
-  .btn-release { background: var(--green); color: #fff; }
-  .btn-release:hover { background: #1e8449; }
-  .btn-revert  { background: #f0f3f6; color: var(--text-muted); border: 1.5px solid var(--border); }
-  .btn-revert:hover  { background: #e0e4e8; }
+        /* ── ACTIONS ── */
+        .prep-actions {
+            display: flex; gap: .5rem; flex-wrap: wrap;
+            margin-top: .75rem; padding-top: .75rem;
+            border-top: 1px solid var(--border);
+        }
 
-  /* ── EMPTY STATE ── */
-  .empty-wrap {
-    background: var(--white); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 60px 20px; text-align: center;
-  }
-  .empty-wrap i { font-size: 3.5rem; color: #d5d8dc; display: block; margin-bottom: 14px; }
-  .empty-wrap p { font-size: .95rem; font-weight: 600; color: var(--text-muted); }
-  .empty-wrap small { font-size: .8rem; color: #bdc3c7; }
+        /* ── EMPTY ── */
+        .empty-state { text-align: center; padding: 3.5rem; color: var(--muted); grid-column: 1/-1; }
+        .empty-state i { font-size: 3.5rem; opacity: .25; display: block; margin-bottom: .75rem; }
 
-  /* ── MODAL ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.45); z-index: 9998;
-    align-items: center; justify-content: center;
-    backdrop-filter: blur(3px);
-  }
-  .modal-overlay.active { display: flex; }
-  .modal {
-    background: var(--white); border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.2);
-    width: 100%; max-width: 460px; padding: 32px;
-    animation: modalIn .25s ease;
-  }
-  @keyframes modalIn {
-    from { transform: scale(.92) translateY(20px); opacity: 0; }
-    to   { transform: scale(1) translateY(0); opacity: 1; }
-  }
-  .modal-icon {
-    width: 60px; height: 60px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.8rem; margin: 0 auto 16px;
-  }
-  .release-icon { background: #eafaf1; color: var(--green); }
-  .revert-icon  { background: #f0f3f6; color: var(--text-muted); }
-  .modal h3 { text-align: center; font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
-  .modal p  { text-align: center; font-size: .84rem; color: var(--text-muted); margin-bottom: 20px; line-height: 1.6; }
-  .modal-detail { background: #f8f9fa; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; font-size: .82rem; }
-  .modal-detail-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #e8ecf0; }
-  .modal-detail-row:last-child { border-bottom: none; }
-  .modal-detail-row .label { color: var(--text-muted); }
-  .modal-detail-row .val   { font-weight: 600; color: var(--text); text-align: right; max-width: 60%; }
+        /* ── MODAL ── */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
+            z-index: 9999; align-items: center; justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--white); border-radius: 16px;
+            width: 95%; max-width: 460px; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,.25);
+            animation: slideUp .25s ease;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .modal-header h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: .5rem; }
+        .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); border-radius: 6px; padding: .2rem .4rem; }
+        .modal-close:hover { background: var(--border); }
+        .modal-body   { padding: 1.5rem; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; justify-content: flex-end; }
 
-  /* Received by field */
-  .received-wrap { margin-bottom: 20px; }
-  .received-wrap label { font-size: .82rem; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
-  .received-wrap input {
-    width: 100%; padding: 9px 14px;
-    border: 1.5px solid var(--border); border-radius: 8px;
-    font-family: 'Poppins', sans-serif; font-size: .83rem;
-    outline: none; color: var(--text); transition: border-color .2s;
-  }
-  .received-wrap input:focus { border-color: var(--green); }
+        .release-asset-card {
+            display: flex; align-items: center; gap: 1rem;
+            background: #f8f9fa; border-radius: 10px;
+            padding: 1rem; margin-bottom: 1.25rem; border: 1px solid var(--border);
+        }
+        .release-thumb {
+            width: 58px; height: 58px; border-radius: 8px;
+            background: #e8ecf0; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: var(--muted); overflow: hidden;
+        }
+        .release-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .release-info .asset-name   { font-size: 1rem; font-weight: 700; }
+        .release-info .asset-type   { font-size: .82rem; color: var(--muted); }
+        .release-info .asset-serial {
+            font-size: .75rem; font-family: monospace;
+            background: #e8ecf0; padding: 1px 6px; border-radius: 4px;
+            display: inline-block; margin-top: 3px;
+        }
 
-  .modal-actions { display: flex; gap: 10px; }
-  .modal-actions .btn { flex: 1; justify-content: center; padding: 10px; }
-  .btn-green  { background: var(--green); color: #fff; }
-  .btn-green:hover  { background: #1e8449; }
-  .btn-gray   { background: #f0f3f6; color: var(--text-muted); }
-  .btn-gray:hover   { background: #e0e4e8; }
+        .release-details { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .75rem; margin-bottom: 1.25rem; }
+        .rd-item .rd-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
+        .rd-item .rd-value { font-size: .88rem; font-weight: 600; color: var(--text); }
 
-  /* ── TOAST ── */
-  .toast-container {
-    position: fixed; bottom: 28px; right: 28px;
-    display: flex; flex-direction: column; gap: 10px; z-index: 99999;
-  }
-  .toast {
-    background: #2c3e50; color: #fff;
-    padding: 14px 20px; border-radius: 10px;
-    font-size: .84rem; font-weight: 500;
-    display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.2);
-    animation: toastIn .3s ease; min-width: 280px;
-  }
-  .toast.success { background: var(--green); }
-  .toast.error   { background: var(--red); }
-  @keyframes toastIn {
-    from { transform: translateX(100px); opacity: 0; }
-    to   { transform: translateX(0); opacity: 1; }
-  }
+        .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
 
-  @media (max-width: 700px) {
-    .main-content { padding: 18px 14px; }
-    .cards-grid { grid-template-columns: 1fr; }
-  }
-</style>
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: .4rem; }
+        .form-group input {
+            width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+            padding: .7rem 1rem; font-family: 'Space Grotesk', sans-serif;
+            font-size: .9rem; outline: none; transition: border-color .2s;
+        }
+        .form-group input:focus { border-color: var(--amber); }
+
+        /* ── TOAST ── */
+        .toast {
+            position: fixed; top: 20px; right: 20px;
+            padding: .9rem 1.4rem; border-radius: 10px;
+            color: white; font-weight: 600; font-size: .875rem;
+            z-index: 10000; animation: toastIn .3s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,.2);
+        }
+        .toast.success { background: var(--green); }
+        .toast.error   { background: var(--red); }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
 </head>
 <body>
 
@@ -398,286 +460,441 @@ $countStmt->close();
 
 <div class="main-content">
 
-  <!-- Page Header -->
-  <div class="page-header">
-    <div>
-      <h1><i class='bx bx-loader-circle' style="color:var(--confirmed); margin-right:6px;"></i>Preparing</h1>
-      <span>Confirmed requests being prepared for release</span>
+    <div class="page-header">
+        <h1><i class='bx bx-loader-circle'></i> Preparing</h1>
+        <p>Track preparation steps — tap each step node to progress, then release when ready</p>
     </div>
-    <div class="confirmed-badge">
-      <i class='bx bx-package'></i>
-      <?= $totalConfirmed ?> Being Prepared
-    </div>
-  </div>
 
-  <!-- Filters -->
-  <form method="GET" class="filters">
-    <div class="search-wrap">
-      <i class='bx bx-search'></i>
-      <input type="text" name="search" placeholder="Search asset, requester, serial no..."
-             value="<?= htmlspecialchars($search) ?>">
-    </div>
-    <input type="date" name="date" value="<?= htmlspecialchars($dateFilter) ?>">
-    <button type="submit" class="btn btn-amber"><i class='bx bx-filter-alt'></i> Filter</button>
-    <?php if ($search || $dateFilter): ?>
-      <a href="warehouse-preparing.php" class="btn btn-outline"><i class='bx bx-x'></i> Clear</a>
-    <?php endif; ?>
-  </form>
-
-  <!-- Cards Grid -->
-  <?php if ($requests->num_rows > 0): ?>
-  <div class="cards-grid" id="cardsGrid">
-    <?php while ($row = $requests->fetch_assoc()):
-      $assetName = trim(($row['brand'] ?? '') . ' ' . ($row['model'] ?? '')) ?: 'Unknown Asset';
-      $urgency = 'normal'; $urgencyLabel = 'On Time';
-      if ($row['date_needed']) {
-        $daysLeft = (strtotime($row['date_needed']) - strtotime('today')) / 86400;
-        if ($daysLeft <= 0)     { $urgency = 'today'; $urgencyLabel = 'Due Today!'; }
-        elseif ($daysLeft <= 2) { $urgency = 'soon';  $urgencyLabel = 'Due Soon'; }
-      }
-    ?>
-    <div class="request-card" id="card-<?= $row['id'] ?>">
-      <div class="card-top">
-        <div class="card-id-row">
-          <span class="card-id"><i class='bx bx-transfer-alt'></i> Request #<?= $row['id'] ?></span>
-          <?php if ($row['date_needed']): ?>
-            <span class="urgency-badge urgency-<?= $urgency ?>"><?= $urgencyLabel ?></span>
-          <?php endif; ?>
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class='bx bx-loader-circle'></i></div>
+            <div>
+                <div class="stat-value" id="statConfirmed"><?= $totalConfirmed ?></div>
+                <div class="stat-label">Total Preparing</div>
+            </div>
         </div>
-        <div class="asset-name"><?= htmlspecialchars($assetName) ?></div>
-        <?php if ($row['serial_number']): ?>
-          <div class="asset-serial">S/N: <?= htmlspecialchars($row['serial_number']) ?></div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class='bx bx-check-circle'></i></div>
+            <div>
+                <div class="stat-value"><?= $readyCount ?></div>
+                <div class="stat-label">Ready to Release</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon muted"><i class='bx bx-time'></i></div>
+            <div>
+                <div class="stat-value"><?= $notStarted ?></div>
+                <div class="stat-label">Not Started</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filters">
+        <div class="search-wrap">
+            <i class='bx bx-search'></i>
+            <input type="text" id="searchInput" placeholder="Search asset, requester, location..."
+                   value="<?= htmlspecialchars($search) ?>">
+        </div>
+        <input type="date" id="dateInput" value="<?= htmlspecialchars($dateFilter) ?>">
+        <select id="locSelect">
+            <option value="">All Locations</option>
+            <?php foreach ($locations as $loc): ?>
+                <option value="<?= htmlspecialchars($loc) ?>" <?= $locFilter === $loc ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($loc) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <button class="btn btn-export" onclick="exportCSV()"><i class='bx bx-download'></i> Export CSV</button>
+    </div>
+
+    <div class="cards-grid" id="cardsGrid">
+        <?php if (empty($rows)): ?>
+            <div class="empty-state">
+                <i class='bx bx-package'></i>
+                <p>No items to prepare right now</p>
+                <small style="font-size:.82rem;color:#bdc3c7;margin-top:.4rem;display:block;">Items confirmed by admin will appear here.</small>
+            </div>
+        <?php else: ?>
+            <?php foreach ($rows as $r):
+                $from       = $r['from_location'] ?: '—';
+                $to         = $r['to_location'] ?: ($r['location_received'] ?: '—');
+                $purpose    = preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $r['purpose'] ?? '');
+                $purpose    = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i', '', $purpose)) ?: '—';
+                $step       = (int) ($r['prep_step'] ?? 0);
+                $isReady    = $step >= 4;
+                $stepLabels = ['', 'Located', 'Checked', 'Packed', 'Ready to Release'];
+                $titles     = ['', 'Locate asset', 'Check condition', 'Pack & label', 'Ready to release'];
+
+                $urgencyHtml = '';
+                if ($r['date_needed']) {
+                    $daysLeft = (strtotime($r['date_needed']) - strtotime('today')) / 86400;
+                    if ($daysLeft <= 0)
+                        $urgencyHtml = '<span style="background:#fdedec;color:#c0392b;padding:.15rem .5rem;border-radius:5px;font-size:.7rem;font-weight:700;">Due Today!</span>';
+                    elseif ($daysLeft <= 2)
+                        $urgencyHtml = '<span style="background:#fef9ed;color:#d68910;padding:.15rem .5rem;border-radius:5px;font-size:.7rem;font-weight:700;">Due Soon</span>';
+                }
+            ?>
+            <div class="prep-card <?= $isReady ? 'step-ready' : '' ?>" id="card-<?= $r['id'] ?>">
+
+                <div class="prep-card-header">
+                    <div>
+                        <div class="req-id">
+                            Request #<?= $r['id'] ?>
+                            <?= $urgencyHtml ?>
+                        </div>
+                        <div class="req-asset"><?= htmlspecialchars($r['brand'] ?? '—') ?></div>
+                        <?php if ($r['model']): ?><div class="req-model"><?= htmlspecialchars($r['model']) ?></div><?php endif; ?>
+                        <?php if ($r['serial_number']): ?>
+                            <div style="font-size:.75rem;background:#f1f2f6;padding:1px 6px;border-radius:4px;display:inline-block;margin-top:3px;font-family:monospace;color:var(--muted);">
+                                <?= htmlspecialchars($r['serial_number']) ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <span id="badge-<?= $r['id'] ?>"
+                          style="background:<?= $isReady ? '#d5f5e3' : '#fef9ed' ?>;color:<?= $isReady ? '#1e8449' : 'var(--amber)' ?>;padding:.3rem .7rem;border-radius:6px;font-size:.74rem;font-weight:700;text-transform:uppercase;white-space:nowrap;flex-shrink:0;margin-left:.5rem;">
+                        <?= $isReady ? '✓ Ready' : 'Preparing' ?>
+                    </span>
+                </div>
+
+                <!-- Step Progress -->
+                <div class="step-progress">
+                    <div class="step-track">
+                        <?php for ($i = 1; $i <= 4; $i++):
+                            $isDone   = $step >= $i;
+                            $isActive = !$isDone && $step === $i - 1;
+                            $cls      = $isDone ? ($i === 4 ? 'ready' : 'done') : ($isActive ? 'active' : '');
+                        ?>
+                            <div class="step-node <?= $cls ?>"
+                                 id="node-<?= $r['id'] . '-' . $i ?>"
+                                 onclick="setStep(<?= $r['id'] . ',' . $i ?>)"
+                                 title="<?= $titles[$i] ?>">
+                                <?= $isDone ? "<i class='bx bx-check' style='font-size:.9rem;'></i>" : $i ?>
+                            </div>
+                            <?php if ($i < 4): ?>
+                                <div class="step-line <?= $step >= $i ? ($step >= 4 ? 'ready' : 'done') : '' ?>"
+                                     id="line-<?= $r['id'] . '-' . $i ?>"></div>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    </div>
+                    <div class="step-labels">
+                        <?php foreach (['Locate', 'Check', 'Pack', 'Ready'] as $idx => $lbl): ?>
+                            <span class="step-label <?= $step >= ($idx + 1) ? ($step >= 4 ? 'ready' : 'done') : '' ?>">
+                                <?= $lbl ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="step-status-text <?= $isReady ? 'ready' : '' ?>" id="steptext-<?= $r['id'] ?>">
+                        <?php if ($isReady): echo '✓ Ready to Release';
+                        elseif ($step === 0): echo 'Tap a step to start preparing';
+                        else: echo "Step $step / 4 — {$stepLabels[$step]}";
+                        endif; ?>
+                    </div>
+                </div>
+
+                <div class="prep-route">
+                    <div class="loc">
+                        <div class="loc-label">From</div>
+                        <div class="loc-value"><?= htmlspecialchars($from) ?></div>
+                    </div>
+                    <i class='bx bx-right-arrow-alt arrow'></i>
+                    <div class="loc">
+                        <div class="loc-label">To</div>
+                        <div class="loc-value"><?= htmlspecialchars($to) ?></div>
+                    </div>
+                </div>
+
+                <div class="prep-meta">
+                    <div class="prep-meta-item">
+                        <div class="mlabel">Quantity</div>
+                        <div class="mvalue"><?= $r['quantity'] ?> pcs</div>
+                    </div>
+                    <div class="prep-meta-item">
+                        <div class="mlabel">Type</div>
+                        <div class="mvalue"><?= htmlspecialchars($r['subcategory_name'] ?? '—') ?></div>
+                    </div>
+                    <div class="prep-meta-item">
+                        <div class="mlabel">Requested By</div>
+                        <div class="mvalue"><?= htmlspecialchars($r['requested_by'] ?? '—') ?></div>
+                    </div>
+                    <div class="prep-meta-item">
+                        <div class="mlabel">Date Needed</div>
+                        <div class="mvalue"><?= $r['date_needed'] ? date('M j, Y', strtotime($r['date_needed'])) : '—' ?></div>
+                    </div>
+                    <?php if ($purpose !== '—'): ?>
+                        <div class="prep-meta-item" style="grid-column:1/-1;">
+                            <div class="mlabel">Purpose</div>
+                            <div class="mvalue"><?= htmlspecialchars($purpose) ?></div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="prep-actions">
+                    <button class="btn btn-success" id="releaseBtn-<?= $r['id'] ?>"
+                        onclick="openRelease(<?= $r['id'] ?>)"
+                        <?= !$isReady ? 'disabled title="Complete all steps first"' : '' ?>>
+                        <i class='bx bx-paper-plane'></i> Release
+                    </button>
+                </div>
+
+            </div>
+            <?php endforeach; ?>
         <?php endif; ?>
-      </div>
-
-      <hr class="card-divider">
-
-      <div class="card-info-grid">
-        <div class="info-item">
-          <div class="info-label">Requested By</div>
-          <div class="info-val"><?= htmlspecialchars($row['requested_by'] ?? '—') ?></div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Date Needed</div>
-          <div class="info-val"><?= $row['date_needed'] ? date('M j, Y', strtotime($row['date_needed'])) : '—' ?></div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Quantity</div>
-          <div class="info-val"><?= $row['quantity'] ?? 1 ?> pc<?= ($row['quantity'] ?? 1) > 1 ? 's' : '' ?></div>
-        </div>
-        <div class="info-item">
-          <div class="info-label">Category</div>
-          <div class="info-val"><?= htmlspecialchars($row['category_name'] ?? '—') ?></div>
-        </div>
-        <?php if ($row['from_location'] || $row['to_location']): ?>
-        <div class="info-item full">
-          <div class="info-label">Route</div>
-          <div class="location-arrow">
-            <?php if ($row['from_location']): ?>
-              <span class="location-tag"><?= htmlspecialchars($row['from_location']) ?></span>
-              <i class='bx bx-right-arrow-alt' style="color:var(--text-muted);"></i>
-            <?php endif; ?>
-            <?php if ($row['to_location']): ?>
-              <span class="location-tag"><?= htmlspecialchars($row['to_location']) ?></span>
-            <?php endif; ?>
-          </div>
-        </div>
-        <?php endif; ?>
-        <?php if ($row['purpose']): ?>
-        <div class="info-item full">
-          <div class="info-label">Purpose</div>
-          <div class="info-val" style="font-weight:400; color:var(--text-muted); font-size:.8rem;">
-            <?= htmlspecialchars($row['purpose']) ?>
-          </div>
-        </div>
-        <?php endif; ?>
-      </div>
-
-      <!-- Preparation Checklist -->
-      <div class="checklist">
-        <div class="checklist-title"><i class='bx bx-check-square'></i> Preparation Checklist</div>
-        <label class="checklist-item">
-          <input type="checkbox" onchange="toggleCheck(this)">
-          <span>Asset located and retrieved</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" onchange="toggleCheck(this)">
-          <span>Condition checked and verified</span>
-        </label>
-        <label class="checklist-item">
-          <input type="checkbox" onchange="toggleCheck(this)">
-          <span>Packed and ready for handover</span>
-        </label>
-      </div>
-
-      <div class="card-footer">
-        <button class="btn btn-release"
-          onclick="openReleaseModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($assetName)) ?>', '<?= htmlspecialchars(addslashes($row['requested_by'] ?? '')) ?>')">
-          <i class='bx bx-check-double'></i> Mark as Released
-        </button>
-        <button class="btn btn-revert"
-          onclick="openRevertModal(<?= $row['id'] ?>, '<?= htmlspecialchars(addslashes($assetName)) ?>')">
-          <i class='bx bx-undo'></i> Revert
-        </button>
-      </div>
     </div>
-    <?php endwhile; ?>
-  </div>
-
-  <?php else: ?>
-  <div class="empty-wrap">
-    <i class='bx bx-package'></i>
-    <p>No items being prepared</p>
-    <small>Confirmed requests will appear here once acknowledged from Incoming Orders.</small>
-  </div>
-  <?php endif; ?>
 
 </div><!-- /main-content -->
 
-<!-- ── RELEASE MODAL ── -->
+<!-- ── Release Modal ──────────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="releaseModal">
-  <div class="modal">
-    <div class="modal-icon release-icon"><i class='bx bx-check-double'></i></div>
-    <h3>Mark as Released</h3>
-    <p>Confirm that this asset has been handed over.<br>Status will change to <strong>RELEASED</strong>.</p>
-    <div class="modal-detail" id="releaseDetail"></div>
-    <div class="received-wrap">
-      <label><i class='bx bx-user-check'></i> Received By</label>
-      <input type="text" id="receivedBy" placeholder="Enter name of person receiving the asset...">
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-gray" onclick="closeModal('releaseModal')"><i class='bx bx-x'></i> Cancel</button>
-      <button class="btn btn-green" onclick="submitAction('release')"><i class='bx bx-check-double'></i> Confirm Release</button>
-    </div>
-  </div>
-</div>
+    <div class="modal">
+        <div class="modal-header">
+            <h3><i class='bx bx-paper-plane' style="color:var(--amber)"></i> Confirm Release</h3>
+            <button class="modal-close" onclick="closeModal('releaseModal')"><i class='bx bx-x'></i></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="releaseId">
 
-<!-- ── REVERT MODAL ── -->
-<div class="modal-overlay" id="revertModal">
-  <div class="modal">
-    <div class="modal-icon revert-icon"><i class='bx bx-undo'></i></div>
-    <h3>Revert to Pending?</h3>
-    <p>This will send the request back to <strong>Incoming Orders</strong> with status <strong>PENDING</strong>.</p>
-    <div class="modal-detail" id="revertDetail"></div>
-    <div class="modal-actions">
-      <button class="btn btn-gray" onclick="closeModal('revertModal')"><i class='bx bx-x'></i> Cancel</button>
-      <button class="btn btn-amber" onclick="submitAction('revert')"><i class='bx bx-undo'></i> Yes, Revert</button>
-    </div>
-  </div>
-</div>
+            <div class="release-asset-card">
+                <div class="release-thumb" id="releaseThumb"><i class='bx bx-image-alt'></i></div>
+                <div class="release-info">
+                    <div class="asset-name" id="releaseAssetName">—</div>
+                    <div class="asset-type"   id="releaseAssetType"></div>
+                    <div class="asset-serial" id="releaseAssetSerial" style="display:none;"></div>
+                </div>
+            </div>
 
-<div class="toast-container" id="toastContainer"></div>
+            <div class="release-details">
+                <div class="rd-item">
+                    <div class="rd-label">From</div>
+                    <div class="rd-value" id="releaseFrom">—</div>
+                </div>
+                <div class="rd-item">
+                    <div class="rd-label">To</div>
+                    <div class="rd-value" id="releaseTo">—</div>
+                </div>
+                <div class="rd-item">
+                    <div class="rd-label">Quantity</div>
+                    <div class="rd-value" id="releaseQty">—</div>
+                </div>
+                <div class="rd-item">
+                    <div class="rd-label">Requested By</div>
+                    <div class="rd-value" id="releaseReqBy">—</div>
+                </div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="form-group">
+                <label>Released By <span style="color:var(--red)">*</span></label>
+                <input type="text" id="releaseReleasedBy" placeholder="Name of person releasing the asset">
+            </div>
+            <div class="form-group">
+                <label>Received By</label>
+                <input type="text" id="releaseReceivedBy" placeholder="Name of person receiving the asset (optional)">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('releaseModal')">Cancel</button>
+            <button class="btn btn-success" onclick="submitRelease()">
+                <i class='bx bx-paper-plane'></i> Confirm Release
+            </button>
+        </div>
+    </div>
+</div>
 
 <script>
-let currentId = null;
-let currentAction = null;
+const STEP_LABELS = ['Not Started', 'Located', 'Checked', 'Packed', 'Ready to Release'];
 
-function openReleaseModal(id, asset, requestedBy) {
-  currentId = id; currentAction = 'release';
-  document.getElementById('releaseDetail').innerHTML = `
-    <div class="modal-detail-row"><span class="label">Request #</span><span class="val">${id}</span></div>
-    <div class="modal-detail-row"><span class="label">Asset</span><span class="val">${asset}</span></div>
-    <div class="modal-detail-row"><span class="label">Requested By</span><span class="val">${requestedBy}</span></div>
-  `;
-  document.getElementById('receivedBy').value = '';
-  document.getElementById('releaseModal').classList.add('active');
-  setTimeout(() => document.getElementById('receivedBy').focus(), 300);
+function applyFilters() {
+    const p = new URLSearchParams({
+        search:   document.getElementById('searchInput').value,
+        date:     document.getElementById('dateInput').value,
+        location: document.getElementById('locSelect').value,
+    });
+    window.location.href = 'warehouse-preparing.php?' + p.toString();
+}
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
+document.getElementById('dateInput').addEventListener('change', applyFilters);
+document.getElementById('locSelect').addEventListener('change', applyFilters);
+
+async function setStep(id, clickedStep) {
+    const cur     = getCurrentStep(id);
+    const newStep = cur === clickedStep ? clickedStep - 1 : clickedStep;
+    const body    = new FormData();
+    body.append('action', 'update_step');
+    body.append('id', id);
+    body.append('step', newStep);
+    try {
+        const res    = await fetch('warehouse-preparing.php', { method: 'POST', body });
+        const result = await res.json();
+        if (!result.success) { showToast(result.message, 'error'); return; }
+        updateCardUI(id, newStep);
+        showToast('Step: ' + STEP_LABELS[newStep], 'success');
+    } catch (e) { showToast('Failed to save.', 'error'); }
 }
 
-function openRevertModal(id, asset) {
-  currentId = id; currentAction = 'revert';
-  document.getElementById('revertDetail').innerHTML = `
-    <div class="modal-detail-row"><span class="label">Request #</span><span class="val">${id}</span></div>
-    <div class="modal-detail-row"><span class="label">Asset</span><span class="val">${asset}</span></div>
-  `;
-  document.getElementById('revertModal').classList.add('active');
+function getCurrentStep(id) {
+    for (let i = 4; i >= 1; i--) {
+        const n = document.getElementById('node-' + id + '-' + i);
+        if (n && (n.classList.contains('done') || n.classList.contains('ready'))) return i;
+    }
+    return 0;
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove('active');
-  currentId = null;
-}
-
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-  overlay.addEventListener('click', function(e) {
-    if (e.target === this) closeModal(this.id);
-  });
-});
-
-function submitAction(action) {
-  if (!currentId) return;
-
-  const formData = new FormData();
-  formData.append('action', action);
-  formData.append('id', currentId);
-
-  if (action === 'release') {
-    const received = document.getElementById('receivedBy').value.trim();
-    if (received) formData.append('received_by', received);
-  }
-
-  document.querySelectorAll('.modal .btn').forEach(b => b.disabled = true);
-
-  fetch('warehouse-preparing.php', { method: 'POST', body: formData })
-    .then(r => r.json())
-    .then(data => {
-      const modalId = action === 'release' ? 'releaseModal' : 'revertModal';
-      closeModal(modalId);
-      if (data.success) {
-        showToast(data.message, 'success');
-        const card = document.getElementById('card-' + currentId);
-        if (card) {
-          card.style.transition = 'opacity .4s, transform .4s';
-          card.style.opacity = '0';
-          card.style.transform = 'scale(.95)';
-          setTimeout(() => {
-            card.remove();
-            updateCount();
-          }, 400);
+function updateCardUI(id, step) {
+    const isReady = step >= 4;
+    for (let i = 1; i <= 4; i++) {
+        const node = document.getElementById('node-' + id + '-' + i);
+        if (!node) continue;
+        node.className = 'step-node';
+        if (step >= i) {
+            node.classList.add(i === 4 ? 'ready' : 'done');
+            node.innerHTML = "<i class='bx bx-check' style='font-size:.9rem;'></i>";
+        } else if (step === i - 1) {
+            node.classList.add('active');
+            node.textContent = i;
+        } else {
+            node.textContent = i;
         }
-      } else {
-        showToast(data.message, 'error');
-      }
-    })
-    .catch(() => showToast('Network error. Please try again.', 'error'))
-    .finally(() => document.querySelectorAll('.modal .btn').forEach(b => b.disabled = false));
+    }
+    for (let i = 1; i <= 3; i++) {
+        const l = document.getElementById('line-' + id + '-' + i);
+        if (!l) continue;
+        l.className = 'step-line';
+        if (step >= i) l.classList.add(isReady ? 'ready' : 'done');
+    }
+    document.querySelectorAll('#card-' + id + ' .step-label').forEach((lbl, idx) => {
+        lbl.className = 'step-label';
+        if (step >= idx + 1) lbl.classList.add(isReady ? 'ready' : 'done');
+    });
+    const txt = document.getElementById('steptext-' + id);
+    if (txt) {
+        txt.className   = 'step-status-text' + (isReady ? ' ready' : '');
+        txt.textContent = isReady ? '✓ Ready to Release'
+            : step === 0 ? 'Tap a step to start preparing'
+            : `Step ${step} / 4 — ${STEP_LABELS[step]}`;
+    }
+    const badge = document.getElementById('badge-' + id);
+    if (badge) {
+        badge.style.background = isReady ? '#d5f5e3' : '#fef9ed';
+        badge.style.color      = isReady ? '#1e8449' : 'var(--amber)';
+        badge.textContent      = isReady ? '✓ Ready' : 'Preparing';
+    }
+    const card = document.getElementById('card-' + id);
+    if (card) card.classList.toggle('step-ready', isReady);
+    const btn = document.getElementById('releaseBtn-' + id);
+    if (btn) { btn.disabled = !isReady; btn.title = isReady ? '' : 'Complete all steps first'; }
 }
 
-function updateCount() {
-  const cards = document.querySelectorAll('.request-card');
-  const count = cards.length;
-  const badge = document.querySelector('.confirmed-badge');
-  if (badge) badge.innerHTML = `<i class='bx bx-package'></i> ${count} Being Prepared`;
+async function openRelease(id) {
+    document.getElementById('releaseId').value             = id;
+    document.getElementById('releaseReleasedBy').value     = '';
+    document.getElementById('releaseReceivedBy').value     = '';
+    document.getElementById('releaseAssetName').textContent = 'Loading...';
+    document.getElementById('releaseAssetType').textContent = '';
+    document.getElementById('releaseAssetSerial').style.display = 'none';
+    document.getElementById('releaseFrom').textContent     = '—';
+    document.getElementById('releaseTo').textContent       = '—';
+    document.getElementById('releaseQty').textContent      = '—';
+    document.getElementById('releaseReqBy').textContent    = '—';
+    document.getElementById('releaseThumb').innerHTML      = "<i class='bx bx-image-alt'></i>";
+    document.getElementById('releaseModal').classList.add('active');
 
-  if (count === 0) {
-    document.getElementById('cardsGrid').outerHTML = `
-      <div class="empty-wrap">
-        <i class='bx bx-package'></i>
-        <p>No items being prepared</p>
-        <small>Confirmed requests will appear here once acknowledged from Incoming Orders.</small>
-      </div>`;
-  }
+    try {
+        const body = new FormData();
+        body.append('action', 'get_details');
+        body.append('id', id);
+        const res    = await fetch('warehouse-preparing.php', { method: 'POST', body });
+        const result = await res.json();
+        if (!result.success) { showToast('Could not load details.', 'error'); return; }
+
+        const d = result.data;
+        document.getElementById('releaseAssetName').textContent = `${d.brand || ''} ${d.model || ''}`.trim() || '—';
+        document.getElementById('releaseAssetType').textContent = d.subcategory_name || '';
+        if (d.serial_number) {
+            const s = document.getElementById('releaseAssetSerial');
+            s.textContent   = d.serial_number;
+            s.style.display = 'inline-block';
+        }
+        if (d.thumbnail) {
+            document.getElementById('releaseThumb').innerHTML =
+                `<img src="${d.thumbnail}" onerror="this.parentElement.innerHTML='<i class=\\'bx bx-image-alt\\'></i>'">`;
+        }
+        document.getElementById('releaseFrom').textContent  = d.from_location || '—';
+        document.getElementById('releaseTo').textContent    = d.to_location   || '—';
+        document.getElementById('releaseQty').textContent   = `${d.quantity   || '—'} pcs`;
+        document.getElementById('releaseReqBy').textContent = d.requested_by  || '—';
+        setTimeout(() => document.getElementById('releaseReleasedBy').focus(), 250);
+    } catch (e) { showToast('Failed to load details.', 'error'); }
 }
 
-function toggleCheck(checkbox) {
-  const label = checkbox.closest('.checklist-item');
-  label.classList.toggle('checked', checkbox.checked);
+async function submitRelease() {
+    const id = document.getElementById('releaseId').value;
+    const rb = document.getElementById('releaseReleasedBy').value.trim();
+    if (!rb) { showToast('Please enter who is releasing the asset.', 'error'); return; }
+
+    const body = new FormData();
+    body.append('action',      'release');
+    body.append('id',          id);
+    body.append('released_by', rb);
+    body.append('received_by', document.getElementById('releaseReceivedBy').value.trim());
+
+    const res    = await fetch('warehouse-preparing.php', { method: 'POST', body });
+    const result = await res.json();
+    showToast(result.message, result.success ? 'success' : 'error');
+    if (result.success) {
+        closeModal('releaseModal');
+        const card = document.getElementById('card-' + id);
+        if (card) {
+            card.style.transition = 'opacity .4s, transform .4s';
+            card.style.opacity    = '0';
+            card.style.transform  = 'scale(.95)';
+            setTimeout(() => { card.remove(); updateStat(-1); }, 400);
+        }
+    }
 }
 
-function showToast(message, type = 'success') {
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = `<i class='bx ${type === 'success' ? 'bx-check-circle' : 'bx-error-circle'}'></i> ${message}`;
-  container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.transition = 'opacity .4s, transform .4s';
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100px)';
-    setTimeout(() => toast.remove(), 400);
-  }, 3500);
+function exportCSV() {
+    const headers = ['ID', 'Brand', 'Model', 'Serial', 'Type', 'Qty', 'From', 'To', 'Purpose', 'Requested By', 'Date Needed', 'Prep Step'];
+    const data = <?php
+        $out = [];
+        foreach ($rows as $r) {
+            $from = $r['from_location'] ?: '—';
+            $to   = $r['to_location']   ?: ($r['location_received'] ?: '—');
+            $p    = preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $r['purpose'] ?? '');
+            $p    = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i', '', $p));
+            $sl   = ['Not Started', 'Located', 'Checked', 'Packed', 'Ready to Release'];
+            $out[] = [
+                $r['id'], $r['brand'] ?? '', $r['model'] ?? '', $r['serial_number'] ?? '',
+                $r['subcategory_name'] ?? '', $r['quantity'], $from, $to, $p,
+                $r['requested_by'] ?? '', $r['date_needed'] ?? '', $sl[$r['prep_step'] ?? 0] ?? ''
+            ];
+        }
+        echo json_encode($out);
+    ?>;
+    const csv = [headers, ...data].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a   = document.createElement('a');
+    a.href    = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = 'preparing_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+}
+
+function updateStat(delta) {
+    const s = document.getElementById('statConfirmed');
+    if (s) s.textContent = Math.max(0, parseInt(s.textContent) + delta);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className   = 'toast ' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
 }
 </script>
 
 </body>
 </html>
+<?php ob_end_flush(); ?>

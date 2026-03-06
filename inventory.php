@@ -44,16 +44,17 @@ include 'sidebar.php';
             line-height: 1.6;
         }
 
+        /* ── LAYOUT ── */
         .content {
             margin-left: 88px;
             padding: 2rem;
             transition: margin-left 0.3s ease;
         }
-
         .sidebar:not(.close) ~ .content {
             margin-left: 260px;
         }
 
+        /* ── PAGE HEADER ── */
         .page-header {
             background: linear-gradient(135deg, var(--primary) 0%, #0984e3 100%);
             border-radius: 16px;
@@ -62,7 +63,6 @@ include 'sidebar.php';
             color: white;
             box-shadow: 0 8px 24px var(--shadow-lg);
         }
-
         .page-header h1 {
             font-size: 2rem;
             font-weight: 700;
@@ -71,16 +71,10 @@ include 'sidebar.php';
             align-items: center;
             gap: 1rem;
         }
+        .page-header h1 i { font-size: 2.5rem; }
+        .page-header p { opacity: 0.9; font-size: 1rem; }
 
-        .page-header h1 i {
-            font-size: 2.5rem;
-        }
-
-        .page-header p {
-            opacity: 0.9;
-            font-size: 1rem;
-        }
-
+        /* ── CONTROLS BAR ── */
         .controls-bar {
             background: var(--bg-card);
             border-radius: 12px;
@@ -92,13 +86,7 @@ include 'sidebar.php';
             flex-wrap: wrap;
             align-items: center;
         }
-
-        .search-box {
-            flex: 1;
-            min-width: 250px;
-            position: relative;
-        }
-
+        .search-box { flex: 1; min-width: 200px; position: relative; }
         .search-box input {
             width: 100%;
             padding: 0.875rem 1rem 0.875rem 3rem;
@@ -108,28 +96,11 @@ include 'sidebar.php';
             font-size: 0.95rem;
             transition: all 0.3s ease;
         }
+        .search-box input:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0,184,148,0.1); }
+        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1.2rem; }
+        .filter-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
-        }
-
-        .search-box i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-        }
-
-        .filter-group {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
+        /* ── BUTTONS ── */
         .btn {
             padding: 0.875rem 1.5rem;
             border: none;
@@ -144,37 +115,12 @@ include 'sidebar.php';
             gap: 0.5rem;
             white-space: nowrap;
         }
-
-        .btn-primary {
-            background: var(--secondary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #00a881;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-main);
-            color: var(--text-primary);
-            border: 2px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary);
-            background: white;
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c0392b;
-        }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: #00a881; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,184,148,0.3); }
+        .btn-secondary { background: var(--bg-main); color: var(--text-primary); border: 2px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--primary); background: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #c0392b; }
 
         select.btn {
             cursor: pointer;
@@ -185,688 +131,343 @@ include 'sidebar.php';
             padding-right: 3rem;
         }
 
-        .table-container {
-            background: var(--bg-card);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow);
-            overflow: hidden;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        thead {
-            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%);
-            color: white;
-        }
-
-        thead th {
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-        }
-
-        tbody tr {
-            border-bottom: 1px solid var(--border);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        tbody tr:hover {
-            background: #f8f9fa;
-            transform: scale(1.001);
-        }
-
-        tbody td {
-            padding: 1rem;
-            color: var(--text-primary);
-            white-space: nowrap;
-        }
-
-        tbody td.actions-cell {
-            cursor: default;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.35rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .badge-new {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .badge-used {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .badge-working {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .badge-not-working {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .badge-for-checking {
-            background: #e2e3e5;
-            color: #383d41;
-        }
-
-        .action-btn {
-            padding: 0.5rem;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-            transition: all 0.2s ease;
-            border-radius: 6px;
-        }
-
-        .action-btn:hover {
-            background: var(--bg-main);
-            transform: scale(1.1);
-        }
-
-        .action-btn.edit:hover {
-            color: var(--info);
-        }
-
-        .action-btn.pullout:hover {
-            color: var(--secondary);
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
-            z-index: 9999;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal {
-            background: white;
-            border-radius: 16px;
-            max-width: 900px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: slideUp 0.3s ease;
-        }
-
-        .modal-header {
-            background: linear-gradient(135deg, var(--primary) 0%, #0984e3 100%);
-            color: white;
-            padding: 1.5rem 2rem;
-            border-radius: 16px 16px 0 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .modal-close {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-        }
-
-        .modal-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: rotate(90deg);
-        }
-
-        .modal-body {
-            padding: 2rem;
-        }
-
-        .image-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .image-item {
-            position: relative;
-            border-radius: 12px;
-            overflow: hidden;
-            aspect-ratio: 1;
-            background: var(--bg-main);
-            box-shadow: 0 4px 12px var(--shadow);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .image-item:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px var(--shadow-lg);
-        }
-
-        .image-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .image-placeholder {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            color: var(--text-secondary);
-            font-size: 3rem;
-        }
-
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .detail-item {
-            background: var(--bg-main);
-            padding: 1rem;
-            border-radius: 8px;
-            border-left: 4px solid var(--secondary);
-        }
-
-        .detail-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-secondary);
-            margin-bottom: 0.25rem;
-            font-weight: 600;
-        }
-
-        .detail-value {
-            font-size: 1rem;
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-
-        .pullout-section {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 2px dashed var(--border);
-        }
-
-        .pullout-section h3 {
-            margin-bottom: 1rem;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .pullout-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-        .form-group label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .form-group label .required {
-            color: var(--danger);
-            margin-left: 2px;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            padding: 0.75rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
-        }
-
-        .form-group small {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.25rem;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 2px solid var(--border);
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            padding: 1.5rem 2rem;
-            border-top: 2px solid var(--border);
-            background: var(--bg-main);
-        }
-
-        /* Edit Modal Styles */
-        .edit-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-        }
-
-        /* Admin Password Modal */
-        #adminPasswordModal .modal {
-            max-width: 420px;
-        }
-
-        .password-lock-icon {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .password-lock-icon i {
-            font-size: 3.5rem;
-            color: var(--warning);
-        }
-
-        .password-error {
-            color: var(--danger);
-            font-size: 0.85rem;
-            margin-top: 0.5rem;
-            display: none;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20%, 60% { transform: translateX(-8px); }
-            40%, 80% { transform: translateX(8px); }
-        }
-
-        .shake {
-            animation: shake 0.4s ease;
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow);
-            border-left: 4px solid var(--secondary);
-        }
-
-        .stat-card h3 {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .stat-card .value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.3;
-        }
-
-        .empty-state h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-
-        /* Highlight search match */
-        mark {
-            background: #fdcb6e;
-            color: var(--primary);
-            border-radius: 3px;
-            padding: 0 2px;
-        }
+        /* ── TABLE ── */
+        .table-container { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; }
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        thead { background: linear-gradient(135deg, #2d3436 0%, #34495e 100%); color: white; }
+        thead th { padding: 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+        tbody tr { border-bottom: 1px solid var(--border); transition: all 0.2s ease; cursor: pointer; }
+        tbody tr:hover { background: #f8f9fa; }
+        tbody td { padding: 1rem; color: var(--text-primary); white-space: nowrap; }
+        tbody td.actions-cell { cursor: default; }
+
+        /* ── BADGES ── */
+        .badge { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; font-family: 'JetBrains Mono', monospace; }
+        .badge-new { background: #d4edda; color: #155724; }
+        .badge-used { background: #fff3cd; color: #856404; }
+        .badge-working { background: #d1ecf1; color: #0c5460; }
+        .badge-not-working { background: #f8d7da; color: #721c24; }
+        .badge-for-checking { background: #e2e3e5; color: #383d41; }
+
+        /* ── ACTION BUTTONS ── */
+        .action-btn { padding: 0.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.2rem; transition: all 0.2s ease; border-radius: 6px; }
+        .action-btn:hover { background: var(--bg-main); transform: scale(1.1); }
+        .action-btn.edit:hover { color: var(--info); }
+        .action-btn.pullout:hover { color: var(--secondary); }
+
+        /* ── MODALS ── */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; animation: fadeIn 0.3s ease; }
+        .modal-overlay.active { display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .modal { background: white; border-radius: 16px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
+        .modal-header { background: linear-gradient(135deg, var(--primary) 0%, #0984e3 100%); color: white; padding: 1.5rem 2rem; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1; }
+        .modal-header h2 { font-size: 1.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; }
+        .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; flex-shrink: 0; }
+        .modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+        .modal-body { padding: 2rem; }
+
+        /* ── IMAGE GALLERY ── */
+        .image-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .image-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: var(--bg-main); box-shadow: 0 4px 12px var(--shadow); cursor: pointer; transition: all 0.3s ease; }
+        .image-item:hover { transform: translateY(-4px); box-shadow: 0 8px 24px var(--shadow-lg); }
+        .image-item img { width: 100%; height: 100%; object-fit: cover; }
+        .image-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); font-size: 3rem; }
+
+        /* ── DETAIL GRID ── */
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .detail-item { background: var(--bg-main); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--secondary); }
+        .detail-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 0.25rem; font-weight: 600; }
+        .detail-value { font-size: 1rem; color: var(--text-primary); font-weight: 500; word-break: break-word; }
+
+        /* ── PULLOUT SECTION ── */
+        .pullout-section { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 1.5rem; border-radius: 12px; border: 2px dashed var(--border); }
+        .pullout-section h3 { margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .pullout-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+
+        /* ── FORM ── */
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+        .form-group label .required { color: var(--danger); margin-left: 2px; }
+        .form-group input, .form-group textarea, .form-group select { padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; transition: all 0.3s ease; width: 100%; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0,184,148,0.1); }
+        .form-group small { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+        .form-actions { display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--border); flex-wrap: wrap; }
+        .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; padding: 1.5rem 2rem; border-top: 2px solid var(--border); background: var(--bg-main); border-radius: 0 0 16px 16px; flex-wrap: wrap; position: sticky; bottom: 0; }
+        .edit-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+
+        /* ── PASSWORD MODAL ── */
+        .password-lock-icon { text-align: center; margin-bottom: 1.5rem; }
+        .password-lock-icon i { font-size: 3.5rem; color: var(--warning); }
+        .password-error { color: var(--danger); font-size: 0.85rem; margin-top: 0.5rem; display: none; }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        .shake { animation: shake 0.4s ease; }
+
+        /* ── STATS ROW ── */
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); border-left: 4px solid var(--secondary); }
+        .stat-card h3 { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+
+        /* ── EMPTY STATE ── */
+        .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-secondary); }
+        .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+        .empty-state h3 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+
+        mark { background: #fdcb6e; color: var(--primary); border-radius: 3px; padding: 0 2px; }
 
         .location-cell { line-height: 1.4; }
         .location-main { font-weight: 500; color: var(--text-primary); }
         .location-sub  { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.1rem; }
 
-        /* Custom Searchable Dropdown */
-        .custom-select-wrapper {
-            position: relative;
+        /* ── CUSTOM SELECT ── */
+        .custom-select-wrapper { position: relative; }
+        .custom-select-input { width: 100%; padding: 0.75rem; border: 2px solid var(--border); border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; transition: all 0.3s ease; background: white; }
+        .custom-select-input:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0,184,148,0.1); }
+        .custom-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 2px solid var(--secondary); border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 99999; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+        .dropdown-item { padding: 0.6rem 1rem; cursor: pointer; font-size: 0.9rem; color: var(--text-primary); transition: background 0.15s ease; }
+        .dropdown-item:hover { background: rgba(0,184,148,0.1); color: var(--secondary); }
+        .dropdown-item.selected-loc { background: rgba(0,184,148,0.08); color: var(--secondary); font-weight: 600; }
+        .dropdown-item.no-match { color: var(--text-secondary); font-style: italic; cursor: default; }
+        .dropdown-item.no-match:hover { background: none; color: var(--text-secondary); }
+
+        .subloc-group { margin-top: 0; }
+
+        /* ══════════════════════════════════════════════
+           RESPONSIVE — TABLET  (max 1024px)
+        ══════════════════════════════════════════════ */
+        @media (max-width: 1024px) {
+            .content {
+                margin-left: 88px;
+                padding: 1.5rem;
+            }
+            .sidebar:not(.close) ~ .content {
+                margin-left: 88px;
+            }
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .page-header h1 { font-size: 1.6rem; }
+            .page-header h1 i { font-size: 2rem; }
+            /* Hide less critical columns on tablet */
+            thead th:nth-child(3),
+            tbody td:nth-child(3) { display: none; }
         }
 
-        .custom-select-input {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            background: white;
+        /* ══════════════════════════════════════════════
+           RESPONSIVE — MOBILE  (max 768px)
+        ══════════════════════════════════════════════ */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding: 1rem;
+                padding-bottom: 5rem; /* space for bottom nav if any */
+            }
+            .sidebar:not(.close) ~ .content {
+                margin-left: 0;
+            }
+
+            /* Page Header */
+            .page-header {
+                padding: 1.25rem;
+                border-radius: 12px;
+                margin-bottom: 1rem;
+            }
+            .page-header h1 {
+                font-size: 1.25rem;
+                gap: 0.5rem;
+            }
+            .page-header h1 i { font-size: 1.5rem; }
+            .page-header p { font-size: 0.85rem; }
+
+            /* Stats */
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+                margin-bottom: 1rem;
+            }
+            .stat-card { padding: 1rem; border-radius: 10px; }
+            .stat-card h3 { font-size: 0.75rem; }
+            .stat-card .value { font-size: 1.5rem; }
+
+            /* Controls Bar */
+            .controls-bar {
+                padding: 1rem;
+                margin-bottom: 1rem;
+                gap: 0.75rem;
+                border-radius: 10px;
+            }
+            .search-box { min-width: 100%; }
+            .filter-group {
+                width: 100%;
+                gap: 0.5rem;
+            }
+            .filter-group select,
+            .filter-group .custom-select-wrapper {
+                flex: 1;
+                min-width: 0;
+            }
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+            select.btn { padding-right: 2.5rem; }
+
+            /* Table — card-style rows on mobile */
+            .table-container { border-radius: 10px; }
+            thead { display: none; }
+            tbody tr {
+                display: block;
+                padding: 1rem;
+                border-bottom: 2px solid var(--border);
+                position: relative;
+            }
+            tbody tr:last-child { border-bottom: none; }
+            tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.35rem 0;
+                white-space: normal;
+                font-size: 0.875rem;
+                border: none;
+            }
+            tbody td::before {
+                content: attr(data-label);
+                font-size: 0.72rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                color: var(--text-secondary);
+                min-width: 90px;
+                flex-shrink: 0;
+            }
+            tbody td.actions-cell {
+                justify-content: flex-end;
+                padding-top: 0.5rem;
+                margin-top: 0.25rem;
+                border-top: 1px solid var(--border);
+            }
+            tbody td.actions-cell::before { display: none; }
+
+            /* Modal */
+            .modal-overlay.active {
+                align-items: flex-end;
+                padding: 0;
+            }
+            .modal {
+                border-radius: 20px 20px 0 0;
+                max-height: 92vh;
+                animation: slideUpMobile 0.35s ease;
+            }
+            .modal-header {
+                padding: 1.25rem 1.5rem;
+                border-radius: 20px 20px 0 0;
+            }
+            .modal-header h2 { font-size: 1.15rem; }
+            .modal-body { padding: 1.25rem; }
+            .modal-actions {
+                padding: 1rem 1.25rem;
+                border-radius: 0;
+                gap: 0.75rem;
+            }
+            .modal-actions .btn,
+            .form-actions .btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            /* Detail Grid */
+            .detail-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .detail-item { padding: 0.75rem; }
+            .detail-value { font-size: 0.9rem; }
+
+            /* Edit Form */
+            .edit-form { grid-template-columns: 1fr; gap: 1rem; }
+            .edit-form .form-group.full-width { grid-column: 1; }
+
+            /* Pullout Form */
+            .pullout-form { grid-template-columns: 1fr; gap: 1rem; }
+            .pullout-form .form-group.full-width { grid-column: 1; }
+            .pullout-section { padding: 1rem; }
+            .form-actions { flex-direction: column-reverse; }
+
+            /* Image Gallery */
+            .image-gallery { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
         }
 
-        .custom-select-input:focus {
-            outline: none;
-            border-color: var(--secondary);
-            box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.1);
+        /* ══════════════════════════════════════════════
+           RESPONSIVE — SMALL MOBILE  (max 480px)
+        ══════════════════════════════════════════════ */
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+            .stat-card .value { font-size: 1.3rem; }
+            .detail-grid { grid-template-columns: 1fr; }
+            .image-gallery { grid-template-columns: repeat(2, 1fr); }
+            .filter-group { flex-direction: column; }
+            .filter-group select,
+            .filter-group .custom-select-wrapper { width: 100%; }
+            .modal-actions { flex-direction: column-reverse; }
+            .modal-actions .btn { width: 100%; justify-content: center; }
         }
 
-        .custom-dropdown {
-            display: none;
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0;
-            right: 0;
-            background: white;
-            border: 2px solid var(--secondary);
-            border-radius: 8px;
-            max-height: 220px;
-            overflow-y: auto;
-            z-index: 99999;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
-
-        .dropdown-item {
-            padding: 0.6rem 1rem;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: var(--text-primary);
-            transition: background 0.15s ease;
-        }
-
-        .dropdown-item:hover {
-            background: rgba(0, 184, 148, 0.1);
-            color: var(--secondary);
-        }
-
-        .dropdown-item.selected-loc {
-            background: rgba(0, 184, 148, 0.08);
-            color: var(--secondary);
-            font-weight: 600;
-        }
-
-        .dropdown-item.no-match {
-            color: var(--text-secondary);
-            font-style: italic;
-            cursor: default;
-        }
-
-        .dropdown-item.no-match:hover {
-            background: none;
-            color: var(--text-secondary);
-        }
-
-        /* Location Filter Panel */
-        .location-panel {
-            background: var(--bg-card);
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow);
-            margin-bottom: 1.5rem;
-            overflow: hidden;
-        }
-        .location-panel-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1rem 1.5rem;
-            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%);
-            color: white;
-            cursor: pointer;
-            user-select: none;
-        }
-        .location-panel-header h3 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin: 0;
-        }
-        .location-panel-header .toggle-icon {
-            font-size: 1.2rem;
-            transition: transform 0.3s ease;
-        }
-        .location-panel-header.collapsed .toggle-icon {
-            transform: rotate(-90deg);
-        }
-        .location-panel-body { padding: 1rem 1.5rem; }
-        .location-panel-body.hidden { display: none; }
-        .location-search-wrap { position: relative; margin-bottom: 1rem; }
-        .location-search-wrap input {
-            width: 100%;
-            padding: 0.7rem 1rem 0.7rem 2.5rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-        }
-        .location-search-wrap input:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(0,184,148,0.1); }
-        .location-search-wrap i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1rem; }
-        .location-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 160px; overflow-y: auto; padding: 2px; }
-        .location-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.4rem 0.85rem;
-            border-radius: 20px;
-            border: 2px solid var(--border);
-            background: var(--bg-main);
-            font-size: 0.82rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-            color: var(--text-primary);
-        }
-        .location-chip:hover { border-color: var(--secondary); background: rgba(0,184,148,0.07); color: var(--secondary); }
-        .location-chip.active { border-color: var(--secondary); background: var(--secondary); color: white; }
-        .location-chip .chip-count { background: rgba(0,0,0,0.12); border-radius: 10px; padding: 0 0.4rem; font-size: 0.75rem; font-weight: 700; }
-        .location-chip.active .chip-count { background: rgba(255,255,255,0.25); }
-        .location-clear {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.4rem 0.85rem;
-            border-radius: 20px;
-            border: 2px dashed var(--border);
-            background: transparent;
-            font-size: 0.82rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: var(--text-secondary);
-            white-space: nowrap;
-        }
-        .location-clear:hover { border-color: var(--danger); color: var(--danger); }
-        .location-no-results { font-size: 0.85rem; color: var(--text-secondary); font-style: italic; padding: 0.5rem 0; }
-
-        /* Sub-location pair styling */
-        .subloc-group {
-            background: rgba(0, 184, 148, 0.04);
-            border: 1px dashed rgba(0, 184, 148, 0.35);
-            border-radius: 8px;
-            padding: 0.75rem;
-            margin-top: -0.25rem;
-        }
-        .subloc-group label {
-            color: var(--text-secondary) !important;
-            font-weight: 500 !important;
-        }
-        .subloc-group input {
-            background: white;
+        @keyframes slideUpMobile {
+            from { opacity: 0; transform: translateY(60px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
 <div class="content">
-    <!-- Page Header -->
     <div class="page-header">
-        <h1>
-            <i class='bx bx-package'></i>
-            Inventory Management
-        </h1>
+        <h1><i class='bx bx-package'></i> Inventory Management</h1>
         <p>Click on any row to view details • Manage and track all your assets</p>
     </div>
 
-    <!-- Statistics Row -->
     <div class="stats-row">
-        <div class="stat-card">
-            <h3>Stock Records</h3>
-            <div class="value" id="totalAssets">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>Total Assets</h3>
-            <div class="value" id="activeItems">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>In Transit</h3>
-            <div class="value" id="pulledOut">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>For Checking</h3>
-            <div class="value" id="forChecking">0</div>
-        </div>
+        <div class="stat-card"><h3>Stock Records</h3><div class="value" id="totalAssets">0</div></div>
+        <div class="stat-card"><h3>Total Assets</h3><div class="value" id="activeItems">0</div></div>
+        <div class="stat-card"><h3>In Transit</h3><div class="value" id="pulledOut">0</div></div>
+        <div class="stat-card"><h3>For Checking</h3><div class="value" id="forChecking">0</div></div>
     </div>
 
-    <!-- Controls Bar -->
     <div class="controls-bar">
         <div class="search-box">
             <i class='bx bx-search'></i>
             <input type="text" id="searchInput" placeholder="Search by brand, model, serial number...">
         </div>
         <div class="filter-group">
-            <select id="categoryFilter" class="btn btn-secondary">
-                <option value="">All Categories</option>
-            </select>
+            <select id="categoryFilter" class="btn btn-secondary"><option value="">All Categories</option></select>
             <select id="statusFilter" class="btn btn-secondary">
                 <option value="">All Status</option>
                 <option value="WORKING">Working</option>
                 <option value="NOT WORKING">Not Working</option>
                 <option value="FOR CHECKING">For Checking</option>
             </select>
-            <!-- Location inline searchable dropdown -->
-            <div class="custom-select-wrapper" style="position:relative;">
+            <div class="custom-select-wrapper" style="position:relative; min-width:160px;">
                 <input type="text" id="locationSearchInput" class="btn btn-secondary"
-                       style="min-width:180px; cursor:text; text-align:left; appearance:none; padding-right:2rem;"
-                       placeholder="All Locations"
-                       autocomplete="off"
-                       oninput="filterLocPanel()"
-                       onfocus="showLocPanel()"
-                       onblur="hideLocPanel()">
+                       style="min-width:160px; cursor:text; text-align:left; appearance:none; padding-right:2rem; width:100%;"
+                       placeholder="All Locations" autocomplete="off"
+                       oninput="filterLocPanel()" onfocus="showLocPanel()" onblur="hideLocPanel()">
                 <i class='bx bx-map-pin' style="position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none;"></i>
                 <div class="custom-dropdown" id="locPanelDropdown"></div>
             </div>
         </div>
     </div>
 
-    <!-- Table Container -->
     <div class="table-container">
         <div class="table-wrapper">
             <table id="inventoryTable">
                 <thead>
                     <tr>
-                      <th>Category / Type</th>
+                        <th>Category / Type</th>
                         <th>Brand / Model</th>
                         <th>Serial No</th>
                         <th>Cond</th>
@@ -886,31 +487,17 @@ include 'sidebar.php';
 <div class="modal-overlay" id="viewModal">
     <div class="modal">
         <div class="modal-header">
-            <h2>
-                <i class='bx bx-info-circle'></i>
-                Asset Details
-            </h2>
-            <button class="modal-close" onclick="closeModal('viewModal')">
-                <i class='bx bx-x'></i>
-            </button>
+            <h2><i class='bx bx-info-circle'></i> Asset Details</h2>
+            <button class="modal-close" onclick="closeModal('viewModal')"><i class='bx bx-x'></i></button>
         </div>
         <div class="modal-body">
             <div class="image-gallery" id="imageGallery"></div>
             <div class="detail-grid" id="assetDetails"></div>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('viewModal')">
-                <i class='bx bx-x'></i>
-                Close
-            </button>
-            <button class="btn btn-primary" id="viewModalEditBtn" onclick="openEditFromView()">
-                <i class='bx bx-edit'></i>
-                Edit Asset
-            </button>
-            <button class="btn btn-primary" id="viewModalPulloutBtn" onclick="openPulloutFromView()">
-                <i class='bx bx-transfer-alt'></i>
-                Asset Transfer
-            </button>
+            <button class="btn btn-secondary" onclick="closeModal('viewModal')"><i class='bx bx-x'></i> Close</button>
+            <button class="btn btn-primary" id="viewModalEditBtn" onclick="openEditFromView()"><i class='bx bx-edit'></i> Edit Asset</button>
+            <button class="btn btn-primary" id="viewModalPulloutBtn" onclick="openPulloutFromView()"><i class='bx bx-transfer-alt'></i> Transfer</button>
         </div>
     </div>
 </div>
@@ -919,21 +506,12 @@ include 'sidebar.php';
 <div class="modal-overlay" id="adminPasswordModal">
     <div class="modal" style="max-width: 420px;">
         <div class="modal-header">
-            <h2>
-                <i class='bx bx-lock-alt'></i>
-                Admin Verification
-            </h2>
-            <button class="modal-close" onclick="closeModal('adminPasswordModal')">
-                <i class='bx bx-x'></i>
-            </button>
+            <h2><i class='bx bx-lock-alt'></i> Admin Verification</h2>
+            <button class="modal-close" onclick="closeModal('adminPasswordModal')"><i class='bx bx-x'></i></button>
         </div>
         <div class="modal-body">
-            <div class="password-lock-icon">
-                <i class='bx bx-shield-quarter'></i>
-            </div>
-            <p style="text-align:center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">
-                Enter admin password to edit this asset.
-            </p>
+            <div class="password-lock-icon"><i class='bx bx-shield-quarter'></i></div>
+            <p style="text-align:center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.95rem;">Enter admin password to edit this asset.</p>
             <div class="form-group">
                 <label>Admin Password <span class="required">*</span></label>
                 <input type="password" id="adminPasswordInput" placeholder="Enter admin password..." onkeydown="if(event.key==='Enter') verifyAdminPassword()">
@@ -941,14 +519,8 @@ include 'sidebar.php';
             </div>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('adminPasswordModal')">
-                <i class='bx bx-x'></i>
-                Cancel
-            </button>
-            <button class="btn btn-primary" onclick="verifyAdminPassword()">
-                <i class='bx bx-check-shield'></i>
-                Verify & Continue
-            </button>
+            <button class="btn btn-secondary" onclick="closeModal('adminPasswordModal')"><i class='bx bx-x'></i> Cancel</button>
+            <button class="btn btn-primary" onclick="verifyAdminPassword()"><i class='bx bx-check-shield'></i> Verify & Continue</button>
         </div>
     </div>
 </div>
@@ -957,80 +529,27 @@ include 'sidebar.php';
 <div class="modal-overlay" id="editModal">
     <div class="modal">
         <div class="modal-header">
-            <h2>
-                <i class='bx bx-edit'></i>
-                Edit Asset
-            </h2>
-            <button class="modal-close" onclick="closeModal('editModal')">
-                <i class='bx bx-x'></i>
-            </button>
+            <h2><i class='bx bx-edit'></i> Edit Asset</h2>
+            <button class="modal-close" onclick="closeModal('editModal')"><i class='bx bx-x'></i></button>
         </div>
         <div class="modal-body">
             <form id="editForm" class="edit-form">
                 <input type="hidden" name="asset_id" id="editAssetId">
-
-                <div class="form-group">
-                    <label>Brand</label>
-                    <input type="text" name="brand" id="editBrand" placeholder="e.g. Dell, HP, Acer">
-                </div>
-                <div class="form-group">
-                    <label>Model</label>
-                    <input type="text" name="model" id="editModel" placeholder="e.g. Latitude 5520">
-                </div>
-                <div class="form-group">
-                    <label>Serial Number</label>
-                    <input type="text" name="serial_number" id="editSerial" placeholder="Serial / Asset Tag">
-                </div>
-                <div class="form-group">
-                    <label>Condition</label>
-                    <select name="condition" id="editCondition">
-                        <option value="NEW">New</option>
-                        <option value="USED">Used</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status" id="editStatus">
-                        <option value="WORKING">Working</option>
-                        <option value="NOT WORKING">Not Working</option>
-                        <option value="FOR CHECKING">For Checking</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Location</label>
-                    <input type="text" name="location" id="editLocation" placeholder="e.g. Warehouse A">
-                </div>
-                <div class="form-group">
-                    <label>Sub-Location</label>
-                    <input type="text" name="sub_location" id="editSubLocation" placeholder="e.g. Shelf 3">
-                </div>
-                <div class="form-group full-width">
-                    <label>Description</label>
-                    <textarea name="description" id="editDescription" rows="3" placeholder="Additional notes or description..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>Beginning Balance</label>
-                    <input type="number" name="beg_balance_count" id="editBegBalance" min="0" placeholder="e.g. 10">
-                    <small>Total stock entered at the start.</small>
-                </div>
-                <div class="form-group">
-                    <label>Active Count</label>
-                    <input type="number" name="active_count" id="editActiveCount" min="0" placeholder="e.g. 8"
-                           oninput="previewBegBalance()">
-                    <small id="activeCountHint">Current available items. Adjusts Beginning Balance automatically.</small>
-                </div>
+                <div class="form-group"><label>Brand</label><input type="text" name="brand" id="editBrand" placeholder="e.g. Dell, HP, Acer"></div>
+                <div class="form-group"><label>Model</label><input type="text" name="model" id="editModel" placeholder="e.g. Latitude 5520"></div>
+                <div class="form-group"><label>Serial Number</label><input type="text" name="serial_number" id="editSerial" placeholder="Serial / Asset Tag"></div>
+                <div class="form-group"><label>Condition</label><select name="condition" id="editCondition"><option value="NEW">New</option><option value="USED">Used</option></select></div>
+                <div class="form-group"><label>Status</label><select name="status" id="editStatus"><option value="WORKING">Working</option><option value="NOT WORKING">Not Working</option><option value="FOR CHECKING">For Checking</option></select></div>
+                <div class="form-group"><label>Location</label><input type="text" name="location" id="editLocation" placeholder="e.g. Warehouse A"></div>
+                <div class="form-group"><label>Sub-Location</label><input type="text" name="sub_location" id="editSubLocation" placeholder="e.g. Shelf 3"></div>
+                <div class="form-group full-width"><label>Description</label><textarea name="description" id="editDescription" rows="3" placeholder="Additional notes or description..."></textarea></div>
+                <div class="form-group"><label>Beginning Balance</label><input type="number" name="beg_balance_count" id="editBegBalance" min="0" placeholder="e.g. 10"><small>Total stock entered at the start.</small></div>
+                <div class="form-group"><label>Active Count</label><input type="number" name="active_count" id="editActiveCount" min="0" placeholder="e.g. 8" oninput="previewBegBalance()"><small id="activeCountHint">Current available items. Adjusts Beginning Balance automatically.</small></div>
             </form>
         </div>
         <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="closeModal('editModal')">
-                <i class='bx bx-x'></i>
-                Cancel
-            </button>
-            <button class="btn btn-primary" onclick="submitEditAsset()">
-                <i class='bx bx-save'></i>
-                Save Changes
-            </button>
+            <button class="btn btn-secondary" onclick="closeModal('editModal')"><i class='bx bx-x'></i> Cancel</button>
+            <button class="btn btn-primary" onclick="submitEditAsset()"><i class='bx bx-save'></i> Save Changes</button>
         </div>
     </div>
 </div>
@@ -1039,46 +558,35 @@ include 'sidebar.php';
 <div class="modal-overlay" id="pulloutModal">
     <div class="modal" style="max-width: 780px;">
         <div class="modal-header">
-            <h2>
-                <i class='bx bx-transfer-alt'></i>
-                Asset Transfer Request
-            </h2>
-            <button class="modal-close" onclick="closeModal('pulloutModal')">
-                <i class='bx bx-x'></i>
-            </button>
+            <h2><i class='bx bx-transfer-alt'></i> Asset Transfer Request</h2>
+            <button class="modal-close" onclick="closeModal('pulloutModal')"><i class='bx bx-x'></i></button>
         </div>
         <div class="modal-body">
             <div class="pullout-section">
-                <h3>
-                    <i class='bx bx-transfer-alt'></i>
-                    Fill Transfer Details
-                </h3>
+                <h3><i class='bx bx-transfer-alt'></i> Fill Transfer Details</h3>
                 <form class="pullout-form" id="pulloutForm">
                     <input type="hidden" name="asset_id" id="modalAssetId">
 
-                    <!-- Row 1: Quantity + Date Needed -->
                     <div class="form-group">
                         <label>Quantity <span class="required">*</span></label>
                         <input type="number" name="quantity" id="pullout_quantity" min="1" value="1" required>
                         <small>Available: <strong id="available_qty">0</strong></small>
                     </div>
-
                     <div class="form-group">
                         <label>Date Needed <span class="required">*</span></label>
                         <input type="date" name="date_needed" required>
                     </div>
 
-                    <!-- Row 2: From + To (searchable dropdowns) -->
                     <div class="form-group">
                         <label>From (Source) <span class="required">*</span></label>
                         <div class="custom-select-wrapper">
-                            <input type="text" id="from_search" class="custom-select-input" placeholder="Search location..." autocomplete="off" oninput="filterDropdown('from')" onfocus="showDropdown('from')" onblur="hideDropdown('from')">
+                            <input type="text" id="from_search" class="custom-select-input" readonly
+                                   style="background:#f1f2f6; color:var(--text-secondary); cursor:not-allowed;">
                             <input type="hidden" name="from_location" id="from_location_value">
                             <div class="custom-dropdown" id="from_dropdown"></div>
                         </div>
                         <small>Where is the asset coming from?</small>
                     </div>
-
                     <div class="form-group">
                         <label>To (Recipient) <span class="required">*</span></label>
                         <div class="custom-select-wrapper">
@@ -1089,22 +597,12 @@ include 'sidebar.php';
                         <small>Where is the asset going?</small>
                     </div>
 
-                    <!-- Row 2b: Sub-locations (optional, visually paired below From/To) -->
                     <div class="form-group subloc-group">
-                        <label><i class='bx bx-subdirectory-right' style="font-size:0.9rem;vertical-align:middle;margin-right:3px;"></i>From Sub-Location</label>
-                        <input type="text" name="from_sub_location" id="from_sub_location_value"
-                               placeholder="e.g. Shelf 3, Rack B, Room 2..." autocomplete="off">
-                        <small>Optional — specific spot within source.</small>
+                        <label>From Sub-Location</label>
+                        <input type="text" name="from_sub_location" id="from_sub_location_value" readonly
+                               style="background:#f1f2f6; color:var(--text-secondary); cursor:not-allowed;">
                     </div>
 
-                    <div class="form-group subloc-group">
-                        <label><i class='bx bx-subdirectory-right' style="font-size:0.9rem;vertical-align:middle;margin-right:3px;"></i>To Sub-Location</label>
-                        <input type="text" name="to_sub_location" id="to_sub_location_value"
-                               placeholder="e.g. Shelf 3, Rack B, Room 2..." autocomplete="off">
-                        <small>Optional — specific spot within destination.</small>
-                    </div>
-
-                    <!-- Row 3: Purpose (searchable dropdown) -->
                     <div class="form-group full-width">
                         <label>Purpose <span class="required">*</span></label>
                         <div class="custom-select-wrapper">
@@ -1114,7 +612,6 @@ include 'sidebar.php';
                         </div>
                     </div>
 
-                    <!-- Row 4: Requested By + Received By -->
                     <div class="form-group">
                         <label>Requested By <span class="required">*</span></label>
                         <div class="custom-select-wrapper">
@@ -1124,21 +621,10 @@ include 'sidebar.php';
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Received By <span class="required">*</span></label>
-                        <input type="text" name="received_by" id="received_by_value" placeholder="Enter name of receiver..." autocomplete="off">
-                    </div>
-
                 </form>
                 <div class="form-actions">
-                    <button class="btn btn-secondary" onclick="closeModal('pulloutModal')">
-                        <i class='bx bx-x'></i>
-                        Cancel
-                    </button>
-                    <button class="btn btn-primary" onclick="submitPullout()">
-                        <i class='bx bx-transfer-alt'></i>
-                        Submit Transfer
-                    </button>
+                    <button class="btn btn-secondary" onclick="closeModal('pulloutModal')"><i class='bx bx-x'></i> Cancel</button>
+                    <button class="btn btn-primary" onclick="submitPullout()"><i class='bx bx-transfer-alt'></i> Submit Transfer</button>
                 </div>
             </div>
         </div>
@@ -1146,14 +632,12 @@ include 'sidebar.php';
 </div>
 
 <script>
-    let inventoryData = [];
+    let inventoryData  = [];
     let currentAssetId = null;
     let pendingEditAssetId = null;
-    let selectedLocation = '';   // active location filter
+    let selectedLocation   = '';
 
-    // ──────────────────────────────────────────────
-    // LOCATION INLINE FILTER
-    // ──────────────────────────────────────────────
+    // ── LOCATION INLINE FILTER ────────────────────────────────────────────────
     function buildLocationMap(data) {
         const map = {};
         data.forEach(item => {
@@ -1170,7 +654,6 @@ include 'sidebar.php';
         const matches = LOCATIONS.filter(l => !term || l.toLowerCase().includes(term.toLowerCase().trim()));
         dd.innerHTML  = '';
 
-        // "All Locations" at top
         const allItem = document.createElement('div');
         allItem.className = 'dropdown-item' + (!selectedLocation ? ' selected-loc' : '');
         allItem.innerHTML = '<em style="color:var(--text-secondary);">All Locations</em>';
@@ -1191,71 +674,26 @@ include 'sidebar.php';
         }
     }
 
-    function filterLocPanel() {
-        buildLocPanelDropdown(document.getElementById('locationSearchInput').value);
-        document.getElementById('locPanelDropdown').style.display = 'block';
-    }
+    function filterLocPanel() { buildLocPanelDropdown(document.getElementById('locationSearchInput').value); document.getElementById('locPanelDropdown').style.display = 'block'; }
+    function showLocPanel()   { buildLocPanelDropdown(document.getElementById('locationSearchInput').value); document.getElementById('locPanelDropdown').style.display = 'block'; }
+    function hideLocPanel()   { setTimeout(() => { document.getElementById('locPanelDropdown').style.display = 'none'; document.getElementById('locationSearchInput').value = selectedLocation || ''; }, 200); }
+    function selectLocPanel(loc) { selectedLocation = loc; document.getElementById('locationSearchInput').value = loc; document.getElementById('locPanelDropdown').style.display = 'none'; loadInventory(); }
 
-    function showLocPanel() {
-        buildLocPanelDropdown(document.getElementById('locationSearchInput').value);
-        document.getElementById('locPanelDropdown').style.display = 'block';
-    }
-
-    function hideLocPanel() {
-        setTimeout(() => {
-            document.getElementById('locPanelDropdown').style.display = 'none';
-            document.getElementById('locationSearchInput').value = selectedLocation || '';
-        }, 200);
-    }
-
-    function selectLocPanel(loc) {
-        selectedLocation = loc;
-        document.getElementById('locationSearchInput').value = loc;
-        document.getElementById('locPanelDropdown').style.display = 'none';
-        loadInventory();
-    }
-
-    function clearLocationFilter() {
-        selectedLocation = '';
-        document.getElementById('locationSearchInput').value = '';
-        loadInventory();
-    }
-
-    function renderLocationChips() { /* no-op */ }
-
-    // ──────────────────────────────────────────────
-    // LOAD & RENDER
-    // ──────────────────────────────────────────────
+    // ── LOAD & RENDER ─────────────────────────────────────────────────────────
     async function loadInventory() {
         try {
-            const searchTerm = document.getElementById('searchInput').value;
-            const category   = document.getElementById('categoryFilter').value;
-            const status     = document.getElementById('statusFilter').value;
-
             const params = new URLSearchParams({
                 action:   'get_inventory',
-                search:   searchTerm,
-                category: category,
-                status:   status,
+                search:   document.getElementById('searchInput').value,
+                category: document.getElementById('categoryFilter').value,
+                status:   document.getElementById('statusFilter').value,
                 location: selectedLocation
             });
-
             const response = await fetch(`inventory_api.php?${params}`);
             const result   = await response.json();
-
-            if (result.success) {
-                inventoryData = result.data;
-                renderLocationChips();
-                renderInventoryTable();
-                updateStats();
-            } else {
-                console.error('Error loading inventory:', result.error);
-                showNotification('Error loading inventory', 'error');
-            }
-        } catch (error) {
-            console.error('Fetch error:', error);
-            showNotification('Failed to load inventory data', 'error');
-        }
+            if (result.success) { inventoryData = result.data; renderInventoryTable(); updateStats(); }
+            else showNotification('Error loading inventory', 'error');
+        } catch (error) { showNotification('Failed to load inventory data', 'error'); }
     }
 
     function highlightText(text, term) {
@@ -1270,88 +708,48 @@ include 'sidebar.php';
         tbody.innerHTML  = '';
 
         if (inventoryData.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="11" style="text-align: center; padding: 3rem;">
-                        <div class="empty-state">
-                            <i class='bx bx-package'></i>
-                            <h3>No assets found${selectedLocation ? ` in "${selectedLocation}"` : ''}</h3>
-                            <p>Try adjusting your filters or add new assets</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:3rem;white-space:normal;"><div class="empty-state"><i class='bx bx-package'></i><h3>No assets found${selectedLocation ? ` in "${selectedLocation}"` : ''}</h3><p>Try adjusting your filters</p></div></td></tr>`;
             return;
         }
 
         inventoryData.forEach(item => {
             const activeCount = parseInt(item.active_count) || 0;
             const h = (val) => highlightText(val, searchTerm);
-
             const row = document.createElement('tr');
             row.setAttribute('data-id', item.id);
-            row.onclick = function(e) {
-                if (!e.target.closest('.action-btn')) {
-                    openViewModal(item.id);
-                }
-            };
-
+            row.onclick = function(e) { if (!e.target.closest('.action-btn')) openViewModal(item.id); };
             row.innerHTML = `
-               <td>
-  <div class="location-cell">
-    <div class="location-main">${h(item.category) || 'N/A'}</div>
-    ${item.asset_type ? `<div class="location-sub">${h(item.asset_type)}</div>` : ''}
-  </div>
-</td>
-              <td>
-  <div class="location-cell">
-    <div class="location-main">${h(item.brand) || 'N/A'}</div>
-    ${item.model ? `<div class="location-sub">${h(item.model)}</div>` : ''}
-  </div>
-</td>
-                <td><code class="badge">${h(item.serial_number) || 'N/A'}</code></td>
-                <td><span class="badge badge-${(item.condition || '').toLowerCase()}">${item.condition || 'N/A'}</span></td>
-                <td><span class="badge badge-${(item.status || '').toLowerCase().replace(' ', '-')}">${item.status || 'N/A'}</span></td>
-                <td>
-  <div class="location-cell">
-    <div class="location-main">${h(item.location) || 'N/A'}</div>
-    ${item.sub_location ? `<div class="location-sub">${h(item.sub_location)}</div>` : ''}
-  </div>
-</td>
-                <td><strong style="color: var(--secondary); font-size: 1.1rem;">${activeCount}</strong></td>
+                <td data-label="Category"><div class="location-cell"><div class="location-main">${h(item.category)||'N/A'}</div>${item.asset_type?`<div class="location-sub">${h(item.asset_type)}</div>`:''}</div></td>
+                <td data-label="Brand / Model"><div class="location-cell"><div class="location-main">${h(item.brand)||'N/A'}</div>${item.model?`<div class="location-sub">${h(item.model)}</div>`:''}</div></td>
+                <td data-label="Serial No"><code class="badge">${h(item.serial_number)||'N/A'}</code></td>
+                <td data-label="Condition"><span class="badge badge-${(item.condition||'').toLowerCase()}">${item.condition||'N/A'}</span></td>
+                <td data-label="Status"><span class="badge badge-${(item.status||'').toLowerCase().replace(' ','-')}">${item.status||'N/A'}</span></td>
+                <td data-label="Location"><div class="location-cell"><div class="location-main">${h(item.location)||'N/A'}</div>${item.sub_location?`<div class="location-sub">${h(item.sub_location)}</div>`:''}</div></td>
+                <td data-label="Active"><strong style="color:var(--secondary);font-size:1.1rem;">${activeCount}</strong></td>
                 <td class="actions-cell">
-                    <button class="action-btn edit" onclick="event.stopPropagation(); openAdminPasswordModal(${item.id})" title="Edit Asset">
-                        <i class='bx bx-edit'></i>
-                    </button>
-                    <button class="action-btn pullout" onclick="event.stopPropagation(); openPulloutModal(${item.id})" title="Asset Transfer Request" ${activeCount <= 0 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''}>
+                    <button class="action-btn edit" onclick="event.stopPropagation(); openAdminPasswordModal(${item.id})" title="Edit Asset"><i class='bx bx-edit'></i></button>
+                    <button class="action-btn pullout" onclick="event.stopPropagation(); openPulloutModal(${item.id})" title="Asset Transfer Request" ${activeCount<=0?'disabled style="opacity:0.3;cursor:not-allowed;"':''}>
                         <i class='bx bx-transfer-alt'></i>
                     </button>
-                </td>
-            `;
+                </td>`;
             tbody.appendChild(row);
         });
     }
 
     function updateStats() {
-        document.getElementById('totalAssets').textContent  = inventoryData.length;
-        document.getElementById('activeItems').textContent  = inventoryData.reduce((s, i) => s + (parseInt(i.active_count) || 0), 0);
-        document.getElementById('pulledOut').textContent    = inventoryData.reduce((s, i) => s + (parseInt(i.for_pullout) || 0), 0);
-        document.getElementById('forChecking').textContent  = inventoryData.filter(i => i.status === 'FOR CHECKING').length;
+        document.getElementById('totalAssets').textContent = inventoryData.length;
+        document.getElementById('activeItems').textContent = inventoryData.reduce((s,i) => s+(parseInt(i.active_count)||0), 0);
+        document.getElementById('pulledOut').textContent   = inventoryData.reduce((s,i) => s+(parseInt(i.for_pullout)||0), 0);
+        document.getElementById('forChecking').textContent = inventoryData.filter(i => i.status==='FOR CHECKING').length;
     }
 
-    // ──────────────────────────────────────────────
-    // VIEW MODAL
-    // ──────────────────────────────────────────────
+    // ── VIEW MODAL ────────────────────────────────────────────────────────────
     async function openViewModal(id) {
         try {
             currentAssetId = id;
             const response = await fetch(`inventory_api.php?action=get_asset_details&asset_id=${id}`);
             const result   = await response.json();
-
-            if (!result.success) {
-                showNotification('Failed to load asset details', 'error');
-                return;
-            }
+            if (!result.success) { showNotification('Failed to load asset details', 'error'); return; }
 
             const item    = result.data;
             const gallery = document.getElementById('imageGallery');
@@ -1359,33 +757,27 @@ include 'sidebar.php';
 
             if (item.images && item.images.length > 0) {
                 item.images.forEach(img => {
-                    gallery.innerHTML += `
-                        <div class="image-item">
-                            <img src="${img}" alt="Asset Image" onclick="window.open('${img}', '_blank')">
-                        </div>`;
+                    gallery.innerHTML += `<div class="image-item"><img src="${img}" alt="Asset Image" onclick="window.open('${img}','_blank')"></div>`;
                 });
             } else {
-                gallery.innerHTML = `
-                    <div class="image-item">
-                        <div class="image-placeholder"><i class='bx bx-image'></i></div>
-                    </div>`;
+                gallery.innerHTML = `<div class="image-item"><div class="image-placeholder"><i class='bx bx-image'></i></div></div>`;
             }
 
             document.getElementById('assetDetails').innerHTML = `
                 <div class="detail-item"><div class="detail-label">Asset ID</div><div class="detail-value">#${item.id}</div></div>
-                <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">${item.category || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Asset Type</div><div class="detail-value">${item.asset_type || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Brand</div><div class="detail-value">${item.brand || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Model</div><div class="detail-value">${item.model || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Serial Number</div><div class="detail-value">${item.serial_number || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Condition</div><div class="detail-value"><span class="badge badge-${(item.condition || '').toLowerCase()}">${item.condition || 'N/A'}</span></div></div>
-                <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge badge-${(item.status || '').toLowerCase().replace(' ', '-')}">${item.status || 'N/A'}</span></div></div>
-                <div class="detail-item"><div class="detail-label">Location</div><div class="detail-value">${item.location || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Sub-Location</div><div class="detail-value">${item.sub_location || 'N/A'}</div></div>
-                <div class="detail-item"><div class="detail-label">Beginning Balance</div><div class="detail-value">${item.beg_balance_count || 0}</div></div>
-                <div class="detail-item"><div class="detail-label">Active Count</div><div class="detail-value"><strong style="color: var(--secondary); font-size: 1.5rem;">${item.active_count || 0}</strong></div></div>
-                <div class="detail-item"><div class="detail-label">Description</div><div class="detail-value">${item.description || 'No description'}</div></div>
-                <div class="detail-item"><div class="detail-label">QR Code</div><div class="detail-value"><code>${item.qr_code || 'N/A'}</code></div></div>
+                <div class="detail-item"><div class="detail-label">Category</div><div class="detail-value">${item.category||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Asset Type</div><div class="detail-value">${item.asset_type||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Brand</div><div class="detail-value">${item.brand||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Model</div><div class="detail-value">${item.model||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Serial Number</div><div class="detail-value">${item.serial_number||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Condition</div><div class="detail-value"><span class="badge badge-${(item.condition||'').toLowerCase()}">${item.condition||'N/A'}</span></div></div>
+                <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value"><span class="badge badge-${(item.status||'').toLowerCase().replace(' ','-')}">${item.status||'N/A'}</span></div></div>
+                <div class="detail-item"><div class="detail-label">Location</div><div class="detail-value">${item.location||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Sub-Location</div><div class="detail-value">${item.sub_location||'N/A'}</div></div>
+                <div class="detail-item"><div class="detail-label">Beginning Balance</div><div class="detail-value">${item.beg_balance_count||0}</div></div>
+                <div class="detail-item"><div class="detail-label">Active Count</div><div class="detail-value"><strong style="color:var(--secondary);font-size:1.5rem;">${item.active_count||0}</strong></div></div>
+                <div class="detail-item"><div class="detail-label">Description</div><div class="detail-value">${item.description||'No description'}</div></div>
+                <div class="detail-item"><div class="detail-label">QR Code</div><div class="detail-value"><code>${item.qr_code||'N/A'}</code></div></div>
             `;
 
             const availableQty  = parseInt(item.active_count) || 0;
@@ -1395,26 +787,13 @@ include 'sidebar.php';
             pulloutBtn.style.cursor  = availableQty <= 0 ? 'not-allowed' : 'pointer';
 
             document.getElementById('viewModal').classList.add('active');
-
-        } catch (error) {
-            console.error('Error loading asset details:', error);
-            showNotification('Failed to load asset details', 'error');
-        }
+        } catch (error) { showNotification('Failed to load asset details', 'error'); }
     }
 
-    function openEditFromView() {
-        closeModal('viewModal');
-        openAdminPasswordModal(currentAssetId);
-    }
+    function openEditFromView()    { closeModal('viewModal'); openAdminPasswordModal(currentAssetId); }
+    function openPulloutFromView() { closeModal('viewModal'); openPulloutModal(currentAssetId); }
 
-    function openPulloutFromView() {
-        closeModal('viewModal');
-        openPulloutModal(currentAssetId);
-    }
-
-    // ──────────────────────────────────────────────
-    // ADMIN PASSWORD MODAL → EDIT MODAL
-    // ──────────────────────────────────────────────
+    // ── ADMIN PASSWORD → EDIT ─────────────────────────────────────────────────
     function openAdminPasswordModal(id) {
         pendingEditAssetId = id;
         document.getElementById('adminPasswordInput').value = '';
@@ -1426,30 +805,20 @@ include 'sidebar.php';
     async function verifyAdminPassword() {
         const password = document.getElementById('adminPasswordInput').value;
         if (!password) return;
-
         try {
             const response = await fetch('inventory_api.php?action=verify_admin_password', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password })
             });
             const result = await response.json();
-
-            if (result.success) {
-                closeModal('adminPasswordModal');
-                openEditModal(pendingEditAssetId);
-            } else {
-                const errEl = document.getElementById('passwordError');
-                errEl.style.display = 'block';
+            if (result.success) { closeModal('adminPasswordModal'); openEditModal(pendingEditAssetId); }
+            else {
+                document.getElementById('passwordError').style.display = 'block';
                 const input = document.getElementById('adminPasswordInput');
-                input.classList.add('shake');
-                input.value = '';
+                input.classList.add('shake'); input.value = '';
                 setTimeout(() => input.classList.remove('shake'), 400);
             }
-        } catch (error) {
-            console.error('Password verify error:', error);
-            showNotification('Verification failed. Try again.', 'error');
-        }
+        } catch (error) { showNotification('Verification failed. Try again.', 'error'); }
     }
 
     async function openEditModal(id) {
@@ -1457,112 +826,66 @@ include 'sidebar.php';
             currentAssetId = id;
             const response = await fetch(`inventory_api.php?action=get_asset_details&asset_id=${id}`);
             const result   = await response.json();
-
-            if (!result.success) {
-                showNotification('Failed to load asset details', 'error');
-                return;
-            }
-
+            if (!result.success) { showNotification('Failed to load asset details', 'error'); return; }
             const item = result.data;
-            document.getElementById('editAssetId').value      = item.id;
-            document.getElementById('editBrand').value        = item.brand || '';
-            document.getElementById('editModel').value        = item.model || '';
-            document.getElementById('editSerial').value       = item.serial_number || '';
-            document.getElementById('editCondition').value    = item.condition || 'NEW';
-            document.getElementById('editStatus').value       = item.status || 'WORKING';
-            document.getElementById('editLocation').value     = item.location || '';
-            document.getElementById('editSubLocation').value  = item.sub_location || '';
-            document.getElementById('editDescription').value  = item.description || '';
-            document.getElementById('editBegBalance').value   = item.beg_balance_count ?? '';
-            document.getElementById('editActiveCount').value  = item.active_count ?? '';
-
+            document.getElementById('editAssetId').value     = item.id;
+            document.getElementById('editBrand').value       = item.brand || '';
+            document.getElementById('editModel').value       = item.model || '';
+            document.getElementById('editSerial').value      = item.serial_number || '';
+            document.getElementById('editCondition').value   = item.condition || 'NEW';
+            document.getElementById('editStatus').value      = item.status || 'WORKING';
+            document.getElementById('editLocation').value    = item.location || '';
+            document.getElementById('editSubLocation').value = item.sub_location || '';
+            document.getElementById('editDescription').value = item.description || '';
+            document.getElementById('editBegBalance').value  = item.beg_balance_count ?? '';
+            document.getElementById('editActiveCount').value = item.active_count ?? '';
             _editReleasedCount = parseInt(item.for_pullout) || 0;
             _editReturnedCount = parseInt(item.beg_balance_count) - parseInt(item.active_count) - _editReleasedCount || 0;
             document.getElementById('activeCountHint').textContent = 'Current available items. Adjusts Beginning Balance automatically.';
             document.getElementById('activeCountHint').style.color = '';
-
             document.getElementById('editModal').classList.add('active');
-
-        } catch (error) {
-            console.error('Error loading edit details:', error);
-            showNotification('Failed to open edit form', 'error');
-        }
+        } catch (error) { showNotification('Failed to open edit form', 'error'); }
     }
 
     async function submitEditAsset() {
-        const form     = document.getElementById('editForm');
-        const formData = new FormData(form);
-        const data     = Object.fromEntries(formData.entries());
-
+        const data = Object.fromEntries(new FormData(document.getElementById('editForm')).entries());
         try {
             const response = await fetch('inventory_api.php?action=update_asset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
             });
             const result = await response.json();
-
-            if (result.success) {
-                showNotification('Asset updated successfully!', 'success');
-                closeModal('editModal');
-                loadInventory();
-            } else {
-                showNotification(result.error || 'Failed to update asset', 'error');
-            }
-        } catch (error) {
-            console.error('Error updating asset:', error);
-            showNotification('Failed to update asset', 'error');
-        }
+            if (result.success) { showNotification('Asset updated successfully!', 'success'); closeModal('editModal'); loadInventory(); }
+            else showNotification(result.error || 'Failed to update asset', 'error');
+        } catch (error) { showNotification('Failed to update asset', 'error'); }
     }
 
-    // ──────────────────────────────────────────────
-    // PULL-OUT MODAL
-    // ──────────────────────────────────────────────
+    // ── PULL-OUT MODAL ────────────────────────────────────────────────────────
     async function openPulloutModal(id) {
         try {
             currentAssetId = id;
             const response = await fetch(`inventory_api.php?action=get_asset_details&asset_id=${id}`);
             const result   = await response.json();
-
-            if (!result.success) {
-                showNotification('Failed to load asset details', 'error');
-                return;
-            }
+            if (!result.success) { showNotification('Failed to load asset details', 'error'); return; }
 
             const item         = result.data;
             const availableQty = parseInt(item.active_count) || 0;
+            if (availableQty <= 0) { showNotification('No available items to transfer', 'error'); return; }
 
-            if (availableQty <= 0) {
-                showNotification('No available items to transfer', 'error');
-                return;
-            }
-
-            document.getElementById('modalAssetId').value        = item.id;
-            document.getElementById('available_qty').textContent  = availableQty;
-            document.getElementById('pullout_quantity').max       = availableQty;
-            document.getElementById('pullout_quantity').value     = Math.min(1, availableQty);
+            document.getElementById('modalAssetId').value       = item.id;
+            document.getElementById('available_qty').textContent = availableQty;
+            document.getElementById('pullout_quantity').max      = availableQty;
+            document.getElementById('pullout_quantity').value    = Math.min(1, availableQty);
 
             const today = new Date().toISOString().split('T')[0];
             document.querySelector('input[name="date_needed"]').min = today;
 
-            // Auto-fill From location and sub-location from the asset's current location
             const assetLoc    = (item.location     || '').trim();
             const assetSubLoc = (item.sub_location || '').trim();
-
-            if (assetLoc) {
-                document.getElementById('from_search').value         = assetLoc;
-                document.getElementById('from_location_value').value = assetLoc;
-            }
-            if (assetSubLoc) {
-                document.getElementById('from_sub_location_value').value = assetSubLoc;
-            }
+            if (assetLoc)    { document.getElementById('from_search').value         = assetLoc; document.getElementById('from_location_value').value = assetLoc; }
+            if (assetSubLoc) { document.getElementById('from_sub_location_value').value = assetSubLoc; }
 
             document.getElementById('pulloutModal').classList.add('active');
-
-        } catch (error) {
-            console.error('Error:', error);
-            showNotification('Failed to open transfer form', 'error');
-        }
+        } catch (error) { showNotification('Failed to open transfer form', 'error'); }
     }
 
     function closeModal(modalId) {
@@ -1571,9 +894,7 @@ include 'sidebar.php';
         if (modalId !== 'adminPasswordModal') currentAssetId = null;
     }
 
-    // ──────────────────────────────────────────────
-    // SEARCHABLE DROPDOWN DATA
-    // ──────────────────────────────────────────────
+    // ── DROPDOWN DATA ─────────────────────────────────────────────────────────
     const LOCATIONS = [
         "QC WareHouse","Pulilan WareHouse","CFE","CFE 2","GSI","ENT Vertis",
         "CBTL A30","CBTL FLZ","CBTL TRK","CBTL TR3","CBTL FVW","CBTL UT2","CBTL UTC","NN UTC",
@@ -1612,15 +933,8 @@ include 'sidebar.php';
         "CBTL LUC-DS","CBTL LUN-DS"
     ];
 
-    const PURPOSES = [
-        "Testing","Installation","Setup","Defective","Service Unit","Buffer"
-    ];
-
-    const REQUESTERS = [
-        "Allen","Arbie","Arwin","Christian","Darwin","Don","Dyzel","Gerr","Gheo","Gilbert",
-        "Jackie","Jake","JB","JC","Jessica","Jubilee","Lea","Mar","Patrick","Princess",
-        "Ricky","Ron","Rai","Toto","Admin"
-    ];
+    const PURPOSES   = ["Testing","Installation","Setup","Defective","Service Unit","Buffer"];
+    const REQUESTERS = ["Allen","Arbie","Arwin","Christian","Darwin","Don","Dyzel","Gerr","Gheo","Gilbert","Jackie","Jake","JB","JC","Jessica","Jubilee","Lea","Mar","Patrick","Princess","Ricky","Ron","Rai","Toto","Admin"];
 
     const DROPDOWN_CONFIG = {
         from:         { data: LOCATIONS,  searchId: 'from_search',         valueId: 'from_location_value',  dropdownId: 'from_dropdown' },
@@ -1635,63 +949,26 @@ include 'sidebar.php';
         const term    = document.getElementById(cfg.searchId).value.toLowerCase().trim();
         const matches = cfg.data.filter(v => v.toLowerCase().includes(term));
         dd.innerHTML  = '';
-        if (matches.length === 0) {
-            dd.innerHTML = '<div class="dropdown-item no-match">No results found</div>';
-        } else {
-            matches.forEach(val => {
-                const item = document.createElement('div');
-                item.className = 'dropdown-item';
-                item.textContent = val;
-                item.onmousedown = () => selectDropdownItem(key, val);
-                dd.appendChild(item);
-            });
-        }
+        if (matches.length === 0) { dd.innerHTML = '<div class="dropdown-item no-match">No results found</div>'; }
+        else { matches.forEach(val => { const item = document.createElement('div'); item.className = 'dropdown-item'; item.textContent = val; item.onmousedown = () => selectDropdownItem(key, val); dd.appendChild(item); }); }
     }
 
-    function filterDropdown(key) {
-        buildDropdown(key);
-        const cfg = DROPDOWN_CONFIG[key];
-        document.getElementById(cfg.valueId).value = '';
-        document.getElementById(cfg.dropdownId).style.display = 'block';
-    }
-
-    function showDropdown(key) {
-        buildDropdown(key);
-        document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'block';
-    }
-
-    function hideDropdown(key) {
-        setTimeout(() => {
-            document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'none';
-            const cfg = DROPDOWN_CONFIG[key];
-            const hidden = document.getElementById(cfg.valueId).value;
-            if (!hidden) document.getElementById(cfg.searchId).value = '';
-        }, 200);
-    }
-
-    function selectDropdownItem(key, val) {
-        const cfg = DROPDOWN_CONFIG[key];
-        document.getElementById(cfg.searchId).value = val;
-        document.getElementById(cfg.valueId).value  = val;
-        document.getElementById(cfg.dropdownId).style.display = 'none';
-    }
+    function filterDropdown(key)  { buildDropdown(key); document.getElementById(DROPDOWN_CONFIG[key].valueId).value = ''; document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'block'; }
+    function showDropdown(key)    { buildDropdown(key); document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'block'; }
+    function hideDropdown(key)    { setTimeout(() => { document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'none'; if (!document.getElementById(DROPDOWN_CONFIG[key].valueId).value) document.getElementById(DROPDOWN_CONFIG[key].searchId).value = ''; }, 200); }
+    function selectDropdownItem(key, val) { document.getElementById(DROPDOWN_CONFIG[key].searchId).value = val; document.getElementById(DROPDOWN_CONFIG[key].valueId).value = val; document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'none'; }
 
     function resetTransferForm() {
         document.getElementById('pulloutForm').reset();
         Object.keys(DROPDOWN_CONFIG).forEach(key => {
-            const cfg = DROPDOWN_CONFIG[key];
-            document.getElementById(cfg.searchId).value = '';
-            document.getElementById(cfg.valueId).value  = '';
-            document.getElementById(cfg.dropdownId).style.display = 'none';
+            document.getElementById(DROPDOWN_CONFIG[key].searchId).value = '';
+            document.getElementById(DROPDOWN_CONFIG[key].valueId).value  = '';
+            document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display = 'none';
         });
-        // Clear sub-location fields too
         document.getElementById('from_sub_location_value').value = '';
-        document.getElementById('to_sub_location_value').value   = '';
     }
 
-    // ──────────────────────────────────────────────
-    // PULL-OUT / TRANSFER SUBMIT
-    // ──────────────────────────────────────────────
+    // ── SUBMIT TRANSFER ───────────────────────────────────────────────────────
     async function submitPullout() {
         const form     = document.getElementById('pulloutForm');
         const formData = new FormData(form);
@@ -1703,17 +980,12 @@ include 'sidebar.php';
             from_location:     formData.get('from_location'),
             from_sub_location: (document.getElementById('from_sub_location_value').value || '').trim(),
             to_location:       formData.get('to_location'),
-            to_sub_location:   (document.getElementById('to_sub_location_value').value || '').trim(),
             purpose:           formData.get('purpose'),
             requested_by:      formData.get('requested_by'),
-            received_by:       (document.getElementById('received_by_value').value || '').trim(),
         };
 
         const availableQty = parseInt(document.getElementById('available_qty').textContent);
-        if (data.quantity > availableQty) {
-            showNotification(`Cannot transfer ${data.quantity} items. Only ${availableQty} available.`, 'error');
-            return;
-        }
+        if (data.quantity > availableQty) { showNotification(`Cannot transfer ${data.quantity} items. Only ${availableQty} available.`, 'error'); return; }
 
         const missing = [];
         if (!data.quantity || data.quantity < 1) missing.push('Quantity');
@@ -1722,59 +994,29 @@ include 'sidebar.php';
         if (!data.to_location)   missing.push('To (Recipient)');
         if (!data.purpose)       missing.push('Purpose');
         if (!data.requested_by)  missing.push('Requested By');
-        if (!data.received_by)   missing.push('Received By');
 
-        if (missing.length > 0) {
-            showNotification(`Please fill in: ${missing.join(', ')}`, 'error');
-            return;
-        }
-
-        if (data.from_location === data.to_location) {
-            showNotification('Source and recipient location cannot be the same.', 'error');
-            return;
-        }
+        if (missing.length > 0) { showNotification(`Please fill in: ${missing.join(', ')}`, 'error'); return; }
+        if (data.from_location === data.to_location) { showNotification('Source and recipient location cannot be the same.', 'error'); return; }
 
         try {
             const response = await fetch('inventory_api.php?action=submit_pullout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
             });
             const result = await response.json();
-
-            if (result.success) {
-                showNotification(`Transfer request submitted for ${data.quantity} item(s)!`, 'success');
-                closeModal('pulloutModal');
-                loadInventory();
-            } else {
-                showNotification(result.error || 'Failed to submit transfer request', 'error');
-            }
-        } catch (error) {
-            console.error('Error submitting transfer:', error);
-            showNotification('Failed to submit transfer request', 'error');
-        }
+            if (result.success) { showNotification(`Transfer request submitted for ${data.quantity} item(s)!`, 'success'); closeModal('pulloutModal'); loadInventory(); }
+            else showNotification(result.error || 'Failed to submit transfer request', 'error');
+        } catch (error) { showNotification('Failed to submit transfer request', 'error'); }
     }
 
-    // ──────────────────────────────────────────────
-    // UTILITIES
-    // ──────────────────────────────────────────────
+    // ── UTILITIES ─────────────────────────────────────────────────────────────
     function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed; top: 20px; right: 20px;
-            padding: 1rem 1.5rem;
-            background: ${type === 'success' ? 'var(--secondary)' : 'var(--danger)'};
-            color: white; border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 10000; animation: slideIn 0.3s ease;
-            font-weight: 500; max-width: 400px;
-        `;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => notification.remove(), 300);
-        }, 4000);
+        const n = document.createElement('div');
+        n.style.cssText = `position:fixed;top:20px;right:20px;left:20px;padding:1rem 1.5rem;background:${type==='success'?'var(--secondary)':'var(--danger)'};color:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:10000;animation:slideIn 0.3s ease;font-weight:500;max-width:400px;margin:0 auto;`;
+        // On mobile, center it
+        if (window.innerWidth > 600) { n.style.left = 'auto'; }
+        n.textContent = message;
+        document.body.appendChild(n);
+        setTimeout(() => { n.style.animation = 'slideOut 0.3s ease'; setTimeout(() => n.remove(), 300); }, 4000);
     }
 
     async function loadCategories() {
@@ -1783,41 +1025,17 @@ include 'sidebar.php';
             const result   = await response.json();
             if (result.success) {
                 const select = document.getElementById('categoryFilter');
-                result.data.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value    = cat.id;
-                    option.textContent = cat.name;
-                    select.appendChild(option);
-                });
+                result.data.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; select.appendChild(o); });
             }
-        } catch (error) {
-            console.error('Error loading categories:', error);
-        }
+        } catch (error) { console.error('Error loading categories:', error); }
     }
 
-    // ──────────────────────────────────────────────
-    // EVENT LISTENERS
-    // ──────────────────────────────────────────────
-    document.getElementById('searchInput').addEventListener('input', function() {
-        renderInventoryTable();
-        clearTimeout(window._searchTimer);
-        window._searchTimer = setTimeout(loadInventory, 300);
-    });
-
+    document.getElementById('searchInput').addEventListener('input', function() { renderInventoryTable(); clearTimeout(window._searchTimer); window._searchTimer = setTimeout(loadInventory, 300); });
     document.getElementById('categoryFilter').addEventListener('change', loadInventory);
     document.getElementById('statusFilter').addEventListener('change', loadInventory);
+    document.querySelectorAll('.modal-overlay').forEach(overlay => { overlay.addEventListener('click', function(e) { if (e.target === this) closeModal(this.id); }); });
 
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', function(e) {
-            if (e.target === this) closeModal(this.id);
-        });
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        loadCategories();
-        loadInventory();
-        renderLocationChips();
-    });
+    document.addEventListener('DOMContentLoaded', function() { loadCategories(); loadInventory(); });
 
     let _editReleasedCount = 0;
     let _editReturnedCount = 0;
@@ -1825,37 +1043,16 @@ include 'sidebar.php';
     function previewBegBalance() {
         const activeVal = parseInt(document.getElementById('editActiveCount').value);
         const hint      = document.getElementById('activeCountHint');
-        if (isNaN(activeVal) || activeVal < 0) {
-            hint.textContent = 'Current available items. Adjusts Beginning Balance automatically.';
-            hint.style.color = '';
-            return;
-        }
+        if (isNaN(activeVal) || activeVal < 0) { hint.textContent = 'Current available items. Adjusts Beginning Balance automatically.'; hint.style.color = ''; return; }
         const newBeg = activeVal + _editReleasedCount - _editReturnedCount;
-        if (newBeg < 0) {
-            hint.innerHTML = `⚠️ Cannot set active to <strong>${activeVal}</strong> — would require a negative beginning balance.`;
-            hint.style.color = 'var(--danger)';
-        } else {
-            hint.innerHTML = `Beginning Balance will be set to <strong>${newBeg}</strong> (active ${activeVal} + released ${_editReleasedCount} − returned ${_editReturnedCount}).`;
-            hint.style.color = 'var(--secondary)';
-        }
+        if (newBeg < 0) { hint.innerHTML = `⚠️ Cannot set active to <strong>${activeVal}</strong> — would require a negative beginning balance.`; hint.style.color = 'var(--danger)'; }
+        else { hint.innerHTML = `Beginning Balance will be set to <strong>${newBeg}</strong> (active ${activeVal} + released ${_editReleasedCount} − returned ${_editReturnedCount}).`; hint.style.color = 'var(--secondary)'; }
     }
 
     const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0);    opacity: 1; }
-            to   { transform: translateX(100%); opacity: 0; }
-        }
-    `;
+    style.textContent = `@keyframes slideIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}@keyframes slideOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(100%);opacity:0;}}`;
     document.head.appendChild(style);
 </script>
-
 </body>
 </html>
-<?php
-ob_end_flush();
-?>
+<?php ob_end_flush(); ?>

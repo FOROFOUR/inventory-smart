@@ -45,7 +45,7 @@ if ($imgStmt) {
     $imgResult = $imgStmt->get_result();
     while ($row = $imgResult->fetch_assoc()) {
         // Stored as "uploads/assets/filename.jpg" — prefix with project URL
-        $images[] = $projectUrl . '/' . ltrim($row['image_path'], '/');
+       $images[] = '/' . ltrim($row['image_path'], '/');
     }
     $imgStmt->close();
 }

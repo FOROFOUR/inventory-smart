@@ -361,11 +361,13 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
                             <button class="btn btn-warning" onclick="openEdit(<?php echo $r['id']; ?>)" title="Edit">
                                 <i class='bx bx-edit'></i>
                             </button>
-                            <button class="btn btn-success" onclick="confirmAction(<?php echo $r['id']; ?>,'confirm')" title="Confirm">
-                                <i class='bx bx-check'></i>
-                            </button>
+                           
                             <button class="btn btn-danger" onclick="openReject(<?php echo $r['id']; ?>)" title="Cancel">
                                 <i class='bx bx-x'></i>
+                            </button>
+
+                             <button class="btn btn-success" onclick="confirmAction(<?php echo $r['id']; ?>,'confirm')" title="Confirm">
+                                <i class='bx bx-check'></i>
                             </button>
                         </div>
                     </td>

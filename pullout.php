@@ -47,7 +47,6 @@ $stats       = $statsResult->fetch_assoc();
         .content { margin-left: 88px; padding: 2rem; transition: margin-left 0.3s ease; }
         .sidebar:not(.close) ~ .content { margin-left: 260px; }
 
-        /* PAGE HEADER */
         .page-header {
             background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%);
             border-radius: 20px 20px 0 0;
@@ -68,7 +67,6 @@ $stats       = $statsResult->fetch_assoc();
         .page-header h1 { font-size: 2.5rem; font-weight: 700; position: relative; z-index: 1; }
         .page-header p  { font-size: 1.1rem; opacity: 0.9; position: relative; z-index: 1; margin-top: 0.25rem; }
 
-        /* STATS */
         .stats-container {
             background: white;
             display: grid;
@@ -86,7 +84,6 @@ $stats       = $statsResult->fetch_assoc();
         .stat-card:nth-child(3) .stat-value { color: var(--success); }
         .stat-card:nth-child(4) .stat-value { color: var(--info); }
 
-        /* CONTROLS */
         .controls-section {
             background: white;
             padding: 1.5rem;
@@ -126,16 +123,15 @@ $stats       = $statsResult->fetch_assoc();
         .btn-filter { background: var(--bg-main); color: var(--text-primary); border: 2px solid var(--border); }
         .btn-filter.active { background: #695CFE; color: white; border-color: #695CFE; }
         .btn-filter:hover { border-color: var(--primary); }
-        .btn-primary  { background: var(--primary); color: white; }
-        .btn-primary:hover  { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(72,201,176,0.3); }
-        .btn-success  { background: var(--success); color: white; }
-        .btn-success:hover  { background: #219a52; transform: translateY(-2px); }
-        .btn-danger   { background: var(--danger); color: white; }
-        .btn-danger:hover   { background: #c0392b; transform: translateY(-2px); }
+        .btn-primary   { background: var(--primary); color: white; }
+        .btn-primary:hover   { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(72,201,176,0.3); }
+        .btn-success   { background: var(--success); color: white; }
+        .btn-success:hover   { background: #219a52; transform: translateY(-2px); }
+        .btn-danger    { background: var(--danger); color: white; }
+        .btn-danger:hover    { background: #c0392b; transform: translateY(-2px); }
         .btn-secondary { background: var(--bg-main); color: var(--text-primary); }
         .btn-secondary:hover { background: var(--border); }
 
-        /* TABLE */
         .table-container {
             background: white;
             box-shadow: 0 4px 12px var(--shadow);
@@ -176,7 +172,6 @@ $stats       = $statsResult->fetch_assoc();
             color: var(--text-secondary);
         }
 
-        /* ── FIX: Route cell — clean FROM → TO display ── */
         .route-cell { line-height: 1.5; min-width: 140px; }
         .route-from { font-size: 0.82rem; color: var(--text-secondary); }
         .route-arrow { font-size: 0.75rem; color: var(--primary); font-weight: 700; }
@@ -201,6 +196,7 @@ $stats       = $statsResult->fetch_assoc();
         .badge-cancelled { background: #f8d7da; color: #721c24; }
         .badge-confirmed { background: #e8daef; color: #6c3483; }
         .badge-ready     { background: #d5f5e3; color: #1e8449; }
+        .badge-received  { background: #d4edda; color: #155724; }
 
         .action-btn { padding: 0.45rem; background: none; border: none; cursor: pointer; color: var(--text-secondary); font-size: 1.15rem; border-radius: 6px; transition: all 0.2s; }
         .action-btn:hover { background: var(--bg-main); color: var(--primary); transform: scale(1.1); }
@@ -208,7 +204,6 @@ $stats       = $statsResult->fetch_assoc();
         .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-secondary); }
         .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; display: block; }
 
-        /* MODAL */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal { background: white; border-radius: 20px; max-width: 750px; width: 95%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
@@ -321,13 +316,15 @@ $stats       = $statsResult->fetch_assoc();
                         <th>From → To</th>
                         <th>Purpose</th>
                         <th>Requested By</th>
+                        <th>Released By</th>
+                        <th>Delivered By</th>
                         <th>Received By</th>
                         <th>Date Needed</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody id="pulloutBody">
-                    <tr><td colspan="10"><div class="empty-state"><i class='bx bx-loader-alt bx-spin'></i><p>Loading...</p></div></td></tr>
+                    <tr><td colspan="12"><div class="empty-state"><i class='bx bx-loader-alt bx-spin'></i><p>Loading...</p></div></td></tr>
                 </tbody>
             </table>
         </div>
@@ -350,38 +347,33 @@ $stats       = $statsResult->fetch_assoc();
         </div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal()"><i class='bx bx-x'></i> Close</button>
-            <button class="btn btn-danger"  id="modalCancelBtn" style="display:none;" onclick="confirmCancel(currentId)"><i class='bx bx-block'></i> Cancel Transfer</button>
+            <button class="btn btn-danger" id="modalCancelBtn" style="display:none;" onclick="confirmCancel(currentId)"><i class='bx bx-block'></i> Cancel Transfer</button>
+            <a class="btn btn-primary" id="modalPreparingLink" href="admin-incoming.php" style="display:none; text-decoration:none;"><i class='bx bx-loader-circle'></i> Go to Incoming Order</a>
             <button class="btn btn-primary" id="modalActionBtn" style="display:none;">Update Status</button>
         </div>
     </div>
 </div>
 
 <script>
-    let pulloutData    = [];
-    let currentFilter  = '';
+    let pulloutData     = [];
+    let currentFilter   = '';
     let currentLocation = '';
-    let currentId      = null;
+    let currentId       = null;
 
-    // ── STATUS RENDERER ───────────────────────────────────
     function renderStatus(item) {
         const s    = item.status;
         const step = parseInt(item.prep_step ?? 0);
-
-        // CONFIRMED + step 4 = show Ready instead
         if (s === 'CONFIRMED' && step >= 4) {
             return `<span class="badge badge-ready" style="font-size:.78rem; padding:.35rem .8rem;">✓ Ready to Release</span>`;
         }
-
         const label =
             s === 'RELEASED'  ? 'RECEIVED'  :
             s === 'RETURNED'  ? 'RETURNED'  :
             s === 'CANCELLED' ? 'CANCELLED' :
             s === 'CONFIRMED' ? 'CONFIRMED' : s;
-
         return `<span class="badge badge-${s.toLowerCase()}">${label}</span>`;
     }
 
-    // ── LOAD LOCATIONS ────────────────────────────────────
     async function loadLocations() {
         try {
             const res    = await fetch('pullout_api.php?action=get_locations');
@@ -400,13 +392,11 @@ $stats       = $statsResult->fetch_assoc();
         } catch(e) { console.error('loadLocations:', e); }
     }
 
-    // ── APPLY FILTERS (called by location dropdown change) ──
     function applyFilters() {
         currentLocation = document.getElementById('locationFilter').value;
         loadPullouts();
     }
 
-    // ── LOAD ──────────────────────────────────────────────
     async function loadPullouts() {
         try {
             const search = document.getElementById('searchInput').value;
@@ -442,25 +432,15 @@ $stats       = $statsResult->fetch_assoc();
             document.getElementById('statPending').textContent  = pending;
             document.getElementById('statReleased').textContent = all.filter(r => r.status === 'RELEASED').length;
             document.getElementById('statReturned').textContent = all.filter(r => r.status === 'RETURNED').length;
-
-            // Update pending badge on filter button
             const badge = document.getElementById('pendingCount');
-            if (pending > 0) {
-                badge.textContent = pending;
-                badge.style.display = 'inline';
-            } else {
-                badge.style.display = 'none';
-            }
+            if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
+            else { badge.style.display = 'none'; }
         } catch(e) {}
     }
 
-    // ── FIX: getRoute — reads from_location/to_location columns directly ──
-    // Falls back to purpose parsing for legacy records
     function getRoute(item) {
         let from = (item.from_location || '').trim();
         let to   = (item.to_location   || '').trim();
-
-        // Fallback: parse from purpose for old records where columns are NULL
         if (!from || !to) {
             const clean = (item.purpose || '').replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').trim();
             const match = clean.match(/From:\s*(.+?)\s*→\s*To:\s*(.+)$/);
@@ -469,8 +449,6 @@ $stats       = $statsResult->fetch_assoc();
                 if (!to)   to   = match[2].trim();
             }
         }
-
-        // For RETURNED status, swap the display direction
         const isReturned = item.status === 'RETURNED';
         return {
             from    : isReturned ? (to   || '—') : (from || '—'),
@@ -480,7 +458,6 @@ $stats       = $statsResult->fetch_assoc();
         };
     }
 
-    // Clean purpose — remove location embedding and dest tags
     function cleanPurpose(purpose) {
         if (!purpose) return '—';
         return purpose
@@ -494,21 +471,19 @@ $stats       = $statsResult->fetch_assoc();
         return val.replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').trim() || '—';
     }
 
-    // ── HIGHLIGHT ─────────────────────────────────────────
     function hl(val, term) {
         if (!term || !val) return val || '';
         const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         return String(val).replace(new RegExp(`(${esc})`, 'gi'), '<mark>$1</mark>');
     }
 
-    // ── RENDER TABLE ──────────────────────────────────────
     function renderTable() {
         const tbody = document.getElementById('pulloutBody');
         const term  = document.getElementById('searchInput').value.trim();
         tbody.innerHTML = '';
 
         if (pulloutData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><i class='bx bx-transfer-alt'></i><h3>No transfer requests found</h3><p>Try adjusting your filters</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state"><i class='bx bx-transfer-alt'></i><h3>No transfer requests found</h3><p>Try adjusting your filters</p></div></td></tr>`;
             return;
         }
 
@@ -517,7 +492,7 @@ $stats       = $statsResult->fetch_assoc();
             const purpose = cleanPurpose(item.purpose);
 
             const thumbHtml = item.thumbnail
-                ? `<img class="thumb-img" src="${item.thumbnail}" alt="asset">`
+                ? `<img class="thumb-img" src="${encodeURI(item.thumbnail)}" alt="asset">`
                 : `<div class="thumb-placeholder"><i class='bx bx-image-alt'></i></div>`;
 
             const row = document.createElement('tr');
@@ -545,7 +520,9 @@ $stats       = $statsResult->fetch_assoc();
                 </td>
                 <td class="wrap">${hl(purpose, term)}</td>
                 <td>${hl(item.requested_by, term) || '—'}</td>
-                <td>${hl(cleanReceivedBy(item.released_by), term)}</td>
+                <td>${hl(item.released_by, term) || '—'}</td>
+                <td>${hl(item.delivered_by, term) || '—'}</td>
+                <td>${hl(cleanReceivedBy(item.received_by), term)}</td>
                 <td>${formatDate(item.date_needed)}</td>
                 <td>${renderStatus(item)}</td>
             `;
@@ -553,7 +530,6 @@ $stats       = $statsResult->fetch_assoc();
         });
     }
 
-    // ── OPEN MODAL ────────────────────────────────────────
     async function openViewModal(id) {
         currentId = id;
         try {
@@ -570,7 +546,8 @@ $stats       = $statsResult->fetch_assoc();
             gallery.innerHTML = '';
             if (item.images && item.images.length > 0) {
                 item.images.forEach(src => {
-                    gallery.innerHTML += `<div class="modal-gallery-item" onclick="window.open('${src}','_blank')"><img src="${src}" alt="Asset photo"></div>`;
+                    const encoded = encodeURI(src);
+                    gallery.innerHTML += `<div class="modal-gallery-item" onclick="window.open('${encoded}','_blank')"><img src="${encoded}" alt="Asset photo"></div>`;
                 });
             } else {
                 gallery.innerHTML = `<div class="modal-gallery-item"><div class="modal-gallery-placeholder"><i class='bx bx-image'></i></div></div>`;
@@ -612,7 +589,7 @@ $stats       = $statsResult->fetch_assoc();
                 </div>
             `;
 
-            // Transfer Info
+            // Transfer Info — now includes Released By, Delivered By, Received By
             document.getElementById('txnInfo').innerHTML = `
                 <div class="detail-item">
                     <div class="detail-label">Transaction #</div>
@@ -642,8 +619,16 @@ $stats       = $statsResult->fetch_assoc();
                     <div class="detail-value">${item.requested_by || '—'}</div>
                 </div>
                 <div class="detail-item">
+                    <div class="detail-label">Released By</div>
+                    <div class="detail-value">${item.released_by || '—'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Delivered By</div>
+                    <div class="detail-value">${item.delivered_by || '—'}</div>
+                </div>
+                <div class="detail-item">
                     <div class="detail-label">Received By</div>
-                    <div class="detail-value">${cleanReceivedBy(item.released_by)}</div>
+                    <div class="detail-value">${cleanReceivedBy(item.received_by)}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Date Needed</div>
@@ -664,18 +649,18 @@ $stats       = $statsResult->fetch_assoc();
             `;
 
             // Action buttons
-            const actionBtn = document.getElementById('modalActionBtn');
-            const cancelBtn = document.getElementById('modalCancelBtn');
-            actionBtn.style.display = 'none';
-            cancelBtn.style.display = 'none';
+            const actionBtn     = document.getElementById('modalActionBtn');
+            const cancelBtn     = document.getElementById('modalCancelBtn');
+            const preparingLink = document.getElementById('modalPreparingLink');
+
+            actionBtn.style.display     = 'none';
+            cancelBtn.style.display     = 'none';
+            preparingLink.style.display = 'none';
             actionBtn.className = 'btn';
 
             if (item.status === 'PENDING') {
-                cancelBtn.style.display = '';
-                actionBtn.style.display = '';
-                actionBtn.innerHTML = '<i class="bx bx-check"></i> Mark as Received';
-                actionBtn.classList.add('btn-success');
-                actionBtn.onclick = () => showReleaseConfirm(id);
+                cancelBtn.style.display     = '';
+                preparingLink.style.display = '';
             } else if (item.status === 'RELEASED') {
                 actionBtn.style.display = '';
                 actionBtn.innerHTML = '<i class="bx bx-undo"></i> Mark as Returned';
@@ -715,22 +700,6 @@ $stats       = $statsResult->fetch_assoc();
         cancelBtn.onclick = () => updateStatus(id, 'CANCELLED');
     }
 
-    function showReleaseConfirm(id) {
-        const existing = document.getElementById('releaseConfirmBlock');
-        if (existing) existing.remove();
-        document.getElementById('txnInfo').insertAdjacentHTML('afterend', `
-            <div id="releaseConfirmBlock" style="margin-top:1rem; background:#e8f5e9; border:2px solid #27ae60; border-radius:10px; padding:1.25rem; text-align:center;">
-                <div style="font-size:1.75rem; margin-bottom:0.4rem;">✅</div>
-                <div style="font-weight:600; font-size:1rem; color:#155724;">Confirm receiving this item?</div>
-                <div style="font-size:0.85rem; color:#636e72; margin-top:0.25rem;">This will mark the transfer as Received.</div>
-            </div>
-        `);
-        const actionBtn = document.getElementById('modalActionBtn');
-        actionBtn.innerHTML = '<i class="bx bx-check-shield"></i> Confirm Received';
-        actionBtn.className = 'btn btn-success';
-        actionBtn.onclick = () => updateStatus(id, 'RELEASED');
-    }
-
     async function updateStatus(id, newStatus) {
         try {
             const res    = await fetch('pullout_api.php?action=update_status', {
@@ -745,7 +714,6 @@ $stats       = $statsResult->fetch_assoc();
                             : 'RETURNED';
                 showNotification(`Transfer marked as ${label}`, 'success');
                 closeModal();
-                // Refresh both table and location counts
                 document.getElementById('locationFilter').innerHTML = '<option value="">All Locations</option>';
                 loadLocations();
                 loadPullouts();
