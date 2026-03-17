@@ -1,84 +1,159 @@
 <?php
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode(['success'=>false,'error'=>'PHP Fatal Error: '.$error['message']]);
+    }
+});
+
+ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
-require_once __DIR__ . '/config.php';
+ini_set('log_errors', 1);
 
+require_once __DIR__ . '/config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user_id'])) {
+    ob_end_clean();
     echo json_encode(['success'=>false,'error'=>'Unauthorized']); exit();
 }
 
 header('Content-Type: application/json');
-$conn     = getDBConnection();
-$userName = $_SESSION['name'] ?? 'Unknown';
 
 $input = json_decode(file_get_contents('php://input'), true);
 $token = trim($input['token'] ?? '');
-
 if (!$token) {
-    echo json_encode(['success'=>false,'error'=>'Missing session token.']); exit();
+    ob_end_clean();
+    echo json_encode(['success'=>false,'error'=>'No token provided.']); exit();
 }
 
-// Fetch only valid staged rows for this token
-$stmt = $conn->prepare("
-    SELECT * FROM asset_staging 
-    WHERE session_token = ? AND is_valid = 1
-");
-$stmt->bind_param("s", $token);
+$conn     = getDBConnection();
+$userName = $_SESSION['name'] ?? 'Unknown';
+
+// ── Ensure drive_url column exists ────────────────────────────────────────
+$conn->query("ALTER TABLE `asset_images` ADD COLUMN IF NOT EXISTS `drive_url` VARCHAR(500) DEFAULT NULL AFTER `image_path`");
+
+// ── Fetch valid staged rows ───────────────────────────────────────────────
+$stmt = $conn->prepare("SELECT * FROM asset_staging WHERE session_token = ? AND is_valid = 1 ORDER BY row_num");
+$stmt->bind_param('s', $token);
 $stmt->execute();
-$result = $stmt->get_result();
-$rows = $result->fetch_all(MYSQLI_ASSOC);
+$rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
 if (empty($rows)) {
-    echo json_encode(['success'=>false,'error'=>'No valid rows found for this token. They may have already been imported or expired.']); exit();
+    ob_end_clean();
+    echo json_encode(['success'=>false,'error'=>'No valid rows found for this token.']); exit();
 }
 
-$insertStmt = $conn->prepare("
-    INSERT INTO assets 
-        (category_id, sub_category_id, brand, model, serial_number, beg_balance_count,
-         `condition`, status, location, sub_location, description, created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,NOW())
+// ── Prepare statements ────────────────────────────────────────────────────
+$assetStmt = $conn->prepare("
+    INSERT INTO assets
+        (category_id, sub_category_id, brand, model, serial_number,
+         beg_balance_count, `condition`, status, location, sub_location,
+         description, tracking_type, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'BULK', NOW())
+");
+
+$imageStmt = $conn->prepare("
+    INSERT INTO asset_images (asset_id, image_path, drive_url, created_at)
+    VALUES (?, 'gdrive_folder', ?, NOW())
 ");
 
 $logStmt = $conn->prepare("
-    INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'EXCEL_UPLOAD', ?)
+    INSERT INTO activity_logs (user_name, action, description, created_at)
+    VALUES (?, 'BULK_IMPORT', ?, NOW())
 ");
 
-$inserted = 0;
+$imported = 0;
 $failed   = 0;
 
 $conn->begin_transaction();
 try {
     foreach ($rows as $row) {
-        $insertStmt->bind_param("iisssisssss",
-            $row['category_id'], $row['sub_category_id'],
-            $row['brand'], $row['model'], $row['serial_number'],
-            $row['beg_balance_count'], $row['condition'], $row['status'],
-            $row['location'], $row['sub_location'], $row['description']
+
+        // NULL-safe values for bind_param
+        $catId    = ($row['category_id']     !== null && $row['category_id']     !== '') ? (int)$row['category_id']     : null;
+        $subCatId = ($row['sub_category_id'] !== null && $row['sub_category_id'] !== '') ? (int)$row['sub_category_id'] : null;
+        $brand    = ($row['brand']       ?? '') !== '' ? $row['brand']       : null;
+        $model    = ($row['model']       ?? '') !== '' ? $row['model']       : null;
+        $serial   = ($row['serial_number']?? '') !== '' ? $row['serial_number']: null;
+        $qty      = (int)($row['beg_balance_count'] ?? 1);
+
+        // ── FIX: Strip ALL non-letter characters (invisible chars, BOM, NBSP, \r, etc.)
+        //         before validating condition — this is the root cause of USED → NEW bug
+       $condRaw = trim((string)($row['condition'] ?? ''));
+// Handle numeric: 0 = NEW, 1 = USED (just in case stored as int)
+if (is_numeric($condRaw)) {
+    $condition = (intval($condRaw) === 1) ? 'USED' : 'NEW';
+} else {
+    $condClean = strtoupper(preg_replace('/[^A-Za-z]/', '', $condRaw));
+    $condition = ($condClean === 'USED') ? 'USED' : 'NEW';
+}
+        // ── Same treatment for status ─────────────────────────────────────
+        $statRaw = strtoupper(trim(preg_replace('/\s+/', ' ', $row['status'] ?? '')));
+        $status  = in_array($statRaw, ['WORKING', 'NOT WORKING', 'FOR CHECKING']) ? $statRaw : 'WORKING';
+
+        $location    = $row['location']     ?? null;
+        $subLocation = ($row['sub_location']?? '') !== '' ? $row['sub_location'] : null;
+        $description = ($row['description'] ?? '') !== '' ? $row['description']  : null;
+
+        $assetStmt->bind_param(
+            'iisssisssss',
+            $catId, $subCatId, $brand, $model, $serial,
+            $qty, $condition, $status, $location, $subLocation, $description
         );
-        if ($insertStmt->execute()) {
-            $inserted++;
-            $desc = "Bulk imported: {$row['brand']} {$row['model']} (staged row {$row['row_num']}) by $userName";
-            $logStmt->bind_param("ss", $userName, $desc);
-            $logStmt->execute();
-        } else {
+
+        if (!$assetStmt->execute()) {
+            error_log("Asset insert failed row {$row['row_num']}: " . $assetStmt->error);
             $failed++;
+            continue;
+        }
+
+        $assetId = $conn->insert_id;
+        $imported++;
+
+        // Save up to 3 Drive photo URLs
+        foreach ([1, 2, 3] as $n) {
+            $url = $row["photo_drive_url_$n"] ?? '';
+            if (!empty($url)) {
+                $imageStmt->bind_param('is', $assetId, $url);
+                if (!$imageStmt->execute()) {
+                    error_log("Drive URL $n insert failed for asset $assetId: " . $imageStmt->error);
+                }
+            }
         }
     }
 
-    // Delete staging rows for this token (both valid and invalid — cleanup)
-    $del = $conn->prepare("DELETE FROM asset_staging WHERE session_token = ?");
-    $del->bind_param("s", $token);
-    $del->execute();
+    // Activity log
+    $desc = "Bulk imported $imported asset(s) via Excel upload.";
+    if ($failed > 0) $desc .= " $failed row(s) failed.";
+    $logStmt->bind_param('ss', $userName, $desc);
+    $logStmt->execute();
 
     $conn->commit();
+
+    // Clean up staging rows
+    $delStmt = $conn->prepare("DELETE FROM asset_staging WHERE session_token = ?");
+    $delStmt->bind_param('s', $token);
+    $delStmt->execute();
+    $delStmt->close();
+
+    ob_end_clean();
     echo json_encode([
         'success'  => true,
-        'inserted' => $inserted,
+        'imported' => $imported,
         'failed'   => $failed,
-        'message'  => "$inserted asset(s) successfully imported.",
+        'message'  => "$imported asset(s) imported successfully." . ($failed > 0 ? " $failed row(s) skipped." : ""),
     ]);
+
 } catch (Exception $e) {
     $conn->rollback();
-    echo json_encode(['success'=>false,'error'=>'Transaction failed: '.$e->getMessage()]);
+    error_log("Bulk import exception: " . $e->getMessage());
+    ob_end_clean();
+    echo json_encode(['success'=>false,'error'=>'Import failed: '.$e->getMessage()]);
 }
+
+$assetStmt->close();
+$imageStmt->close();
+$logStmt->close();

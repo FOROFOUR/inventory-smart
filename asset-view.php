@@ -16,7 +16,7 @@ $stmt = $conn->prepare("
         c.name  AS category_name,
         sc.name AS sub_category_name
     FROM assets a
-    LEFT JOIN categories c    ON a.category_id    = c.id
+    LEFT JOIN categories c      ON a.category_id     = c.id
     LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
     WHERE a.id = ?
 ");
@@ -29,23 +29,53 @@ if (!$asset) {
     die('<div style="text-align:center;padding:3rem;font-family:sans-serif;"><h2>❌ Asset Not Found</h2></div>');
 }
 
-// Fetch images — build absolute URL from server root
-$images  = [];
-$baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-         . '://' . $_SERVER['HTTP_HOST'];
+// ── Helper: extract Google Drive file ID ──────────────────────────────────
+function getDriveFileId($url) {
+    if (preg_match('#/file/d/([a-zA-Z0-9_-]+)#', $url, $m)) return $m[1];
+    if (preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $url, $m)) return $m[1];
+    return null;
+}
 
-// Detect the subfolder this project lives in (e.g. /inventory-smart)
-$scriptDir  = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'])); // e.g. /inventory-smart
-$projectUrl = rtrim($baseUrl . $scriptDir, '/');                        // e.g. http://localhost/inventory-smart
+// ── Helper: check if Sheets/Drawings image URL ────────────────────────────
+function isSheetsImageUrl($url) {
+    return strpos($url, 'docs.google.com/sheets-images-rt/') !== false
+        || strpos($url, 'docs.google.com/drawings/') !== false;
+}
 
-$imgStmt = $conn->prepare("SELECT image_path FROM asset_images WHERE asset_id = ? ORDER BY id ASC LIMIT 3");
+// ── Fetch images — supports uploaded files AND Google Drive/Sheets URLs ────
+$images = []; // each: ['type' => 'uploaded'|'gdrive'|'sheets', 'src' => '...', 'href' => '...']
+
+$imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id ASC LIMIT 3");
 if ($imgStmt) {
     $imgStmt->bind_param('i', $assetId);
     $imgStmt->execute();
     $imgResult = $imgStmt->get_result();
     while ($row = $imgResult->fetch_assoc()) {
-        // Stored as "uploads/assets/filename.jpg" — prefix with project URL
-       $images[] = '/' . ltrim($row['image_path'], '/');
+        if ($row['image_path'] === 'gdrive_folder' && !empty($row['drive_url'])) {
+            $url = $row['drive_url'];
+
+            if (isSheetsImageUrl($url)) {
+                // Google Sheets embedded image — use URL directly as src
+                $images[] = ['type' => 'sheets', 'src' => 'image-proxy.php?url=' . urlencode($url), 'href' => $url];
+
+            } else {
+                $fileId = getDriveFileId($url);
+                if ($fileId) {
+                    // Google Drive file — use thumbnail API for display, original for click
+                    $images[] = [
+                        'type' => 'gdrive',
+                        'src'  => "image-proxy.php?url=" . urlencode("https://drive.google.com/thumbnail?id={$fileId}&sz=w800"),
+                        'href' => $url,
+                    ];
+                } else {
+                    // Folder or unrecognized — show link tile
+                    $images[] = ['type' => 'gdrive_folder', 'src' => null, 'href' => $url];
+                }
+            }
+        } elseif (!empty($row['image_path']) && $row['image_path'] !== 'gdrive_folder') {
+            // Regular uploaded image
+            $images[] = ['type' => 'uploaded', 'src' => '/' . ltrim($row['image_path'], '/'), 'href' => null];
+        }
     }
     $imgStmt->close();
 }
@@ -72,13 +102,13 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --primary:    #695CFE;
-            --surface:    #ffffff;
-            --bg:         #f4f3ff;
-            --border:     #e5e3ff;
-            --text:       #1a1523;
-            --muted:      #6b7280;
-            --radius:     16px;
+            --primary:  #695CFE;
+            --surface:  #ffffff;
+            --bg:       #f4f3ff;
+            --border:   #e5e3ff;
+            --text:     #1a1523;
+            --muted:    #6b7280;
+            --radius:   16px;
         }
 
         body {
@@ -90,211 +120,137 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
         }
 
         /* ── Header ── */
-        .header {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            animation: fadeDown 0.5s ease both;
-        }
+        .header { text-align: center; margin-bottom: 1.5rem; animation: fadeDown 0.5s ease both; }
         .header .logo {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: var(--primary);
-            color: white;
-            padding: 0.4rem 1rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.75rem;
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--primary); color: white;
+            padding: 0.4rem 1rem; border-radius: 999px;
+            font-size: 0.8rem; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 0.75rem;
         }
-        .header h1 {
-            font-size: 1.6rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-        .header .sub {
-            color: var(--muted);
-            font-size: 0.85rem;
-            margin-top: 0.25rem;
-            font-family: 'DM Mono', monospace;
-        }
+        .header h1 { font-size: 1.6rem; font-weight: 700; line-height: 1.2; }
+        .header .sub { color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem; font-family: 'DM Mono', monospace; }
 
         /* ── Card ── */
         .card {
-            background: var(--surface);
-            border-radius: var(--radius);
+            background: var(--surface); border-radius: var(--radius);
             border: 1px solid var(--border);
             box-shadow: 0 2px 16px rgba(105,92,254,0.06);
-            overflow: hidden;
-            max-width: 520px;
-            margin: 0 auto 1rem;
+            overflow: hidden; max-width: 520px; margin: 0 auto 1rem;
             animation: fadeUp 0.5s ease both;
         }
         .card + .card { animation-delay: 0.08s; }
-
         .card-header {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--primary);
-            background: #faf9ff;
+            padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 0.5rem;
+            font-weight: 600; font-size: 0.9rem; color: var(--primary); background: #faf9ff;
         }
         .card-header i { font-size: 1.1rem; }
 
         /* ── Image Carousel ── */
-        .image-section {
-            position: relative;
-            background: #f8f7ff;
-            overflow: hidden;
-        }
-        .image-slides {
-            display: flex;
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-        }
-        .image-slide {
-            min-width: 100%;
-            aspect-ratio: 4/3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .image-section { position: relative; background: #f8f7ff; overflow: hidden; }
+        .image-slides  { display: flex; transition: transform 0.35s cubic-bezier(0.4,0,0.2,1); }
+        .image-slide   { min-width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; position: relative; }
+
+        /* Uploaded image */
         .image-slide img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 1rem;
+            width: 100%; height: 100%; object-fit: contain; padding: 1rem;
         }
+
+        /* Google Drive / Sheets image — fill the slide */
+        .image-slide .drive-img {
+            width: 100%; height: 100%; object-fit: cover;
+            display: block; cursor: pointer;
+        }
+
+        /* Fallback tile for folder links */
+        .gdrive-tile {
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; height: 100%; gap: 0.75rem;
+            color: #1a73e8; text-decoration: none;
+            background: linear-gradient(135deg, #e8f0fe, #f1f8e9);
+        }
+        .gdrive-tile i   { font-size: 3rem; }
+        .gdrive-tile span { font-size: 0.85rem; font-weight: 600; }
+
+        /* Open in Drive badge — shown on drive/sheets images */
+        .drive-badge {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            display: inline-flex; align-items: center; gap: 5px;
+            background: rgba(255,255,255,0.92); border-radius: 999px;
+            padding: 4px 12px; font-size: 0.75rem; font-weight: 600;
+            color: #1a73e8; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            text-decoration: none; white-space: nowrap;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+        .drive-badge:hover { background: white; }
+        .drive-badge i { font-size: 1rem; }
+
         .no-image {
-            aspect-ratio: 4/3;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: #c4b5fd;
-            gap: 0.5rem;
-            font-size: 0.85rem;
+            aspect-ratio: 4/3; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: #c4b5fd; gap: 0.5rem; font-size: 0.85rem;
         }
         .no-image i { font-size: 3rem; }
 
         .image-dots {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 6px;
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 6px;
         }
+        /* Push dots up if there's a drive badge */
+        .has-drive-badge .image-dots { bottom: 44px; }
+
         .dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: rgba(105,92,254,0.3);
-            cursor: pointer;
+            width: 7px; height: 7px; border-radius: 50%;
+            background: rgba(105,92,254,0.3); cursor: pointer;
             transition: background 0.2s, transform 0.2s;
         }
         .dot.active { background: var(--primary); transform: scale(1.3); }
 
         .img-nav {
-            position: absolute;
-            top: 50%; transform: translateY(-50%);
-            background: rgba(255,255,255,0.85);
-            border: none;
-            width: 32px; height: 32px;
-            border-radius: 50%;
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(255,255,255,0.85); border: none;
+            width: 32px; height: 32px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            font-size: 1rem;
-            color: var(--primary);
-            transition: background 0.2s;
+            cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            font-size: 1rem; color: var(--primary); transition: background 0.2s;
         }
         .img-nav:hover { background: white; }
         .img-nav.prev { left: 10px; }
         .img-nav.next { right: 10px; }
 
         /* ── Info Grid ── */
-        .info-grid {
-            padding: 1.25rem;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+        .info-grid { padding: 1.25rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         .info-item { display: flex; flex-direction: column; gap: 0.2rem; }
         .info-item.full { grid-column: 1 / -1; }
-        .info-label {
-            font-size: 0.72rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            color: var(--muted);
-        }
-        .info-value {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: var(--text);
-        }
+        .info-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
+        .info-value { font-size: 0.95rem; font-weight: 500; color: var(--text); }
         .info-value.mono {
-            font-family: 'DM Mono', monospace;
-            font-size: 0.85rem;
-            background: #f4f3ff;
-            padding: 0.3rem 0.6rem;
-            border-radius: 6px;
-            display: inline-block;
+            font-family: 'DM Mono', monospace; font-size: 0.85rem;
+            background: #f4f3ff; padding: 0.3rem 0.6rem; border-radius: 6px; display: inline-block;
         }
 
         /* ── Status Badge ── */
         .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            padding: 0.3rem 0.75rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            background: <?php echo $sc['bg']; ?>;
-            color: <?php echo $sc['text']; ?>;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.3rem 0.75rem; border-radius: 999px;
+            font-size: 0.8rem; font-weight: 600;
+            background: <?php echo $sc['bg']; ?>; color: <?php echo $sc['text']; ?>;
         }
         .status-dot {
-            width: 7px; height: 7px;
-            border-radius: 50%;
-            background: <?php echo $sc['dot']; ?>;
-            animation: pulse 1.8s infinite;
+            width: 7px; height: 7px; border-radius: 50%;
+            background: <?php echo $sc['dot']; ?>; animation: pulse 1.8s infinite;
         }
 
         /* ── Description ── */
-        .description-text {
-            padding: 0 1.25rem 1.25rem;
-            font-size: 0.9rem;
-            color: #4b5563;
-            line-height: 1.6;
-        }
+        .description-text { padding: 0 1.25rem 1.25rem; font-size: 0.9rem; color: #4b5563; line-height: 1.6; }
 
         /* ── Footer ── */
-        .footer {
-            text-align: center;
-            color: var(--muted);
-            font-size: 0.75rem;
-            margin-top: 1.5rem;
-            animation: fadeUp 0.5s 0.2s ease both;
-        }
+        .footer { text-align: center; color: var(--muted); font-size: 0.75rem; margin-top: 1.5rem; animation: fadeUp 0.5s 0.2s ease both; }
 
-        /* ── Animations ── */
-        @keyframes fadeDown {
-            from { opacity: 0; transform: translateY(-16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(16px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.4; }
-        }
+        @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeUp   { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
+        @keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
     </style>
 </head>
 <body>
@@ -309,15 +265,42 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
 <!-- Images -->
 <div class="card" style="animation-delay:0s;">
     <?php if (!empty($images)): ?>
-    <div class="image-section" id="imageSection">
+    <?php
+        // Check if any slide has a drive badge (for dot positioning)
+        $anyDriveBadge = false;
+        foreach ($images as $img) {
+            if (in_array($img['type'], ['gdrive','sheets'])) { $anyDriveBadge = true; break; }
+        }
+    ?>
+    <div class="image-section <?php echo $anyDriveBadge && count($images) > 1 ? 'has-drive-badge' : ''; ?>" id="imageSection">
         <div class="image-slides" id="imageSlides">
             <?php foreach ($images as $img): ?>
             <div class="image-slide">
-                <img src="<?php echo htmlspecialchars($img); ?>" alt="Asset Image"
-                     onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:#c4b5fd;font-size:0.85rem;\'>⚠️ Image not found</div>'">
+                <?php if ($img['type'] === 'uploaded'): ?>
+                    <img src="<?php echo htmlspecialchars($img['src']); ?>" alt="Asset Image"
+                         onerror="this.parentElement.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;color:#c4b5fd;font-size:0.85rem;\'>⚠️ Image not found</div>'">
+
+                <?php elseif ($img['type'] === 'gdrive' || $img['type'] === 'sheets'): ?>
+                    <img class="drive-img"
+                         src="<?php echo htmlspecialchars($img['src']); ?>"
+                         alt="Asset Photo"
+                         onclick="window.open('<?php echo htmlspecialchars($img['href']); ?>','_blank')"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='none';this.parentElement.innerHTML+='<div style=\'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:0.5rem;color:#c4b5fd;font-size:0.85rem;\'><i class=\'bx bx-image\' style=\'font-size:3rem;\'></i><span>Image unavailable</span></div>'">
+                    <a class="drive-badge" href="<?php echo htmlspecialchars($img['href']); ?>" target="_blank" rel="noopener">
+                        <i class='bx bxl-google'></i> Open in Drive
+                    </a>
+
+                <?php elseif ($img['type'] === 'gdrive_folder'): ?>
+                    <a class="gdrive-tile" href="<?php echo htmlspecialchars($img['href']); ?>" target="_blank" rel="noopener">
+                        <i class='bx bxl-google'></i>
+                        <span>View on Google Drive</span>
+                    </a>
+
+                <?php endif; ?>
             </div>
             <?php endforeach; ?>
         </div>
+
         <?php if (count($images) > 1): ?>
         <button class="img-nav prev" onclick="slideImg(-1)"><i class='bx bx-chevron-left'></i></button>
         <button class="img-nav next" onclick="slideImg(1)"><i class='bx bx-chevron-right'></i></button>
@@ -328,6 +311,7 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
         </div>
         <?php endif; ?>
     </div>
+
     <?php else: ?>
     <div class="no-image">
         <i class='bx bx-image'></i>
@@ -340,37 +324,30 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
 <div class="card" style="animation-delay:0.05s;">
     <div class="card-header"><i class='bx bx-info-circle'></i> Asset Details</div>
     <div class="info-grid">
-
         <div class="info-item">
             <span class="info-label">Category</span>
             <span class="info-value"><?php echo htmlspecialchars($asset['category_name'] ?? '—'); ?></span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Sub-Category</span>
             <span class="info-value"><?php echo htmlspecialchars($asset['sub_category_name'] ?? '—'); ?></span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Brand</span>
             <span class="info-value"><?php echo htmlspecialchars($asset['brand'] ?? '—'); ?></span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Model</span>
             <span class="info-value"><?php echo htmlspecialchars($asset['model'] ?? '—'); ?></span>
         </div>
-
         <div class="info-item full">
             <span class="info-label">Serial Number</span>
             <span class="info-value mono"><?php echo htmlspecialchars($asset['serial_number'] ?? 'N/A'); ?></span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Condition</span>
             <span class="info-value"><?php echo $conditionLabel; ?></span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Status</span>
             <span class="status-badge">
@@ -378,17 +355,14 @@ $conditionLabel = $asset['condition'] === 'NEW' ? '🆕 New' : '🔄 Used';
                 <?php echo htmlspecialchars($asset['status']); ?>
             </span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Quantity</span>
             <span class="info-value"><?php echo intval($asset['beg_balance_count']); ?> unit(s)</span>
         </div>
-
         <div class="info-item">
             <span class="info-label">Tracking</span>
             <span class="info-value"><?php echo htmlspecialchars($asset['tracking_type'] ?? '—'); ?></span>
         </div>
-
     </div>
 </div>
 

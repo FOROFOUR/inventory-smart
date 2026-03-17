@@ -11,18 +11,16 @@ document.querySelectorAll('.tab-button').forEach(button => {
 
 // ── Category Change Handler — fetches from DB (no more hardcoded list) ────
 document.getElementById('category').addEventListener('change', function () {
-    const categoryId   = this.value;
-    const categoryText = this.options[this.selectedIndex].text;
-    const subSelect    = document.getElementById('sub_category');
+    const categoryId     = this.value;
+    const categoryText   = this.options[this.selectedIndex].text;
+    const subSelect      = document.getElementById('sub_category');
     const othersSubField = document.getElementById('others_sub_field');
     const othersCatField = document.getElementById('others_cat_field');
 
-    // Show/hide "New Category" input if "Others" selected
     if (othersCatField) {
         othersCatField.style.display = (categoryText === 'Others') ? 'block' : 'none';
     }
 
-    // Reset sub-category dropdown
     subSelect.innerHTML = '<option value="">Loading...</option>';
     subSelect.disabled  = true;
     if (othersSubField) othersSubField.style.display = 'none';
@@ -32,7 +30,6 @@ document.getElementById('category').addEventListener('change', function () {
         return;
     }
 
-    // Fetch sub-categories from the database
     fetch(`get-subcategories.php?category_id=${encodeURIComponent(categoryId)}`)
         .then(res => {
             if (!res.ok) throw new Error('Network error');
@@ -40,7 +37,6 @@ document.getElementById('category').addEventListener('change', function () {
         })
         .then(data => {
             subSelect.innerHTML = '<option value="">Select sub-category</option>';
-
             if (data && data.length > 0) {
                 data.forEach(sub => {
                     const option       = document.createElement('option');
@@ -72,9 +68,9 @@ const imageInputs  = document.querySelectorAll('.image-input');
 let uploadedImages = new Array(3).fill(null);
 
 imageInputs.forEach(input => {
-    const index      = parseInt(input.getAttribute('data-index'));
-    const uploadBox  = input.closest('.upload-box');
-    const removeBtn  = uploadBox.querySelector('.remove-image-btn');
+    const index     = parseInt(input.getAttribute('data-index'));
+    const uploadBox = input.closest('.upload-box');
+    const removeBtn = uploadBox.querySelector('.remove-image-btn');
 
     input.addEventListener('change', function (e) {
         const file = e.target.files[0];
@@ -84,14 +80,14 @@ imageInputs.forEach(input => {
                 input.value = '';
                 return;
             }
-            const reader   = new FileReader();
-            reader.onload  = function (e) {
+            const reader  = new FileReader();
+            reader.onload = function (e) {
                 const previewImg     = uploadBox.querySelector('.preview-image');
                 const previewWrapper = uploadBox.querySelector('.image-preview-wrapper');
                 const uploadContent  = uploadBox.querySelector('.upload-content');
-                previewImg.src       = e.target.result;
-                uploadContent.style.display  = 'none';
-                previewWrapper.style.display = 'block';
+                previewImg.src                   = e.target.result;
+                uploadContent.style.display      = 'none';
+                previewWrapper.style.display     = 'block';
                 uploadBox.classList.add('has-image');
                 uploadedImages[index] = file;
                 if (index < 2) {
@@ -111,10 +107,10 @@ imageInputs.forEach(input => {
             e.stopPropagation();
             const previewWrapper = uploadBox.querySelector('.image-preview-wrapper');
             const uploadContent  = uploadBox.querySelector('.upload-content');
-            input.value                      = '';
-            uploadedImages[index]            = null;
-            previewWrapper.style.display     = 'none';
-            uploadContent.style.display      = 'flex';
+            input.value                  = '';
+            uploadedImages[index]        = null;
+            previewWrapper.style.display = 'none';
+            uploadContent.style.display  = 'flex';
             uploadBox.classList.remove('has-image');
             for (let i = index + 1; i < 3; i++) {
                 if (!uploadedImages[i]) {
@@ -129,7 +125,6 @@ imageInputs.forEach(input => {
 document.getElementById('manualAssetForm').addEventListener('submit', async function (e) {
     e.preventDefault();
     const formData = new FormData(this);
-    // images[] are already included via name="images[]" on file inputs
 
     try {
         const response = await fetch('api/add-asset.php', { method: 'POST', body: formData });
@@ -165,13 +160,29 @@ dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-ov
 dropZone.addEventListener('drop', e => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
+
     const file = e.dataTransfer.files[0];
-    if (file && /\.(xlsx|xls|csv)$/i.test(file.name)) {
-        document.getElementById('excel_file').files = e.dataTransfer.files;
-        document.getElementById('excel_file').dispatchEvent(new Event('change'));
-    } else {
-        showNotification('Please drop a valid Excel/CSV file', 'error');
+    if (!file || !/\.(xlsx|xls|csv)$/i.test(file.name)) {
+        showNotification('Please drop a valid Excel/CSV file (.xlsx, .xls, .csv)', 'error');
+        return;
     }
+
+    // ✅ FIX: Use DataTransfer to properly assign dragged file to input
+    const fileInput  = document.getElementById('excel_file');
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(file);
+    fileInput.files = dataTransfer.files;
+
+    // Show file info in drop zone
+    document.querySelector('.drop-zone-content').style.display = 'none';
+    const info = document.getElementById('fileInfo');
+    info.style.display = 'flex';
+    info.querySelector('.file-name').textContent = file.name;
+    info.querySelector('.file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+
+    // Reset previous results
+    document.getElementById('uploadResults').style.display  = 'none';
+    document.getElementById('confirmSection').style.display = 'none';
 });
 
 // ── Notification ──────────────────────────────────────────────────────────

@@ -46,8 +46,6 @@ $userName = $user['name'];
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-
-        /* Preview table */
         .preview-table-wrap {
             overflow-x: auto;
             margin-top: 1rem;
@@ -77,13 +75,8 @@ $userName = $user['name'];
             vertical-align: top;
         }
 
-        .row-valid {
-            background: #f0fdf4;
-        }
-
-        .row-invalid {
-            background: #fff5f5;
-        }
+        .row-valid   { background: #f0fdf4; }
+        .row-invalid { background: #fff5f5; }
 
         .error-tag {
             display: inline-block;
@@ -95,7 +88,6 @@ $userName = $user['name'];
             margin: 2px 2px 2px 0;
         }
 
-        /* Summary bar */
         .preview-summary {
             display: flex;
             gap: 1rem;
@@ -112,22 +104,25 @@ $userName = $user['name'];
             font-size: 0.9rem;
         }
 
-        .summary-stat.ok {
-            background: #dcfce7;
-            color: #15803d;
-        }
+        .summary-stat.ok   { background: #dcfce7; color: #15803d; }
+        .summary-stat.err  { background: #fee2e2; color: #b91c1c; }
+        .summary-stat.info { background: #eff6ff; color: #1d4ed8; }
 
-        .summary-stat.err {
-            background: #fee2e2;
-            color: #b91c1c;
+        /* ── Blocked import banner ── */
+        .blocked-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: #fff7ed;
+            border: 2px solid #fb923c;
+            border-radius: 12px;
+            padding: 1.25rem 1.5rem;
         }
+        .blocked-box i { font-size: 2rem; color: #ea580c; flex-shrink: 0; margin-top: 2px; }
+        .blocked-box h4 { margin: 0 0 0.25rem; color: #9a3412; font-size: 1rem; }
+        .blocked-box p  { margin: 0; color: #7c3a1b; font-size: 0.875rem; line-height: 1.5; }
 
-        .summary-stat.info {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        /* Confirm box */
+        /* ── Confirm box (all rows valid) ── */
         .confirm-box {
             display: flex;
             align-items: center;
@@ -140,18 +135,9 @@ $userName = $user['name'];
             padding: 1.25rem 1.5rem;
         }
 
-        .confirm-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+        .confirm-info    { display: flex; align-items: center; gap: 1rem; }
+        .confirm-actions { display: flex; gap: 0.75rem; }
 
-        .confirm-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        /* Alerts */
         .alert {
             padding: 1rem 1.5rem;
             border-radius: 10px;
@@ -191,9 +177,9 @@ $userName = $user['name'];
                 <div class="header-stats">
                     <div class="stat-item">
                         <span class="stat-value"><?php
-                                                    $countResult = $conn->query("SELECT COUNT(*) as total FROM assets");
-                                                    echo number_format($countResult->fetch_assoc()['total'] ?? 0);
-                                                    ?></span>
+                            $countResult = $conn->query("SELECT COUNT(*) as total FROM assets");
+                            echo number_format($countResult->fetch_assoc()['total'] ?? 0);
+                        ?></span>
                         <span class="stat-label">Total Assets</span>
                     </div>
                 </div>
@@ -218,7 +204,6 @@ $userName = $user['name'];
                 <div class="content-card">
                     <form id="manualAssetForm" enctype="multipart/form-data" class="modern-form">
 
-                        <!-- Asset Information -->
                         <div class="form-section">
                             <div class="section-header">
                                 <i class='bx bx-info-circle'></i>
@@ -280,13 +265,11 @@ $userName = $user['name'];
                                     <input type="text" id="serial_number" name="serial_number" placeholder="e.g., SN123456">
                                 </div>
 
-                                <!-- Quantity + Active side by side -->
                                 <div class="form-field">
                                     <label>Quantity <span class="req">*</span></label>
                                     <input type="number" id="quantity" name="beg_balance_count" min="1" value="1" required>
                                 </div>
 
-                                <!-- Condition moved here -->
                                 <div class="form-field">
                                     <label>Condition <span class="req">*</span></label>
                                     <div class="select-wrapper">
@@ -298,7 +281,6 @@ $userName = $user['name'];
                                     </div>
                                 </div>
 
-                                <!-- Status moved here -->
                                 <div class="form-field">
                                     <label>Status <span class="req">*</span></label>
                                     <div class="select-wrapper">
@@ -314,7 +296,6 @@ $userName = $user['name'];
                             </div>
                         </div>
 
-                        <!-- Location -->
                         <div class="form-section">
                             <div class="section-header">
                                 <i class='bx bx-map'></i>
@@ -332,7 +313,6 @@ $userName = $user['name'];
                             </div>
                         </div>
 
-                        <!-- Description -->
                         <div class="form-section">
                             <div class="section-header">
                                 <i class='bx bx-file-blank'></i>
@@ -346,7 +326,6 @@ $userName = $user['name'];
                             </div>
                         </div>
 
-                        <!-- Images -->
                         <div class="form-section">
                             <div class="section-header">
                                 <i class='bx bx-image'></i>
@@ -358,7 +337,6 @@ $userName = $user['name'];
 
                                     <label class="upload-box active" id="uploadBox1">
                                         <input type="file" class="image-input" name="images[]" accept="image/*" data-index="0">
-
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
@@ -372,7 +350,6 @@ $userName = $user['name'];
 
                                     <label class="upload-box" id="uploadBox2">
                                         <input type="file" class="image-input" name="images[]" accept="image/*" data-index="1">
-
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
@@ -386,7 +363,6 @@ $userName = $user['name'];
 
                                     <label class="upload-box" id="uploadBox3">
                                         <input type="file" class="image-input" name="images[]" accept="image/*" data-index="2">
-
                                         <div class="upload-content">
                                             <i class='bx bx-cloud-upload'></i>
                                             <span>Upload Image</span>
@@ -402,7 +378,6 @@ $userName = $user['name'];
                             </div>
                         </div>
 
-                        <!-- Actions -->
                         <div class="form-actions">
                             <button type="reset" class="btn btn-secondary">
                                 <i class='bx bx-reset'></i>
@@ -446,7 +421,7 @@ $userName = $user['name'];
                                     </div>
                                     <div class="req-item">
                                         <i class='bx bx-info-circle'></i>
-                                        <span><strong>Optional:</strong> Brand, Model, Serial Number, Description</span>
+                                        <span><strong>Optional:</strong> Brand, Model, Serial Number, Description, Photo Drive URL</span>
                                     </div>
                                 </div>
                             </div>
@@ -460,6 +435,19 @@ $userName = $user['name'];
                         </div>
                     </div>
 
+                    <!-- Google Drive tip banner -->
+                    <div style="display:flex;align-items:flex-start;gap:0.75rem;
+                        background:#e8f0fe;border:1px solid #c5d8fb;border-radius:10px;
+                        padding:1rem 1.25rem;margin-bottom:1.5rem;font-size:0.875rem;color:#1a3c6e;">
+                        <i class='bx bxl-google' style="font-size:1.5rem;color:#4285f4;flex-shrink:0;margin-top:2px;"></i>
+                        <div>
+                            <strong>How to add photos via Google Drive:</strong><br>
+                            1. Create a folder in Google Drive and upload your asset photos.<br>
+                            2. Right-click the folder → <em>Share</em> → set access to <em>"Anyone with the link can view"</em> → Copy link.<br>
+                            3. Paste the link in the <code style="background:#d0e3ff;padding:1px 5px;border-radius:4px;">photo_drive_url_1</code>, <code style="background:#d0e3ff;padding:1px 5px;border-radius:4px;">photo_drive_url_2</code>, or <code style="background:#d0e3ff;padding:1px 5px;border-radius:4px;">photo_drive_url_3</code> columns of your Excel file (up to 3 photos per asset).
+                        </div>
+                    </div>
+
                     <form id="excelUploadForm" enctype="multipart/form-data" class="excel-upload-form">
                         <div class="file-drop-zone" id="dropZone">
                             <input type="file" id="excel_file" name="excel_file" accept=".xlsx,.xls,.csv" required hidden>
@@ -467,7 +455,7 @@ $userName = $user['name'];
                                 <i class='bx bxs-cloud-upload'></i>
                                 <h3>Drop your file here</h3>
                                 <p>or <span class="browse-link" onclick="document.getElementById('excel_file').click()">browse</span> to choose a file</p>
-                                <small>Supports .csv, .xlsx, .xls &nbsp;•&nbsp; Max <strong>500MB</strong></small>
+                                <small>Supports .csv, .xlsx, .xls &nbsp;•&nbsp; Max <strong>40MB</strong></small>
                             </div>
                             <div class="file-info" id="fileInfo" style="display:none;">
                                 <i class='bx bxs-file'></i>
@@ -481,7 +469,6 @@ $userName = $user['name'];
                             </div>
                         </div>
 
-
                         <div class="upload-actions">
                             <button type="button" class="btn btn-secondary" onclick="clearExcelFile()">
                                 <i class='bx bx-trash'></i>
@@ -494,340 +481,315 @@ $userName = $user['name'];
                         </div>
                     </form>
 
-                    <!-- Confirm section — shown after validation -->
-                    <div id="confirmSection" style="display:none; margin-top:1.5rem;">
-
-                        <div class="confirm-box">
-                            <div class="confirm-info">
-                                <i class='bx bx-import' style="font-size:2rem; color:#3b82f6;"></i>
-                                <div>
-                                    <strong><span id="confirmCount">0</span> valid rows</strong> are ready to import.
-                                    <div id="confirmWarning" style="display:none; color:#b45309; font-size:0.875rem; margin-top:0.25rem;">
-                                        ⚠️ <span id="confirmSkipCount">0</span> invalid rows will be <strong>skipped</strong> — only valid rows will be imported.
-                                    </div>
-                                </div>
+                    <!-- Progress bar -->
+                    <div id="uploadProgress" style="display:none; margin-top:1.5rem;">
+                        <div class="progress-content">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="progressFill"></div>
                             </div>
-                            <div class="confirm-actions">
-                                <button type="button" class="btn btn-secondary" onclick="clearExcelFile()">
-                                    <i class='bx bx-x'></i> Cancel
-                                </button>
-                                <button type="button" id="confirmImportBtn" class="btn btn-primary">
-                                    <i class='bx bx-check-circle'></i> <span>Confirm Import</span>
-                                </button>
-                            </div>
+                            <p class="progress-text">Processing your file, please wait...</p>
                         </div>
-
-                        <div id="uploadProgress" class="upload-progress" style="display:none;">
-                            <div class="progress-content">
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-fill" id="progressFill"></div>
-                                </div>
-                                <p class="progress-text">Processing your file, please wait...</p>
-                            </div>
-                        </div>
-
-                        <div id="uploadResults" class="upload-results" style="display:none;"></div>
-
-                        <script>
-                            // ── State ─────────────────────────────────────────────────────────────────
-                            let stagingToken = null;
-
-                            // ── File input display ────────────────────────────────────────────────────
-                            document.getElementById('excel_file').addEventListener('change', function() {
-                                const file = this.files[0];
-                                if (!file) return;
-                                document.querySelector('.drop-zone-content').style.display = 'none';
-                                const info = document.getElementById('fileInfo');
-                                info.style.display = 'flex';
-                                info.querySelector('.file-name').textContent = file.name;
-                                info.querySelector('.file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-                                // Reset previous results
-                                document.getElementById('uploadResults').style.display = 'none';
-                                document.getElementById('confirmSection').style.display = 'none';
-                                stagingToken = null;
-                            });
-
-                            function clearExcelFile() {
-                                document.getElementById('excel_file').value = '';
-                                document.getElementById('fileInfo').style.display = 'none';
-                                document.querySelector('.drop-zone-content').style.display = '';
-                                document.getElementById('uploadResults').style.display = 'none';
-                                document.getElementById('confirmSection').style.display = 'none';
-                                stagingToken = null;
-                            }
-
-                            // ── STEP 1: Upload & Validate ─────────────────────────────────────────────
-                            document.getElementById('excelUploadForm').addEventListener('submit', async function(e) {
-                                e.preventDefault();
-                                const file = document.getElementById('excel_file').files[0];
-                                if (!file) {
-                                    alert('Please select a file first.');
-                                    return;
-                                }
-
-                                document.getElementById('uploadProgress').style.display = 'block';
-                                document.getElementById('uploadResults').style.display = 'none';
-                                document.getElementById('confirmSection').style.display = 'none';
-                                document.getElementById('uploadBtn').disabled = true;
-                                stagingToken = null;
-
-                                let pct = 0;
-                                const fill = document.getElementById('progressFill');
-                                const timer = setInterval(() => {
-                                    pct = Math.min(pct + Math.random() * 8, 90);
-                                    fill.style.width = pct + '%';
-                                }, 300);
-
-                                const formData = new FormData();
-                                formData.append('excel_file', file);
-
-                                try {
-                                    const res = await fetch('upload-excel.php', {
-                                        method: 'POST',
-                                        body: formData
-                                    });
-                                    const result = await res.json();
-
-                                    clearInterval(timer);
-                                    fill.style.width = '100%';
-                                    setTimeout(() => {
-                                        document.getElementById('uploadProgress').style.display = 'none';
-                                        fill.style.width = '0';
-                                    }, 500);
-
-                                    const resultsDiv = document.getElementById('uploadResults');
-                                    resultsDiv.style.display = 'block';
-
-                                    if (!result.success) {
-                                        resultsDiv.innerHTML = `<div class="alert alert-danger">❌ <strong>Error:</strong> ${result.error}</div>`;
-                                        return;
-                                    }
-
-                                    stagingToken = result.token;
-
-                                    // Build summary bar
-                                    let html = `
-            <div class="preview-summary">
-                <div class="summary-stat ok"><i class='bx bx-check-circle'></i> <strong>${result.valid_rows}</strong> valid rows</div>
-                <div class="summary-stat ${result.invalid_rows > 0 ? 'err' : 'ok'}">
-                    <i class='bx bx-${result.invalid_rows > 0 ? 'error' : 'check-circle'}'></i>
-                    <strong>${result.invalid_rows}</strong> rows with errors
-                </div>
-                <div class="summary-stat info"><i class='bx bx-table'></i> <strong>${result.total_rows}</strong> total rows</div>
-            </div>`;
-
-                                    // Build preview table
-                                    if (result.preview && result.preview.length > 0) {
-                                        html += `<div class="preview-table-wrap"><table class="preview-table">
-                <thead><tr>
-<th>Row</th><th>Category</th><th>Sub-Category</th>
-<th>Brand</th><th>Model</th><th>Serial</th>
-<th>Qty</th><th>Condition</th><th>Status</th><th>Location</th><th>Sub-Location</th><th>Issues</th>
-                </tr></thead><tbody>`;
-
-                                        result.preview.forEach(r => {
-                                            const rowClass = r.is_valid ? 'row-valid' : 'row-invalid';
-                                            const issues = r.is_valid ? '<span style="color:#28a745">✓</span>' :
-                                                r.errors.map(e => `<span class="error-tag">${e}</span>`).join('');
-                                            html += `<tr class="${rowClass}">
-    <td>${r.row}</td>
-    <td>${r.category}</td><td>${r.sub_category}</td>
-    <td>${r.brand||'—'}</td><td>${r.model||'—'}</td><td>${r.serial}</td>
-    <td>${r.qty}</td><td>${r.condition}</td><td>${r.status}</td><td>${r.location}</td>
-    <td>${r.sub_location||'—'}</td>
-    <td>${issues}</td>
-</tr>`;
-                                        });
-
-                                        html += `</tbody></table></div>`;
-                                    }
-
-                                    resultsDiv.innerHTML = html;
-
-                                    // Show confirm section only if there are valid rows
-                                    if (result.valid_rows > 0) {
-                                        const confirmSec = document.getElementById('confirmSection');
-                                        confirmSec.style.display = 'block';
-                                        document.getElementById('confirmCount').textContent = result.valid_rows;
-                                        if (result.invalid_rows > 0) {
-                                            document.getElementById('confirmWarning').style.display = 'block';
-                                            document.getElementById('confirmSkipCount').textContent = result.invalid_rows;
-                                        } else {
-                                            document.getElementById('confirmWarning').style.display = 'none';
-                                        }
-                                    }
-
-                                } catch (err) {
-                                    clearInterval(timer);
-                                    document.getElementById('uploadProgress').style.display = 'none';
-                                    document.getElementById('uploadResults').innerHTML =
-                                        `<div class="alert alert-danger">❌ Upload failed: ${err.message}</div>`;
-                                    document.getElementById('uploadResults').style.display = 'block';
-                                }
-
-                                document.getElementById('uploadBtn').disabled = false;
-                            });
-
-                            document.getElementById('confirmImportBtn').addEventListener('click', async function() {
-                                if (!stagingToken) {
-                                    alert('No staged data found. Please re-upload.');
-                                    return;
-                                }
-
-                                this.disabled = true;
-                                this.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> <span>Importing...</span>`;
-
-                                try {
-                                    const res = await fetch('confirm-import.php', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json'
-                                        },
-                                        body: JSON.stringify({
-                                            token: stagingToken
-                                        })
-                                    });
-                                    const result = await res.json();
-
-                                    document.getElementById('confirmSection').style.display = 'none';
-                                    const resultsDiv = document.getElementById('uploadResults');
-
-                                    if (result.success) {
-                                        // ── Success banner ──────────────────────────────────────
-                                        resultsDiv.innerHTML = `
-                <div class="alert alert-success">
-                    ✅ <strong>Import Successful!</strong> ${result.message}
-                    ${result.failed > 0 ? `<br><small>⚠️ ${result.failed} row(s) were skipped due to errors.</small>` : ''}
-                </div>`;
-
-                                        // ── Success toast (top-right) ───────────────────────────
-                                        const toast = document.createElement('div');
-                                        toast.style.cssText = `
-                position:fixed; top:20px; right:20px;
-                padding:1rem 1.5rem;
-                background:#16a34a; color:white;
-                border-radius:10px; font-weight:500;
-                box-shadow:0 4px 16px rgba(0,0,0,0.2);
-                z-index:10000; font-family:inherit;
-                display:flex; align-items:center; gap:0.5rem;
-                animation: slideInRight 0.3s ease;
-            `;
-                                        toast.innerHTML = `<i class='bx bx-check-circle' style="font-size:1.25rem;"></i> Assets imported successfully!`;
-                                        document.body.appendChild(toast);
-                                        setTimeout(() => {
-                                            toast.style.transition = 'opacity 0.4s';
-                                            toast.style.opacity = '0';
-                                            setTimeout(() => toast.remove(), 400);
-                                        }, 4000);
-
-                                        stagingToken = null;
-                                        clearExcelFile();
-                                    } else {
-                                        resultsDiv.insertAdjacentHTML('afterbegin',
-                                            `<div class="alert alert-danger">❌ <strong>Import failed:</strong> ${result.error}</div>`);
-                                    }
-                                } catch (err) {
-                                    document.getElementById('uploadResults').insertAdjacentHTML('afterbegin',
-                                        `<div class="alert alert-danger">❌ Confirm failed: ${err.message}</div>`);
-                                }
-
-                                this.disabled = false;
-                                this.innerHTML = `<i class='bx bx-check-circle'></i> <span>Confirm Import</span>`;
-                            });
-                        </script>
                     </div>
-                </div>
 
-            </div>
+                    <!-- Results (preview table + summary) -->
+                    <div id="uploadResults" style="display:none; margin-top:1rem;"></div>
+
+                    <!-- Action section: either blocked or confirm -->
+                    <div id="confirmSection" style="display:none; margin-top:1rem;"></div>
+
+                </div><!-- /content-card -->
+            </div><!-- /excel-panel -->
+
+        </div><!-- /page-container -->
     </section>
 
     <script src="js/upload-asses.js"></script>
     <script>
-        // Remove tracking_type required validation since we removed that field
-        document.querySelectorAll('input[name="tracking_type"]').forEach(el => {
-            el.removeAttribute('required');
-        });
-
-        // Add hidden tracking_type with default BULK so backend doesn't complain
+        // ── Hidden tracking type ──────────────────────────────────────────────
+        document.querySelectorAll('input[name="tracking_type"]').forEach(el => el.removeAttribute('required'));
         const trackingInput = document.createElement('input');
-        trackingInput.type = 'hidden';
-        trackingInput.name = 'tracking_type';
+        trackingInput.type  = 'hidden';
+        trackingInput.name  = 'tracking_type';
         trackingInput.value = 'BULK';
         document.getElementById('manualAssetForm').appendChild(trackingInput);
 
-        // ── VALIDATION: red highlight on missing required fields ──
-        const manualForm = document.getElementById('manualAssetForm');
+        // ── Manual form validation ────────────────────────────────────────────
+        const manualForm   = document.getElementById('manualAssetForm');
+        const invalidStyle = `border:2px solid #d63031!important;background:#fff5f5!important;box-shadow:0 0 0 3px rgba(214,48,49,0.15)!important;`;
 
-        const invalidStyle = `
-        border: 2px solid #d63031 !important;
-        background: #fff5f5 !important;
-        box-shadow: 0 0 0 3px rgba(214,48,49,0.15) !important;
-    `;
+        function setInvalid(el) { el.setAttribute('style', invalidStyle); el.classList.add('field-invalid'); }
+        function setValid(el)   { el.removeAttribute('style'); el.classList.remove('field-invalid'); }
 
-        function setInvalid(el) {
-            el.setAttribute('style', invalidStyle);
-            el.classList.add('field-invalid');
-        }
-
-        function setValid(el) {
-            el.removeAttribute('style');
-            el.classList.remove('field-invalid');
-        }
-
-        manualForm.querySelectorAll('input, select, textarea').forEach(el => {
-            el.addEventListener('input', () => setValid(el));
+        manualForm.querySelectorAll('input,select,textarea').forEach(el => {
+            el.addEventListener('input',  () => setValid(el));
             el.addEventListener('change', () => setValid(el));
         });
 
         manualForm.addEventListener('submit', function(e) {
-            // Only validate visible, non-hidden required fields
-            const requiredFields = Array.from(manualForm.querySelectorAll('[required]'))
+            const fields = Array.from(manualForm.querySelectorAll('[required]'))
                 .filter(el => el.type !== 'hidden' && el.name !== 'tracking_type');
-
             let hasError = false;
-
-            requiredFields.forEach(el => {
-                if (!el.value.trim()) {
-                    e.preventDefault();
-                    setInvalid(el);
-                    hasError = true;
-                } else {
-                    setValid(el);
-                }
+            fields.forEach(el => {
+                if (!el.value.trim()) { e.preventDefault(); setInvalid(el); hasError = true; }
+                else setValid(el);
             });
-
             if (hasError) {
                 const first = manualForm.querySelector('.field-invalid');
-                if (first) first.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center'
-                });
-
-                const toast = document.createElement('div');
-                toast.style.cssText = `
-                position:fixed; top:20px; right:20px;
-                padding:1rem 1.5rem;
-                background:#d63031; color:white;
-                border-radius:10px; font-weight:500;
-                box-shadow:0 4px 16px rgba(0,0,0,0.2);
-                z-index:10000; font-family:inherit;
-            `;
-                toast.textContent = '⚠️ Please fill in all required fields.';
-                document.body.appendChild(toast);
-                setTimeout(() => toast.remove(), 3500);
+                if (first) first.scrollIntoView({ behavior:'smooth', block:'center' });
+                const t = document.createElement('div');
+                t.style.cssText = 'position:fixed;top:20px;right:20px;padding:1rem 1.5rem;background:#d63031;color:white;border-radius:10px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:10000;font-family:inherit;';
+                t.textContent = '⚠️ Please fill in all required fields.';
+                document.body.appendChild(t);
+                setTimeout(() => t.remove(), 3500);
             }
         });
 
-        const validationStyle = document.createElement('style');
-        validationStyle.textContent = `
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
+        // ════════════════════════════════════════════════════════════════════════
+        // EXCEL UPLOAD
+        // ════════════════════════════════════════════════════════════════════════
+        let stagingToken = null;
+
+        document.getElementById('excel_file').addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            document.querySelector('.drop-zone-content').style.display = 'none';
+            const info = document.getElementById('fileInfo');
+            info.style.display = 'flex';
+            info.querySelector('.file-name').textContent = file.name;
+            info.querySelector('.file-size').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+            document.getElementById('uploadResults').style.display  = 'none';
+            document.getElementById('confirmSection').style.display = 'none';
+            stagingToken = null;
+        });
+
+        function clearExcelFile() {
+            document.getElementById('excel_file').value = '';
+            document.getElementById('fileInfo').style.display          = 'none';
+            document.querySelector('.drop-zone-content').style.display = '';
+            document.getElementById('uploadResults').style.display     = 'none';
+            document.getElementById('confirmSection').style.display    = 'none';
+            stagingToken = null;
         }
-        .field-invalid + i { color: #d63031 !important; }
-    `;
-        document.head.appendChild(validationStyle);
-    </script>
+
+        function escHtml(str) {
+            if (str === null || str === undefined) return '—';
+            return String(str)
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+
+        // ── STEP 1: Upload & Validate ─────────────────────────────────────────
+        document.getElementById('excelUploadForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const file = document.getElementById('excel_file').files[0];
+            if (!file) { alert('Please select a file first.'); return; }
+
+            const progressEl = document.getElementById('uploadProgress');
+            const resultsDiv = document.getElementById('uploadResults');
+            const confirmSec = document.getElementById('confirmSection');
+            const fill       = document.getElementById('progressFill');
+            const uploadBtn  = document.getElementById('uploadBtn');
+
+            progressEl.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            confirmSec.style.display = 'none';
+            uploadBtn.disabled       = true;
+            stagingToken             = null;
+
+            let pct   = 0;
+            const timer = setInterval(() => {
+                pct = Math.min(pct + Math.random() * 8, 90);
+                fill.style.width = pct + '%';
+            }, 300);
+
+            const formData = new FormData();
+            formData.append('excel_file', file);
+
+            try {
+                const res    = await fetch('upload-excel.php', { method: 'POST', body: formData });
+                const result = await res.json();
+
+                clearInterval(timer);
+                fill.style.width = '100%';
+                setTimeout(() => { progressEl.style.display = 'none'; fill.style.width = '0'; }, 500);
+
+                resultsDiv.style.display = 'block';
+
+                if (!result.success) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger">❌ <strong>Error:</strong> ${escHtml(result.error)}</div>`;
+                    uploadBtn.disabled   = false;
+                    return;
+                }
+
+                stagingToken = result.token;
+                const hasErrors = result.invalid_rows > 0;
+                const allValid  = !hasErrors && result.valid_rows > 0;
+
+                // ── Summary bar ───────────────────────────────────────────────
+                let html = `
+                <div class="preview-summary">
+                    <div class="summary-stat ok"><i class='bx bx-check-circle'></i> <strong>${result.valid_rows}</strong> valid rows</div>
+                    <div class="summary-stat ${hasErrors ? 'err' : 'ok'}">
+                        <i class='bx bx-${hasErrors ? 'error' : 'check-circle'}'></i>
+                        <strong>${result.invalid_rows}</strong> rows with errors
+                    </div>
+                    <div class="summary-stat info"><i class='bx bx-table'></i> <strong>${result.total_rows}</strong> total rows</div>
+                </div>`;
+
+                // ── Preview table ─────────────────────────────────────────────
+                if (result.preview && result.preview.length > 0) {
+                    html += `
+                    <div class="preview-table-wrap">
+                      <table class="preview-table">
+                        <thead><tr>
+                          <th>Row</th><th>Category</th><th>Sub-Category</th>
+                          <th>Brand</th><th>Model</th><th>Serial</th>
+                          <th>Qty</th><th>Condition</th><th>Status</th>
+                          <th>Location</th><th>Sub-Location</th>
+                          <th>Photo 1</th><th>Photo 2</th><th>Photo 3</th><th>Issues</th>
+                        </tr></thead><tbody>`;
+
+                    result.preview.forEach(r => {
+                        const rowClass = r.is_valid ? 'row-valid' : 'row-invalid';
+                        function makePhotoLink(url, n) {
+                            if (!url) return '—';
+                            return `<a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer"
+                                style="display:inline-flex;align-items:center;gap:4px;color:#1a73e8;font-weight:500;
+                                text-decoration:none;background:#e8f0fe;padding:3px 8px;border-radius:6px;
+                                font-size:0.78rem;white-space:nowrap;">
+                                <i class='bx bxl-google' style="font-size:1rem;"></i> Photo ${n}</a>`;
+                        }
+                        const issues = r.is_valid
+                            ? '<span style="color:#28a745;font-weight:600;">✓ OK</span>'
+                            : r.errors.map(err => `<span class="error-tag">${escHtml(err)}</span>`).join('');
+
+                        html += `<tr class="${rowClass}">
+                            <td>${r.row}</td>
+                            <td>${escHtml(r.category)}</td><td>${escHtml(r.sub_category)}</td>
+                            <td>${escHtml(r.brand)}</td><td>${escHtml(r.model)}</td>
+                            <td>${escHtml(r.serial)}</td><td>${r.qty}</td>
+                            <td>${escHtml(r.condition)}</td><td>${escHtml(r.status)}</td>
+                            <td>${escHtml(r.location)}</td><td>${escHtml(r.sub_location)}</td>
+                            <td>${makePhotoLink(r.photo_drive_url_1, 1)}</td>
+                            <td>${makePhotoLink(r.photo_drive_url_2, 2)}</td>
+                            <td>${makePhotoLink(r.photo_drive_url_3, 3)}</td>
+                            <td>${issues}</td>
+                        </tr>`;
+                    });
+
+                    html += `</tbody></table></div>`;
+                }
+
+                resultsDiv.innerHTML = html;
+
+                // ── STEP 2 action section ─────────────────────────────────────
+                confirmSec.style.display = 'block';
+
+                if (hasErrors) {
+                    // ❌ BLOCKED — must fix errors first
+                    confirmSec.innerHTML = `
+                    <div class="blocked-box">
+                        <i class='bx bx-block'></i>
+                        <div>
+                            <h4>Import Blocked — Please Fix All Errors First</h4>
+                            <p>
+                                <strong>${result.invalid_rows} row(s)</strong> have errors highlighted in red above.
+                                All rows must be valid before you can import.<br>
+                                Please correct your Excel file and re-upload.
+                            </p>
+                        </div>
+                    </div>`;
+                    stagingToken = null; // prevent any accidental import
+
+                } else if (allValid) {
+                    // ✅ ALL VALID — show confirm button
+                    confirmSec.innerHTML = `
+                    <div class="confirm-box">
+                        <div class="confirm-info">
+                            <i class='bx bx-import' style="font-size:2rem; color:#3b82f6;"></i>
+                            <div>
+                                <strong>All ${result.valid_rows} rows are valid and ready to import.</strong>
+                                <div style="color:#15803d;font-size:0.875rem;margin-top:0.25rem;">
+                                    ✅ No errors found — you can safely proceed.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="confirm-actions">
+                            <button type="button" class="btn btn-secondary" onclick="clearExcelFile()">
+                                <i class='bx bx-x'></i> Cancel
+                            </button>
+                            <button type="button" id="confirmImportBtn" class="btn btn-primary">
+                                <i class='bx bx-check-circle'></i> <span>Confirm Import</span>
+                            </button>
+                        </div>
+                    </div>`;
+
+                    // Attach confirm handler
+                    document.getElementById('confirmImportBtn').addEventListener('click', confirmImport);
+
+                } else {
+                    // No rows at all
+                    confirmSec.innerHTML = `<div class="alert alert-danger">❌ No valid rows found to import.</div>`;
+                    stagingToken = null;
+                }
+
+            } catch (err) {
+                clearInterval(timer);
+                progressEl.style.display = 'none';
+                resultsDiv.innerHTML     = `<div class="alert alert-danger">❌ Upload failed: ${escHtml(err.message)}</div>`;
+                resultsDiv.style.display = 'block';
+            }
+
+            uploadBtn.disabled = false;
+        });
+
+        // ── STEP 2: Confirm & Import ──────────────────────────────────────────
+        async function confirmImport() {
+            if (!stagingToken) { alert('No staged data found. Please re-upload.'); return; }
+
+            const btn = document.getElementById('confirmImportBtn');
+            btn.disabled  = true;
+            btn.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> <span>Importing...</span>`;
+
+            try {
+                const res    = await fetch('confirm-import.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: stagingToken })
+                });
+                const result = await res.json();
+
+                const confirmSec = document.getElementById('confirmSection');
+                const resultsDiv = document.getElementById('uploadResults');
+
+                if (result.success) {
+                    confirmSec.innerHTML = `
+                    <div class="alert alert-success">
+                        ✅ <strong>Import Successful!</strong> ${escHtml(result.message)}
+                    </div>`;
+
+                    const toast = document.createElement('div');
+                    toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:1rem 1.5rem;background:#16a34a;color:white;border-radius:10px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,0.2);z-index:10000;display:flex;align-items:center;gap:0.5rem;';
+                    toast.innerHTML = `<i class='bx bx-check-circle' style="font-size:1.25rem;"></i> Assets imported successfully!`;
+                    document.body.appendChild(toast);
+                    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 4000);
+
+                    stagingToken = null;
+                    setTimeout(() => clearExcelFile(), 3000);
+                } else {
+                    confirmSec.insertAdjacentHTML('afterbegin',
+                        `<div class="alert alert-danger" style="margin-bottom:1rem;">❌ <strong>Import failed:</strong> ${escHtml(result.error)}</div>`);
+                    btn.disabled  = false;
+                    btn.innerHTML = `<i class='bx bx-check-circle'></i> <span>Confirm Import</span>`;
+                }
+            } catch (err) {
+                document.getElementById('confirmSection').insertAdjacentHTML('afterbegin',
+                    `<div class="alert alert-danger" style="margin-bottom:1rem;">❌ Confirm failed: ${escHtml(err.message)}</div>`);
+                btn.disabled  = false;
+                btn.innerHTML = `<i class='bx bx-check-circle'></i> <span>Confirm Import</span>`;
+            }
+        }
     </script>
 
+</body>
 </html>

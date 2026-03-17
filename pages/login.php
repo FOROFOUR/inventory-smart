@@ -2,107 +2,98 @@
 session_start();
 require_once '../config.php';
 
-$conn = getDBConnection();
+$conn  = getDBConnection();
 $error = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $login = trim($_POST['login']);
-    $password = $_POST['password'];
+    $login    = trim($_POST['login'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    $stmt = $conn->prepare("
-        SELECT * FROM users 
-        WHERE username = ? 
-        UNION 
-        SELECT * FROM users 
-        WHERE email = ?
-        LIMIT 1
-    ");
-    $stmt->bind_param("ss", $login, $login);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // Generic message for ALL failures — never hint which field is wrong
+    $genericError = "Invalid username or password.";
 
-    if ($result->num_rows === 1) {
+    if (!empty($login) && !empty($password)) {
 
-        $user = $result->fetch_assoc();
-        $now = date("Y-m-d H:i:s");
+        $stmt = $conn->prepare("
+            SELECT * FROM users
+            WHERE (username = ? OR email = ?)
+            LIMIT 1
+        ");
+        $stmt->bind_param("ss", $login, $login);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if ($user['lock_until'] && $user['lock_until'] > $now) {
-            $error = "Account locked until " . $user['lock_until'];
-        }
+        if ($result->num_rows === 1) {
+            $user = $result->fetch_assoc();
+            $now  = date("Y-m-d H:i:s");
 
-        elseif ($user['status'] !== 'ACTIVE') {
-            $error = "Account inactive.";
-        }
+            if ($user['lock_until'] && $user['lock_until'] > $now) {
+                // Locked — generic, no timing info
+                $error = "Your account has been temporarily locked. Please try again later.";
 
-        elseif (password_verify($password, $user['password'])) {
+            } elseif ($user['status'] !== 'ACTIVE') {
+                // Inactive — same generic message
+                $error = $genericError;
 
-            $reset = $conn->prepare("
-                UPDATE users 
-                SET failed_attempts = 0, lock_until = NULL 
-                WHERE id = ?
-            ");
-            $reset->bind_param("i", $user['id']);
-            $reset->execute();
+            } elseif (password_verify($password, $user['password'])) {
+                // ✅ Success — reset counters
+                $reset = $conn->prepare("UPDATE users SET failed_attempts = 0, lock_until = NULL WHERE id = ?");
+                $reset->bind_param("i", $user['id']);
+                $reset->execute();
 
-            session_regenerate_id(true);
+                session_regenerate_id(true);
+                $_SESSION['user_id']           = $user['id'];
+                $_SESSION['role']              = $user['role'];
+                $_SESSION['name']              = $user['name'];
+                $_SESSION['profile_pic']       = $user['profile_pic'] ?? null;
+                $_SESSION['warehouse_location'] = $user['warehouse_location'] ?? null;
 
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['role'] = $user['role'];
-            $_SESSION['name'] = $user['name'];
-
-            if ($user['role'] === 'ADMIN') {
-                header("Location: ../dashboard.php");
+                // Role-based redirect
+                if ($user['role'] === 'ADMIN') {
+                    header("Location: ../dashboard.php");
+                } elseif ($user['role'] === 'WAREHOUSE') {
+                    header("Location: ../user/warehouse_dashboard.php");
+                } else {
+                    // EMPLOYEE and any future roles
+                    header("Location: ../dashboard.php");
+                }
+                exit();
 
             } else {
-                header("Location: ../user/warehouse_dashboard.php");
+                // Wrong password — increment silently, never expose count
+                $failedAttempts = $user['failed_attempts'] + 1;
+
+                if ($failedAttempts >= 5) {
+                    $lockUntil = date("Y-m-d H:i:s", strtotime("+15 minutes"));
+                    $update    = $conn->prepare("UPDATE users SET failed_attempts = ?, lock_until = ? WHERE id = ?");
+                    $update->bind_param("isi", $failedAttempts, $lockUntil, $user['id']);
+                    $update->execute();
+                    $error = "Your account has been temporarily locked. Please try again later.";
+                } else {
+                    $update = $conn->prepare("UPDATE users SET failed_attempts = ?, last_failed_attempt = NOW() WHERE id = ?");
+                    $update->bind_param("ii", $failedAttempts, $user['id']);
+                    $update->execute();
+                    $error = $genericError;
+                }
             }
-            exit();
 
         } else {
-
-            $failedAttempts = $user['failed_attempts'] + 1;
-
-            if ($failedAttempts >= 5) {
-
-                $lockUntil = date("Y-m-d H:i:s", strtotime("+15 minutes"));
-
-                $update = $conn->prepare("
-                    UPDATE users 
-                    SET failed_attempts = ?, lock_until = ? 
-                    WHERE id = ?
-                ");
-                $update->bind_param("isi", $failedAttempts, $lockUntil, $user['id']);
-                $update->execute();
-
-                $error = "Too many attempts. Locked for 15 minutes.";
-            } else {
-
-                $update = $conn->prepare("
-                    UPDATE users 
-                    SET failed_attempts = ?, last_failed_attempt = NOW()
-                    WHERE id = ?
-                ");
-                $update->bind_param("ii", $failedAttempts, $user['id']);
-                $update->execute();
-
-                $error = "Invalid credentials. Attempt $failedAttempts of 5.";
-            }
+            // User not found — same generic, no enumeration hint
+            $error = $genericError;
         }
 
     } else {
-        $error = "User not found.";
+        $error = "Please fill in all fields.";
     }
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Smart Intern</title>
+    <title>Login — IBIS</title>
     <link rel="stylesheet" href="../css/auth.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,6 +102,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 <body>
     <div class="auth-container">
+
+        <!-- ── Left panel ──────────────────────────────────── -->
         <div class="auth-left">
             <div class="auth-left-content">
                 <a href="../landing.php" class="back-link">
@@ -119,147 +112,123 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </a>
                 <div class="brand-section">
                     <div class="logo">
-                        <i class="fas fa-cube"></i>
-                        <span>Smart<strong>Intern</strong></span>
+                        <i class="fas fa-boxes-stacked"></i>
+                        <span><strong>IBIS</strong></span>
                     </div>
                     <h1>Welcome Back</h1>
-                    <p>Sign in to access your inventory management dashboard</p>
+                    <p>Sign in to access the Imbak-Bantay Inventory System dashboard</p>
                 </div>
                 <div class="features-list">
-                    
-                    
-                  
+                    <div class="feature-item">
+                        <i class="fas fa-boxes"></i>
+                        Real-time Inventory Tracking
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-exchange-alt"></i>
+                        Asset Transfer Management
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-chart-bar"></i>
+                        Reports &amp; Analytics
+                    </div>
                 </div>
             </div>
         </div>
-        
+
+        <!-- ── Right panel ─────────────────────────────────── -->
         <div class="auth-right">
             <div class="auth-form-wrapper">
                 <div class="auth-header">
                     <h2>Sign In</h2>
-                    <p>Enter your credentials to access your account</p>
+                    <p>Enter your credentials to continue</p>
                 </div>
-                
+
                 <?php if ($error): ?>
                 <div class="alert alert-error">
                     <i class="fas fa-exclamation-circle"></i>
                     <span><?php echo htmlspecialchars($error); ?></span>
                 </div>
                 <?php endif; ?>
-                
+
                 <form method="POST" class="auth-form" id="loginForm">
+
                     <div class="form-group">
-                        <label for="username">Username</label>
+                        <label>Username or Email</label>
                         <div class="input-wrapper">
                             <i class="fas fa-user"></i>
-                            <input              
-    type="text"
-    name="login"
-    placeholder="Enter username or email"
-    required
-                          autofocus
+                            <input
+                                type="text"
+                                name="login"
+                                placeholder="Enter username or email"
+                                value="<?php echo htmlspecialchars($_POST['login'] ?? ''); ?>"
+                                required
+                                autofocus
                             >
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label for="password">Password</label>
+                        <label>Password</label>
                         <div class="input-wrapper">
                             <i class="fas fa-lock"></i>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                name="password" 
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
                                 placeholder="Enter your password"
                                 required
                             >
-                            <button type="button" class="toggle-password" onclick="togglePassword()">
+                            <button type="button" class="toggle-password" onclick="togglePassword()" tabindex="-1">
                                 <i class="fas fa-eye" id="toggleIcon"></i>
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="form-options">
                         <label class="checkbox-wrapper">
                             <input type="checkbox" name="remember">
                             <span>Remember me</span>
                         </label>
-                        <a href="#" class="forgot-link">Forgot password?</a>
                     </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-full">
+
+                    <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
                         <span>Sign In</span>
                         <i class="fas fa-arrow-right"></i>
                     </button>
-                    
-                    <div class="divider">
-                        <span>or continue with</span>
-                    </div>
-                    
-                    <div class="social-login">
-                        <button type="button" class="btn-social">
-                            <i class="fab fa-google"></i>
-                            Google
-                        </button>
-                        <button type="button" class="btn-social">
-                            <i class="fab fa-microsoft"></i>
-                            Microsoft
-                        </button>
-                    </div>
-                    
-                    <p class="signup-link">
-                        Don't have an account? <a href="signup.php">Sign up</a>
-                    </p>
+
                 </form>
-            
+
+                <div class="auth-footer">
+                    <p class="demo-info">
+                        <i class="fas fa-shield-alt"></i>
+                        Secured by IBIS &mdash; Imbak-Bantay Inventory System
+                    </p>
+                </div>
+
             </div>
         </div>
+
     </div>
-    
+
     <script>
         function togglePassword() {
-            const passwordInput = document.getElementById('password');
-            const toggleIcon = document.getElementById('toggleIcon');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleIcon.classList.remove('fa-eye');
-                toggleIcon.classList.add('fa-eye-slash');
+            const input = document.getElementById('password');
+            const icon  = document.getElementById('toggleIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
             } else {
-                passwordInput.type = 'password';
-                toggleIcon.classList.remove('fa-eye-slash');
-                toggleIcon.classList.add('fa-eye');
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
             }
         }
-        
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                e.preventDefault();
-                showNotification('Please fill in all fields', 'error');
-            }
+
+        // Disable submit button to prevent double-click spam
+        document.getElementById('loginForm').addEventListener('submit', function () {
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>&nbsp; Signing in…';
         });
-        
-        function showNotification(message, type = 'info') {
-            const existing = document.querySelector('.notification');
-            if (existing) existing.remove();
-            
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-out';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
     </script>
 </body>
 </html>

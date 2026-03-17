@@ -163,6 +163,11 @@ h1, h2, h3, h4, h5, h6 {
     transition: var(--transition);
 }
 
+/* hamburger open state */
+.hamburger.open span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+
 .hero {
     position: relative;
     min-height: 100vh;
@@ -290,6 +295,7 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     gap: 16px;
     margin-bottom: 48px;
+    flex-wrap: wrap;
 }
 
 .btn {
@@ -900,6 +906,9 @@ section {
     font-size: 14px;
 }
 
+/* ─────────────────────────────────────────────────────────
+   RESPONSIVE — original breakpoints (untouched)
+───────────────────────────────────────────────────────── */
 @media (max-width: 968px) {
     .hamburger {
         display: flex;
@@ -993,4 +1002,366 @@ section {
     .floating-card {
         display: none;
     }
+}
+
+
+/* ═════════════════════════════════════════════════════════
+   IBIS ADDITIONS
+   Lahat ng styles dito ay para sa mga bagong elements lang.
+   Hindi binago ang kahit anong original na rule sa itaas.
+═════════════════════════════════════════════════════════ */
+
+/* ── Hero: eyebrow badge ── */
+.ibis-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(8px);
+    color: #fff;
+    padding: 7px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+.ibis-eyebrow i { font-size: 13px; opacity: 0.85; }
+
+/* ── Hero: big IBIS brand title ── */
+.ibis-main-title {
+    font-family: 'Sora', sans-serif;
+    font-size: clamp(4rem, 12vw, 7.5rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.ibis-main-title span {
+    background: linear-gradient(135deg, #bfdbfe, #93c5fd, #ffffff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* ── Hero: I·B·I·S tagline ── */
+.ibis-tagline {
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 400;
+    margin-bottom: 24px;
+    letter-spacing: 0.05em;
+}
+.ibis-tagline strong {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* ── Hero: acronym pill row ── */
+.ibis-acronym-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.ibis-letter-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 10px;
+    padding: 7px 14px 7px 7px;
+    transition: var(--transition);
+    cursor: default;
+}
+.ibis-letter-pill:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.pill-letter {
+    width: 34px;
+    height: 34px;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-family: 'Sora', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+.pill-i1 { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+.pill-b  { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.pill-i2 { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+.pill-s  { background: linear-gradient(135deg, #f59e0b, #f97316); }
+
+.pill-texts {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+.pill-ph {
+    font-size: 0.83rem;
+    font-weight: 700;
+    color: #fff;
+}
+.pill-en {
+    font-size: 0.66rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+.pill-divider {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.65rem;
+    flex-shrink: 0;
+}
+
+/* ── Hero: typewriter line ── */
+.ibis-typewriter-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: clamp(0.95rem, 2vw, 1.15rem);
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: 32px;
+    min-height: 1.8em;
+}
+.ibis-typewriter-line i {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+#ibis-typed { font-weight: 600; color: #fff; }
+.ibis-cursor {
+    display: inline-block;
+    color: #7dd3fc;
+    font-weight: 300;
+    animation: ibis-blink 0.75s step-end infinite;
+}
+@keyframes ibis-blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+}
+
+/* ── Bakit IBIS section ── */
+.bakit-ibis {
+    padding: 100px 0;
+    background: linear-gradient(160deg, #f0f7ff 0%, #f8faff 55%, #eef4ff 100%);
+}
+
+/* override section-header max-width for this section */
+.bakit-ibis .section-header {
+    max-width: 700px;
+}
+
+/* custom badge style inside bakit-ibis (overrides .section-badge) */
+.bakit-ibis .section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(13, 110, 253, 0.08);
+    border: 1px solid rgba(13, 110, 253, 0.2);
+    color: var(--primary);
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.bakit-ibis .section-title span {
+    background: linear-gradient(135deg, var(--primary), #0ea5e9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.bakit-ibis .section-desc {
+    font-size: 17px;
+    color: var(--text-secondary);
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.75;
+}
+
+/* 4-letter big cards */
+.ibis-big-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.ibis-big-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 36px 24px;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+}
+.ibis-big-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    border-radius: 20px 20px 0 0;
+}
+.ibis-big-card.card-i1::before { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
+.ibis-big-card.card-b::before  { background: linear-gradient(90deg, #6366f1, #8b5cf6); }
+.ibis-big-card.card-i2::before { background: linear-gradient(90deg, #ec4899, #f43f5e); }
+.ibis-big-card.card-s::before  { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+.ibis-big-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-lg);
+    border-color: transparent;
+}
+.ibis-big-card.card-i1:hover { box-shadow: 0 20px 48px rgba(59,130,246,.2); }
+.ibis-big-card.card-b:hover  { box-shadow: 0 20px 48px rgba(99,102,241,.2); }
+.ibis-big-card.card-i2:hover { box-shadow: 0 20px 48px rgba(236,72,153,.2); }
+.ibis-big-card.card-s:hover  { box-shadow: 0 20px 48px rgba(245,158,11,.2); }
+
+.ibis-big-letter {
+    font-family: 'Sora', sans-serif;
+    font-size: 4.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 12px;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.card-i1 .ibis-big-letter { background: linear-gradient(135deg, #3b82f6, #06b6d4); }
+.card-b  .ibis-big-letter { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.card-i2 .ibis-big-letter { background: linear-gradient(135deg, #ec4899, #f43f5e); }
+.card-s  .ibis-big-letter { background: linear-gradient(135deg, #f59e0b, #f97316); }
+
+.ibis-big-word-ph {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.ibis-big-word-en {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+.ibis-big-icon {
+    margin-top: 16px;
+    font-size: 1.6rem;
+    opacity: 0.18;
+    transition: opacity 0.3s;
+}
+.ibis-big-card:hover .ibis-big-icon { opacity: 0.35; }
+.card-i1 .ibis-big-icon { color: #3b82f6; }
+.card-b  .ibis-big-icon { color: #6366f1; }
+.card-i2 .ibis-big-icon { color: #ec4899; }
+.card-s  .ibis-big-icon { color: #f59e0b; }
+
+/* bird story card */
+.ibis-story-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 40px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 36px;
+    align-items: start;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+}
+.ibis-story-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b);
+}
+
+.ibis-bird-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border: 1.5px solid rgba(59, 130, 246, 0.15);
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.ibis-story-text h3 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+.ibis-story-text h3 span {
+    background: linear-gradient(135deg, var(--primary), #0ea5e9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+.ibis-story-text p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 12px;
+}
+.ibis-story-text p:last-child { margin-bottom: 0; }
+.ibis-story-text strong { color: var(--primary); font-weight: 600; }
+
+/* ── Responsive additions ── */
+@media (max-width: 968px) {
+    /* pills center on tablet */
+    .ibis-acronym-row { justify-content: center; }
+    .pill-divider { display: none; }
+    .ibis-typewriter-line { justify-content: center; }
+
+    /* 2-col letter cards on tablet */
+    .ibis-big-row { grid-template-columns: repeat(2, 1fr); }
+
+    /* story card goes single column */
+    .ibis-story-card {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 28px;
+    }
+}
+
+@media (max-width: 640px) {
+    /* hero text centering on mobile */
+    .hero-content { text-align: center; }
+    .ibis-acronym-row { justify-content: center; }
+    .ibis-typewriter-line { justify-content: center; }
+    .hero-buttons { justify-content: center; }
+
+    /* single col letter cards on mobile */
+    .ibis-big-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .ibis-big-card { padding: 24px 16px; }
+    .ibis-big-letter { font-size: 3.2rem; }
+
+    .ibis-story-card { padding: 20px; }
+    .ibis-bird-icon { width: 60px; height: 60px; font-size: 1.5rem; }
 }
