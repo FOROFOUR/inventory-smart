@@ -430,6 +430,7 @@ function validateUserForm() {
     return true;
 }
 
+// ── PERMISSIONS ───────────────────────────────────────────────────────────────
 const PERMS = [
   { key:'dashboard',        label:'Dashboard',        sub:'Main overview',        icon:'bx-grid-alt',        color:'#3b82f6', bg:'#eff6ff' },
   { key:'inventory_view',   label:'Inventory',        sub:'View only',            icon:'bx-package',         color:'#8b5cf6', bg:'#f5f3ff' },
@@ -438,8 +439,14 @@ const PERMS = [
   { key:'qr_management',    label:'QR Management',    sub:'Generate & print QRs', icon:'bx-qr-scan',         color:'#06b6d4', bg:'#ecfeff' },
   { key:'reports',          label:'Reports',          sub:'View reports',         icon:'bx-bar-chart-alt-2', color:'#6366f1', bg:'#eef2ff' },
   { key:'account_settings', label:'Account Settings', sub:'Always enabled',       icon:'bx-cog',             color:'#64748b', bg:'#f8fafc', locked:true },
+  // ── Transfer flow ─────────────────────────────────────────────────────────
+  { key:'orders',           label:'Orders',           sub:'Admin-only by default', icon:'bx-list-ul',        color:'#dc2626', bg:'#fff1f2', adminOnly:true },
+  { key:'preparing',        label:'Preparing',        sub:'Warehouse prep stage',  icon:'bx-loader-alt',     color:'#d97706', bg:'#fffbeb' },
+  { key:'receiving',        label:'Receiving',        sub:'Receive transfers',     icon:'bx-import',         color:'#0891b2', bg:'#ecfeff' },
+  { key:'completed',        label:'Completed',        sub:'View completed items',  icon:'bx-check-circle',   color:'#059669', bg:'#f0fdf4' },
 ];
-const DEFAULT_PERMS = PERMS.map(p => p.key);
+// orders/preparing/receiving/completed are NOT default — must be explicitly granted
+const DEFAULT_PERMS = ['dashboard','inventory_view','asset_transfer','upload_assets','qr_management','reports','account_settings'];
 
 let allUsers = [], delTarget = null, blkTarget = null, pendingAction = null, modalToReopenOnCancel = null;
 
@@ -549,29 +556,45 @@ function renderTable() {
     }).join('');
 }
 
-function renderPermGrid(selected = []) {
-    document.getElementById('permGrid').innerHTML = PERMS.map(p => {
-        const chk = selected.includes(p.key) ? 'checked' : '';
-        const dis = p.locked ? 'disabled' : '';
-        const cls = ['perm-item', selected.includes(p.key) ? 'checked' : '', p.locked ? 'locked' : ''].join(' ').trim();
-        return `<label class="${cls}" id="pitem_${p.key}">
-            <input type="checkbox" value="${p.key}" ${chk} ${dis} onchange="onPermChange(this,'${p.key}')">
-            <div class="perm-item-icon" style="background:${p.bg};color:${p.color}"><i class='bx ${p.icon}'></i></div>
-            <div><div class="perm-item-label">${p.label}</div><div class="perm-item-sub">${p.sub}</div></div>
-        </label>`;
-    }).join('');
+// ── renderPermGrid: role param controls visibility of adminOnly items ──────────
+function renderPermGrid(selected = [], role = 'EMPLOYEE') {
+    const isAdmin = role === 'ADMIN';
+    document.getElementById('permGrid').innerHTML = PERMS
+        .filter(p => isAdmin || !p.adminOnly)
+        .map(p => {
+            const chk = selected.includes(p.key) ? 'checked' : '';
+            const dis = p.locked ? 'disabled' : '';
+            const cls = ['perm-item', selected.includes(p.key) ? 'checked' : '', p.locked ? 'locked' : ''].join(' ').trim();
+            const adminBadge = (p.adminOnly && isAdmin)
+                ? `<span style="font-size:.62rem;background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;margin-left:5px;font-weight:700;vertical-align:middle;">ADMIN</span>`
+                : '';
+            return `<label class="${cls}" id="pitem_${p.key}">
+                <input type="checkbox" value="${p.key}" ${chk} ${dis} onchange="onPermChange(this,'${p.key}')">
+                <div class="perm-item-icon" style="background:${p.bg};color:${p.color}"><i class='bx ${p.icon}'></i></div>
+                <div><div class="perm-item-label">${p.label}${adminBadge}</div><div class="perm-item-sub">${p.sub}</div></div>
+            </label>`;
+        }).join('');
 }
 
 function onPermChange(cb, key) { document.getElementById('pitem_' + key).classList.toggle('checked', cb.checked); }
 
+// ── onRoleChange: re-renders grid so adminOnly items show/hide correctly ───────
 function onRoleChange() {
     const role = document.getElementById('fieldRole').value;
     const isAdmin = role === 'ADMIN', isWH = role === 'WAREHOUSE';
     document.getElementById('adminNotice').style.display       = isAdmin ? 'flex'  : 'none';
     document.getElementById('whNotice').style.display          = isWH    ? 'flex'  : 'none';
-    document.getElementById('permGrid').style.display          = (isAdmin || isWH) ? 'none' : 'grid';
-    document.getElementById('btnToggleAll').style.display      = (isAdmin || isWH) ? 'none' : 'inline';
     document.getElementById('warehouseLocGroup').style.display = isWH    ? 'block' : 'none';
+
+    if (isAdmin || isWH) {
+        document.getElementById('permGrid').style.display     = 'none';
+        document.getElementById('btnToggleAll').style.display = 'none';
+    } else {
+        const currentSelected = getSelectedPerms();
+        renderPermGrid(currentSelected.length ? currentSelected : DEFAULT_PERMS, role);
+        document.getElementById('permGrid').style.display     = 'grid';
+        document.getElementById('btnToggleAll').style.display = 'inline';
+    }
 }
 
 function toggleAll() {
@@ -596,7 +619,7 @@ function openAddModal() {
     document.getElementById('fieldPassword').value = '';
     document.getElementById('fieldWarehouseLoc').value = '';
     document.getElementById('pwHint').style.display = 'none';
-    renderPermGrid(DEFAULT_PERMS); onRoleChange(); openModal('userModal');
+    renderPermGrid(DEFAULT_PERMS, 'EMPLOYEE'); onRoleChange(); openModal('userModal');
 }
 
 function openEditModal(uid) {
@@ -613,7 +636,7 @@ function openEditModal(uid) {
     document.getElementById('fieldPassword').value = '';
     document.getElementById('fieldWarehouseLoc').value = u.warehouse_location || '';
     document.getElementById('pwHint').style.display = 'block';
-    renderPermGrid(u.permissions || DEFAULT_PERMS); onRoleChange(); openModal('userModal');
+    renderPermGrid(u.permissions || DEFAULT_PERMS, u.role); onRoleChange(); openModal('userModal');
 }
 
 async function doSaveUser() {

@@ -567,19 +567,27 @@ function renderInventoryTable() {
 }
 
 function updateStats() {
-    const records  = inventoryData.length;
-    const working  = inventoryData.filter(i=>i.status==='WORKING').length;
-    const total    = inventoryData.reduce((s,i)=>s+(parseInt(i.active_count)||0),0);
-    const transit  = inventoryData.reduce((s,i)=>s+(parseInt(i.for_pullout)||0),0);
-    const checking = inventoryData.filter(i=>i.status==='FOR CHECKING').length;
-    const notWork  = inventoryData.filter(i=>i.status==='NOT WORKING').length;
-    document.getElementById('totalAssets').textContent   = working;
-    document.getElementById('activeItems').textContent   = total;
-    document.getElementById('pulledOut').textContent     = transit;
-    document.getElementById('forChecking').textContent   = checking;
-    document.getElementById('kpiSubRecords').textContent  = working === 1 ? '1 functional item' : `${working} of ${records} records`;
-    document.getElementById('kpiSubAssets').textContent   = `${total} available units`;
-    document.getElementById('kpiSubChecking').textContent = notWork > 0 ? `${notWork} not working` : 'need attention';
+    const records = inventoryData.length;
+
+    const sumBeg = (filterFn) =>
+        inventoryData
+            .filter(filterFn)
+            .reduce((s, i) => s + (parseInt(i.beg_balance_count) || 0), 0);
+
+    const workingQty  = sumBeg(i => i.status === 'WORKING');
+    const totalQty    = sumBeg(() => true);
+    const checkingQty = sumBeg(i => i.status === 'FOR CHECKING');
+    const notWorkQty  = sumBeg(i => i.status === 'NOT WORKING');
+    const transitQty  = inventoryData.reduce((s, i) => s + (parseInt(i.for_pullout) || 0), 0);
+
+    document.getElementById('totalAssets').textContent    = workingQty;
+    document.getElementById('activeItems').textContent    = totalQty;
+    document.getElementById('pulledOut').textContent      = transitQty;
+    document.getElementById('forChecking').textContent    = checkingQty;
+
+    document.getElementById('kpiSubRecords').textContent  = `${records} asset record${records !== 1 ? 's' : ''}`;
+    document.getElementById('kpiSubAssets').textContent   = `${totalQty} total units`;
+    document.getElementById('kpiSubChecking').textContent = notWorkQty > 0 ? `${notWorkQty} units not working` : 'need attention';
 }
 
 // ── View Modal ────────────────────────────────────────────────────────────────
