@@ -569,7 +569,9 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                             <?php endif; ?>
                         </a>
                     </li>
+                <?php endif; ?>
 
+                <?php if (hasPermission('orders')): ?>
                     <li class="nav-link <?= isActive('admin-incoming.php') ?>">
                         <a href="admin-incoming.php" id="adminIncomingLink">
                             <i class='bx bx-box icon' style="font-size:1.05rem;padding-left:10px;"></i>
@@ -580,7 +582,9 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                             <?php endif; ?>
                         </a>
                     </li>
+                <?php endif; ?>
 
+                <?php if (hasPermission('preparing')): ?>
                     <li class="nav-link <?= isActive('admin-preparing.php') ?>">
                         <a href="admin-preparing.php" id="adminPreparingLink">
                             <i class='bx bx-loader-circle icon' style="font-size:1.05rem;padding-left:10px;"></i>
@@ -591,7 +595,9 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                             <?php endif; ?>
                         </a>
                     </li>
+                <?php endif; ?>
 
+                <?php if (hasPermission('receiving')): ?>
                     <li class="nav-link <?= isActive('admin-receiving.php') ?>">
                         <a href="admin-receiving.php" id="adminReceivingLink">
                             <i class='bx bx-package icon' style="font-size:1.05rem;padding-left:10px;"></i>
@@ -690,73 +696,73 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
 
     // ── Real-time badge polling every 5s ──────────────────────────────────────
     <?php if (hasPermission('asset_transfer')): ?>
-            (function pollBadges() {
-                let lastPending = <?= $pendingCount ?>;
-                let lastPrep = <?= $prepCount ?>;
-                let lastReleased = <?= $releasedCount ?>;
+        (function pollBadges() {
+            let lastPending = <?= $pendingCount ?>;
+            let lastPrep    = <?= $prepCount ?>;
+            let lastReleased = <?= $releasedCount ?>;
 
-                function renderBadge(linkEl, count, color, shadow, tooltipText) {
-                    if (!linkEl) return;
-                    linkEl.querySelectorAll('.badge, .badge-tooltip').forEach(el => el.remove());
-                    if (count <= 0) return;
-                    const badge = document.createElement('span');
-                    badge.className = 'badge';
-                    badge.textContent = count > 99 ? '99+' : count;
-                    if (color) badge.style.background = color;
-                    if (shadow) badge.style.boxShadow = shadow;
-                    const tooltip = document.createElement('span');
-                    tooltip.className = 'badge-tooltip';
-                    tooltip.textContent = tooltipText;
-                    linkEl.appendChild(badge);
-                    linkEl.appendChild(tooltip);
+            function renderBadge(linkEl, count, color, shadow, tooltipText) {
+                if (!linkEl) return;
+                linkEl.querySelectorAll('.badge, .badge-tooltip').forEach(el => el.remove());
+                if (count <= 0) return;
+                const badge = document.createElement('span');
+                badge.className = 'badge';
+                badge.textContent = count > 99 ? '99+' : count;
+                if (color) badge.style.background = color;
+                if (shadow) badge.style.boxShadow = shadow;
+                const tooltip = document.createElement('span');
+                tooltip.className = 'badge-tooltip';
+                tooltip.textContent = tooltipText;
+                linkEl.appendChild(badge);
+                linkEl.appendChild(tooltip);
+            }
+
+            function updateBellCount(pending, prep, released) {
+                const total = pending + prep + released;
+                const el = document.getElementById('bellCount');
+                if (!el) return;
+                el.textContent = total > 99 ? '99+' : total;
+                el.style.display = total > 0 ? 'flex' : 'none';
+
+                // Update summary pills
+                const summary = document.querySelector('.notif-summary');
+                if (summary) {
+                    summary.innerHTML = '';
+                    if (pending > 0) summary.innerHTML += `<span class="npill pending"><i class='bx bx-time-five'></i> ${pending} Pending</span>`;
+                    if (prep > 0)    summary.innerHTML += `<span class="npill prep"><i class='bx bx-loader-circle'></i> ${prep} Preparing</span>`;
+                    if (released > 0) summary.innerHTML += `<span class="npill released"><i class='bx bx-package'></i> ${released} For Receipt</span>`;
                 }
+            }
 
-                function updateBellCount(pending, prep, released) {
-                    const total = pending + prep + released;
-                    const el = document.getElementById('bellCount');
-                    if (!el) return;
-                    el.textContent = total > 99 ? '99+' : total;
-                    el.style.display = total > 0 ? 'flex' : 'none';
+            async function poll() {
+                try {
+                    const [r1, r2, r3] = await Promise.all([
+                        fetch('pullout_api.php?action=get_pullouts&status=PENDING&search=').then(r => r.json()),
+                        fetch('pullout_api.php?action=get_pullouts&status=CONFIRMED&search=').then(r => r.json()),
+                        fetch('pullout_api.php?action=get_pullouts&status=RELEASED&search=').then(r => r.json()),
+                    ]);
+                    const pending  = r1.success ? (r1.count ?? 0) : lastPending;
+                    const prep     = r2.success ? (r2.count ?? 0) : lastPrep;
+                    const released = r3.success ? (r3.count ?? 0) : lastReleased;
 
-                    // Update summary pills
-                    const summary = document.querySelector('.notif-summary');
-                    if (summary) {
-                        summary.innerHTML = '';
-                        if (pending > 0) summary.innerHTML += `<span class="npill pending"><i class='bx bx-time-five'></i> ${pending} Pending</span>`;
-                        if (prep > 0) summary.innerHTML += `<span class="npill prep"><i class='bx bx-loader-circle'></i> ${prep} Preparing</span>`;
-                        if (released > 0) summary.innerHTML += `<span class="npill released"><i class='bx bx-package'></i> ${released} For Receipt</span>`;
+                    if (pending !== lastPending) {
+                        lastPending = pending;
+                        renderBadge(document.getElementById('pulloutNavLink'), pending, null, null, `${pending} pending transfer${pending > 1 ? 's' : ''}`);
+                        renderBadge(document.getElementById('adminIncomingLink'), pending, null, null, `${pending} pending`);
                     }
-                }
+                    if (prep !== lastPrep) {
+                        lastPrep = prep;
+                        renderBadge(document.getElementById('adminPreparingLink'), prep, '#8e44ad', '0 2px 6px rgba(142,68,173,.5)', `${prep} being prepared`);
+                    }
+                    if (released !== lastReleased) {
+                        lastReleased = released;
+                        renderBadge(document.getElementById('adminReceivingLink'), released, '#16a085', '0 2px 6px rgba(22,160,133,.5)', `${released} awaiting receipt`);
+                    }
+                    updateBellCount(pending, prep, released);
+                } catch (e) {}
+            }
 
-                async function poll() {
-                    try {
-                        const [r1, r2, r3] = await Promise.all([
-                            fetch('pullout_api.php?action=get_pullouts&status=PENDING&search=').then(r => r.json()),
-                            fetch('pullout_api.php?action=get_pullouts&status=CONFIRMED&search=').then(r => r.json()),
-                            fetch('pullout_api.php?action=get_pullouts&status=RELEASED&search=').then(r => r.json()),
-                        ]);
-                        const pending = r1.success ? (r1.count ?? 0) : lastPending;
-                        const prep = r2.success ? (r2.count ?? 0) : lastPrep;
-                        const released = r3.success ? (r3.count ?? 0) : lastReleased;
-
-                        if (pending !== lastPending) {
-                            lastPending = pending;
-                            renderBadge(document.getElementById('pulloutNavLink'), pending, null, null, `${pending} pending transfer${pending > 1 ? 's' : ''}`);
-                            renderBadge(document.getElementById('adminIncomingLink'), pending, null, null, `${pending} pending`);
-                        }
-                        if (prep !== lastPrep) {
-                            lastPrep = prep;
-                            renderBadge(document.getElementById('adminPreparingLink'), prep, '#8e44ad', '0 2px 6px rgba(142,68,173,.5)', `${prep} being prepared`);
-                        }
-                        if (released !== lastReleased) {
-                            lastReleased = released;
-                            renderBadge(document.getElementById('adminReceivingLink'), released, '#16a085', '0 2px 6px rgba(22,160,133,.5)', `${released} awaiting receipt`);
-                        }
-                        updateBellCount(pending, prep, released);
-                    } catch (e) {}
-                }
-
-                setInterval(poll, 5000);
-            })();
+            setInterval(poll, 5000);
+        })();
     <?php endif; ?>
 </script>

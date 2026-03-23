@@ -949,7 +949,7 @@
             var phrases = [
                 'Nagbabantay ng iyong Assets',
                 'Nag-iimbak ng Talaan nang Tumpak',
-                
+
                 'Mabilis, Maaasahan, at Ligtas',
                 
             ];
@@ -1007,6 +1007,6 @@
         }
 
     })();
-    </script>
+    </script> 
 </body>
 </html>
