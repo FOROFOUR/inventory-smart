@@ -56,9 +56,6 @@ $conn->query("
       INDEX `idx_session_token` (`session_token`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
 ");
-$conn->query("ALTER TABLE `asset_staging` ADD COLUMN IF NOT EXISTS `photo_drive_url_1` VARCHAR(500) DEFAULT NULL AFTER `description`");
-$conn->query("ALTER TABLE `asset_staging` ADD COLUMN IF NOT EXISTS `photo_drive_url_2` VARCHAR(500) DEFAULT NULL AFTER `photo_drive_url_1`");
-$conn->query("ALTER TABLE `asset_staging` ADD COLUMN IF NOT EXISTS `photo_drive_url_3` VARCHAR(500) DEFAULT NULL AFTER `photo_drive_url_2`");
 
 $file = $_FILES['excel_file'];
 $ext  = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));

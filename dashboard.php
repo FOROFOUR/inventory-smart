@@ -9,16 +9,16 @@ if (!isset($_SESSION['user_id'])) {
 
 $conn = getDBConnection();
 
-$totalAssets   = $conn->query("SELECT SUM(beg_balance_count) as total FROM assets")->fetch_assoc()['total'] ?? 0;
-$workingAssets = $conn->query("SELECT SUM(beg_balance_count) as total FROM assets WHERE status = 'WORKING'")->fetch_assoc()['total'] ?? 0;
+$totalAssets   = (float)($conn->query("SELECT SUM(beg_balance_count) as total FROM assets")->fetch_assoc()['total'] ?? 0);
+$workingAssets = (float)($conn->query("SELECT SUM(beg_balance_count) as total FROM assets WHERE status = 'WORKING'")->fetch_assoc()['total'] ?? 0);
 
 $statusResult = $conn->query("SELECT status, SUM(beg_balance_count) as count FROM assets GROUP BY status");
 $statusData = [];
-while ($row = $statusResult->fetch_assoc()) $statusData[$row['status']] = $row['count'];
+while ($row = $statusResult->fetch_assoc()) $statusData[$row['status']] = (float)($row['count'] ?? 0);
 
 $conditionResult = $conn->query("SELECT `condition`, SUM(beg_balance_count) as count FROM assets GROUP BY `condition`");
 $conditionData = [];
-while ($row = $conditionResult->fetch_assoc()) $conditionData[$row['condition']] = $row['count'];
+while ($row = $conditionResult->fetch_assoc()) $conditionData[$row['condition']] = (float)($row['count'] ?? 0);
 
 $categoryData = [];
 $catResult = $conn->query("SELECT c.name, SUM(a.beg_balance_count) as count FROM assets a JOIN categories c ON a.category_id=c.id GROUP BY c.id,c.name ORDER BY count DESC");
@@ -29,6 +29,11 @@ $locResult = $conn->query("SELECT location, SUM(beg_balance_count) as count FROM
 while ($row = $locResult->fetch_assoc()) $locationData[] = $row;
 
 $txnStats = $conn->query("SELECT COUNT(*) as total, SUM(CASE WHEN status='PENDING' THEN 1 ELSE 0 END) as pending, SUM(CASE WHEN status='RELEASED' THEN 1 ELSE 0 END) as received, SUM(CASE WHEN status='RETURNED' THEN 1 ELSE 0 END) as returned, SUM(CASE WHEN status='CANCELLED' THEN 1 ELSE 0 END) as cancelled FROM pull_out_transactions")->fetch_assoc();
+$txnStats['total'] = (float)($txnStats['total'] ?? 0);
+$txnStats['pending'] = (float)($txnStats['pending'] ?? 0);
+$txnStats['received'] = (float)($txnStats['received'] ?? 0);
+$txnStats['returned'] = (float)($txnStats['returned'] ?? 0);
+$txnStats['cancelled'] = (float)($txnStats['cancelled'] ?? 0);
 
 // Recent transfers — fetch from_location & to_location directly
 $recentTxns = [];

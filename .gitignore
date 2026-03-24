@@ -1,0 +1,32 @@
+# Database and sensitive configuration
+config.php
+
+# User uploads
+uploads/**/*
+!uploads/.gitkeep
+
+# PHP QR Code cache
+phpqrcode/cache/*.dat
+phpqrcode/cache/*.png
+
+# Temp files
+*.tmp
+*.log
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# PHP specific
+vendor/
+composer.lock

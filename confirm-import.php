@@ -31,9 +31,6 @@ if (!$token) {
 $conn     = getDBConnection();
 $userName = $_SESSION['name'] ?? 'Unknown';
 
-// ── Ensure drive_url column exists ────────────────────────────────────────
-$conn->query("ALTER TABLE `asset_images` ADD COLUMN IF NOT EXISTS `drive_url` VARCHAR(500) DEFAULT NULL AFTER `image_path`");
-
 // ── Fetch valid staged rows ───────────────────────────────────────────────
 $stmt = $conn->prepare("SELECT * FROM asset_staging WHERE session_token = ? AND is_valid = 1 ORDER BY row_num");
 $stmt->bind_param('s', $token);
