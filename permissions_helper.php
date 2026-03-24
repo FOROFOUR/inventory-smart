@@ -13,6 +13,8 @@
  *   dashboard        inventory_view     asset_transfer
  *   upload_assets    qr_management      reports
  *   account_settings user_management    (admin-only, not assignable to employee)
+ *   preparing        receiving          completed
+ *   orders           (admin-only by default, assignable via user management)
  */
 
 // ── All defined permissions ────────────────────────────────────────────────────
@@ -24,9 +26,15 @@ define('ALL_PERMISSIONS', [
     'qr_management'    => 'QR Management',
     'reports'          => 'Reports',
     'account_settings' => 'Account Settings',
+    'orders'           => 'Orders',
+    'preparing'        => 'Preparing',
+    'receiving'        => 'Receiving',
+    'completed'        => 'Completed',
 ]);
 
 // ── Default permissions given to new EMPLOYEE accounts ───────────────────────
+// NOTE: orders/preparing/receiving/completed are NOT included by default.
+//       Admin must explicitly grant them per user.
 define('DEFAULT_EMPLOYEE_PERMISSIONS', [
     'dashboard',
     'inventory_view',
@@ -44,7 +52,7 @@ define('DEFAULT_EMPLOYEE_PERMISSIONS', [
 function loadPermissions(mysqli $conn, int $userId, string $role): void
 {
     if ($role === 'ADMIN') {
-        // Admin has all permissions including user_management
+        // Admin has all permissions including user_management and orders
         $_SESSION['permissions'] = array_merge(
             array_keys(ALL_PERMISSIONS),
             ['user_management']

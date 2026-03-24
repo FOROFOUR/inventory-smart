@@ -65,6 +65,7 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
 ?>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
     * {
@@ -263,7 +264,12 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
         position: relative;
         overflow: visible;
     }
-
+.sidebar header .name {
+    color: #2563eb !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    letter-spacing: -.3px !important;
+}
     .sidebar li a:hover {
         background: var(--primary-color);
     }
@@ -752,11 +758,13 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
 <nav class="sidebar">
     <header>
         <div class="image-text">
-            <span class="image"><i class='bx bxs-warehouse'></i></span>
-            <div class="text logo-text">
-                <span class="name">Warehouse</span>
-                <span class="profession"><?= htmlspecialchars($warehouseLocation ?: 'Portal') ?></span>
-            </div>
+            <span class="image">
+    <i class="fas fa-feather-alt" style="font-size:26px;color:#2563eb;"></i>
+</span>
+<div class="text logo-text">
+    <span class="name" style="color:#2563eb;font-weight:700;letter-spacing:-.3px;">IBIS</span>
+    <span class="profession"><?= htmlspecialchars($warehouseLocation ?: 'Warehouse Portal') ?></span>
+</div>
         </div>
         <i class='bx bx-chevron-right toggle'></i>
     </header>
@@ -804,6 +812,13 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                         <span class="text nav-text">Completed</span>
                     </a>
                 </li>
+                <li class="nav-link <?= isActive('warehouse-reports.php') ?>">
+                  <a href="warehouse-reports.php">
+                        <i class='bx bx-bar-chart-alt-2 icon'></i>
+                        <span class="text nav-text">Reports</span>
+                    </a>
+                </li>
+
                 <li class="nav-link <?= isActive('warehouse-account-settings.php') ?>">
                     <a href="warehouse-account-settings.php">
                         <i class='bx bx-cog icon'></i>
@@ -963,7 +978,8 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                     rebuildBellList(d.data || []);
                 }
             } catch (e) {
-                /* silent */ }
+                /* silent */
+            }
         }
 
         setInterval(poll, 20000);

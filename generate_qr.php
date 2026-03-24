@@ -4,7 +4,7 @@ require_once 'phpqrcode/qrlib.php';
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if (!$id) exit;
 
-$url = "http://10.20.80.208/inventory-smart/asset-view.php?id=" . $id;
+$url = "http://10.20.80.43/inventory-smart/asset-view.php?id=" . $id;
 
 header('Content-Type: image/png');
 
