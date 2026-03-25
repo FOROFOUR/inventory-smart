@@ -5,41 +5,9 @@ on: [push]
 jobs:
   build_and_deploy:
     name: Build package and deploy to Cloud
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          extensions: fileinfo, mbstring, xml, gd, zip
-          ini-values: post_max_size=256M, max_execution_time=180
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Composer Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
-      - name: Install NPM Dependencies
-        run: npm install
-
-      - name: Build Frontend Assets
-        run: npm run build
-
-      # New step to create the storage symbolic link
-      - name: Create Storage Link
-        run: php artisan storage:link
-
-      - name: Clear Laravel Cache
-        run: |
-          php artisan route:clear
-          php artisan config:clear
-          php artisan cache:clear
-          php artisan view:clear
 
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -55,3 +23,6 @@ jobs:
             **/.git*/**
             **/node_modules/**
             README.md
+            .github/**
+            .gitignore
+            config.example.php
