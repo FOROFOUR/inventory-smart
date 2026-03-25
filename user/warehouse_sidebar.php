@@ -264,12 +264,14 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
         position: relative;
         overflow: visible;
     }
-.sidebar header .name {
-    color: #2563eb !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    letter-spacing: -.3px !important;
-}
+
+    .sidebar header .name {
+        color: #2563eb !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        letter-spacing: -.3px !important;
+    }
+
     .sidebar li a:hover {
         background: var(--primary-color);
     }
@@ -572,15 +574,8 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
     }
 
     @keyframes bPulse {
-
-        0%,
-        100% {
-            box-shadow: 0 0 0 0 rgba(5, 150, 105, .4);
-        }
-
-        50% {
-            box-shadow: 0 0 0 5px rgba(5, 150, 105, 0);
-        }
+        0%, 100% { box-shadow: 0 0 0 0 rgba(5, 150, 105, .4); }
+        50%       { box-shadow: 0 0 0 5px rgba(5, 150, 105, 0); }
     }
 
     .bell-item-body {
@@ -759,12 +754,12 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
     <header>
         <div class="image-text">
             <span class="image">
-    <i class="fas fa-feather-alt" style="font-size:26px;color:#2563eb;"></i>
-</span>
-<div class="text logo-text">
-    <span class="name" style="color:#2563eb;font-weight:700;letter-spacing:-.3px;">IBIS</span>
-    <span class="profession"><?= htmlspecialchars($warehouseLocation ?: 'Warehouse Portal') ?></span>
-</div>
+                <i class="fas fa-feather-alt" style="font-size:26px;color:#2563eb;"></i>
+            </span>
+            <div class="text logo-text">
+                <span class="name" style="color:#2563eb;font-weight:700;letter-spacing:-.3px;">IBIS</span>
+                <span class="profession"><?= htmlspecialchars($warehouseLocation ?: 'Warehouse Portal') ?></span>
+            </div>
         </div>
         <i class='bx bx-chevron-right toggle'></i>
     </header>
@@ -813,12 +808,11 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                     </a>
                 </li>
                 <li class="nav-link <?= isActive('warehouse-reports.php') ?>">
-                  <a href="warehouse-reports.php">
+                    <a href="warehouse-reports.php">
                         <i class='bx bx-bar-chart-alt-2 icon'></i>
                         <span class="text nav-text">Reports</span>
                     </a>
                 </li>
-
                 <li class="nav-link <?= isActive('warehouse-account-settings.php') ?>">
                     <a href="warehouse-account-settings.php">
                         <i class='bx bx-cog icon'></i>
@@ -840,12 +834,21 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
 </nav>
 
 <script>
-    // ── Sidebar toggle ────────────────────────────────────────────────────────────
+    // ── Inject favicon ────────────────────────────────────────────────────────
+    (function() {
+        const favicon = document.createElement('link');
+        favicon.rel   = 'icon';
+        favicon.type  = 'image/x-icon';
+        favicon.href  = '../favicon.ico';
+        document.head.appendChild(favicon);
+    })();
+
+    // ── Sidebar toggle ────────────────────────────────────────────────────────
     const sidebar = document.querySelector(".sidebar");
-    const toggle = document.querySelector(".toggle");
+    const toggle  = document.querySelector(".toggle");
     toggle.addEventListener("click", () => sidebar.classList.toggle("close"));
 
-    // ── Bell toggle ───────────────────────────────────────────────────────────────
+    // ── Bell toggle ───────────────────────────────────────────────────────────
     function toggleBellDropdown() {
         document.getElementById('bellDropdown').classList.toggle('open');
     }
@@ -855,30 +858,27 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
             document.getElementById('bellDropdown')?.classList.remove('open');
     });
 
-    // ── Relative timestamps ───────────────────────────────────────────────────────
+    // ── Relative timestamps ───────────────────────────────────────────────────
     function fmtAgo(d) {
         if (!d) return '—';
         const diff = Math.floor((Date.now() - new Date(d)) / 60000);
-        if (diff < 1) return 'just now';
-        if (diff < 60) return diff + 'm ago';
+        if (diff < 1)    return 'just now';
+        if (diff < 60)   return diff + 'm ago';
         if (diff < 1440) return Math.floor(diff / 60) + 'h ago';
-        return new Date(d).toLocaleDateString('en-PH', {
-            month: 'short',
-            day: 'numeric'
-        });
+        return new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
     }
     document.querySelectorAll('[data-ts]').forEach(el => {
         el.textContent = fmtAgo(el.dataset.ts);
     });
 
-    // ── Poll every 20 seconds ─────────────────────────────────────────────────────
+    // ── Poll every 20 seconds ─────────────────────────────────────────────────
     (function pollNotifications() {
-        let lastTotal = <?= $bellTotal ?>;
+        let lastTotal     = <?= $bellTotal ?>;
         let lastConfirmed = <?= $confirmedCount ?>;
-        let lastReleased = <?= $releasedCount ?>;
+        let lastReleased  = <?= $releasedCount ?>;
 
         function escHtml(s) {
-            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
         function updateNavBadge(id, count, cls, tip) {
@@ -887,10 +887,10 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
             link.querySelectorAll('.badge, .badge-tooltip').forEach(el => el.remove());
             if (count > 0) {
                 const b = document.createElement('span');
-                b.className = 'badge ' + cls;
+                b.className   = 'badge ' + cls;
                 b.textContent = count > 99 ? '99+' : count;
                 const t = document.createElement('span');
-                t.className = 'badge-tooltip';
+                t.className   = 'badge-tooltip';
                 t.textContent = tip(count);
                 link.appendChild(b);
                 link.appendChild(t);
@@ -905,38 +905,37 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                 return;
             }
             list.innerHTML = items.map(n => {
-                const isR = n.status === 'RELEASED';
+                const isR  = n.status === 'RELEASED';
                 const item = ((n.brand || '') + ' ' + (n.model || '')).trim() || 'Asset #' + n.id;
                 return `<div class="bell-item" onclick="window.location='${isR ? 'warehouse-receiving.php' : 'warehouse-preparing.php'}'">
-                <div class="b-dot ${isR ? 'receiving' : 'preparing'}"></div>
-                <div class="bell-item-body">
-                    <div class="bell-item-title">
-                        <span style="overflow:hidden;text-overflow:ellipsis;">${escHtml(item)}</span>
-                        <span class="s-pill ${isR ? 'released' : 'confirmed'}" style="flex-shrink:0;">${isR ? '🚚 Incoming' : '📦 To Prepare'}</span>
+                    <div class="b-dot ${isR ? 'receiving' : 'preparing'}"></div>
+                    <div class="bell-item-body">
+                        <div class="bell-item-title">
+                            <span style="overflow:hidden;text-overflow:ellipsis;">${escHtml(item)}</span>
+                            <span class="s-pill ${isR ? 'released' : 'confirmed'}" style="flex-shrink:0;">${isR ? '🚚 Incoming' : '📦 To Prepare'}</span>
+                        </div>
+                        <div class="bell-item-sub">
+                            ${isR
+                                ? `From <strong>${escHtml(n.from_location||'?')}</strong> → <strong>${escHtml(n.to_location||'')}</strong> · Qty: ${n.quantity}`
+                                : `Qty ${n.quantity} pcs → to <strong>${escHtml(n.to_location||'?')}</strong>`
+                            }
+                        </div>
                     </div>
-                    <div class="bell-item-sub">
-                        ${isR
-                            ? `From <strong>${escHtml(n.from_location||'?')}</strong> → <strong>${escHtml(n.to_location||'')}</strong> · Qty: ${n.quantity}`
-                            : `Qty ${n.quantity} pcs → to <strong>${escHtml(n.to_location||'?')}</strong>`
-                        }
-                    </div>
-                </div>
-                <div class="bell-item-time">${fmtAgo(n.created_at)}</div>
-            </div>`;
+                    <div class="bell-item-time">${fmtAgo(n.created_at)}</div>
+                </div>`;
             }).join('');
         }
 
         async function poll() {
             try {
                 const res = await fetch('warehouse_dashboard_api.php?action=get_notifications');
-                const d = await res.json();
+                const d   = await res.json();
                 if (!d.success) return;
 
-                const total = d.total || 0;
+                const total     = d.total     || 0;
                 const preparing = d.preparing || 0;
                 const receiving = d.receiving || 0;
 
-                // Update nav badges if changed
                 if (preparing !== lastConfirmed) {
                     lastConfirmed = preparing;
                     updateNavBadge('preparingNavLink', preparing, 'badge-preparing',
@@ -948,11 +947,8 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                         c => `${c} item${c > 1 ? 's' : ''} incoming`);
                 }
 
-                // Update bell
                 if (total !== lastTotal) {
                     lastTotal = total;
-
-                    // Bell count badge
                     let countEl = document.getElementById('bellCount');
                     if (total > 0) {
                         if (!countEl) {
@@ -965,21 +961,13 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                     } else {
                         countEl?.remove();
                     }
-
-                    // Bell icon
                     const icon = document.getElementById('bellIcon');
                     if (icon) icon.className = total > 0 ? 'bx bx-bell bx-tada' : 'bx bx-bell';
-
-                    // Header count
                     const hdr = document.getElementById('bellHdrCount');
                     if (hdr) hdr.textContent = total + ' item' + (total !== 1 ? 's' : '');
-
-                    // Rebuild list
                     rebuildBellList(d.data || []);
                 }
-            } catch (e) {
-                /* silent */
-            }
+            } catch (e) { /* silent */ }
         }
 
         setInterval(poll, 20000);

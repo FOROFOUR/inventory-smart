@@ -103,19 +103,9 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
     }
 
     @keyframes badgePop {
-        0% {
-            transform: scale(0) rotate(-10deg);
-            opacity: 0;
-        }
-
-        60% {
-            transform: scale(1.3) rotate(3deg);
-            opacity: 1;
-        }
-
-        100% {
-            transform: scale(1) rotate(0deg);
-        }
+        0% { transform: scale(0) rotate(-10deg); opacity: 0; }
+        60% { transform: scale(1.3) rotate(3deg); opacity: 1; }
+        100% { transform: scale(1) rotate(0deg); }
     }
 
     .nav-link .badge-tooltip {
@@ -157,12 +147,14 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         right: 24px;
         z-index: 8888;
     }
-.sidebar header .name {
-    color: #2563eb !important;
-    font-size: 18px !important;
-    font-weight: 700 !important;
-    letter-spacing: -.3px !important;
-}
+
+    .sidebar header .name {
+        color: #2563eb !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        letter-spacing: -.3px !important;
+    }
+
     .notif-bell-btn {
         background: #fff;
         border: none;
@@ -224,15 +216,8 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
     }
 
     @keyframes dropIn {
-        from {
-            opacity: 0;
-            transform: translateY(-8px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 
     .notif-header {
@@ -260,9 +245,7 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         font-family: 'Poppins', sans-serif;
     }
 
-    .notif-mark-read:hover {
-        text-decoration: underline;
-    }
+    .notif-mark-read:hover { text-decoration: underline; }
 
     .notif-list {
         max-height: 340px;
@@ -279,13 +262,8 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         cursor: default;
     }
 
-    .notif-item:hover {
-        background: #fafbfc;
-    }
-
-    .notif-item:last-child {
-        border-bottom: none;
-    }
+    .notif-item:hover { background: #fafbfc; }
+    .notif-item:last-child { border-bottom: none; }
 
     .notif-icon {
         width: 34px;
@@ -299,35 +277,13 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         margin-top: 1px;
     }
 
-    .notif-icon.pending {
-        background: #fef3cd;
-        color: #f39c12;
-    }
+    .notif-icon.pending  { background: #fef3cd; color: #f39c12; }
+    .notif-icon.release  { background: #d5f5e3; color: #27ae60; }
+    .notif-icon.prep     { background: #e8d5f5; color: #8e44ad; }
+    .notif-icon.receive  { background: #d6eaf8; color: #2980b9; }
+    .notif-icon.default  { background: #f0f3f6; color: #7f8c8d; }
 
-    .notif-icon.release {
-        background: #d5f5e3;
-        color: #27ae60;
-    }
-
-    .notif-icon.prep {
-        background: #e8d5f5;
-        color: #8e44ad;
-    }
-
-    .notif-icon.receive {
-        background: #d6eaf8;
-        color: #2980b9;
-    }
-
-    .notif-icon.default {
-        background: #f0f3f6;
-        color: #7f8c8d;
-    }
-
-    .notif-body {
-        flex: 1;
-        min-width: 0;
-    }
+    .notif-body { flex: 1; min-width: 0; }
 
     .notif-body .ntitle {
         font-size: .82rem;
@@ -389,11 +345,8 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         font-family: 'Poppins', sans-serif;
     }
 
-    .notif-footer a:hover {
-        text-decoration: underline;
-    }
+    .notif-footer a:hover { text-decoration: underline; }
 
-    /* summary pills inside dropdown */
     .notif-summary {
         display: flex;
         gap: .5rem;
@@ -413,20 +366,9 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         font-family: 'Poppins', sans-serif;
     }
 
-    .npill.pending {
-        background: #fef3cd;
-        color: #d68910;
-    }
-
-    .npill.prep {
-        background: #e8d5f5;
-        color: #7d3c98;
-    }
-
-    .npill.released {
-        background: #d5f5e3;
-        color: #1e8449;
-    }
+    .npill.pending  { background: #fef3cd; color: #d68910; }
+    .npill.prep     { background: #e8d5f5; color: #7d3c98; }
+    .npill.released { background: #d5f5e3; color: #1e8449; }
 </style>
 
 <!-- ── NOTIFICATION BELL ───────────────────────────────────────────────── -->
@@ -468,27 +410,23 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                 </div>
             <?php else: ?>
                 <?php foreach ($notifRows as $n):
-                    $action = strtoupper($n['action'] ?? '');
+                    $action    = strtoupper($n['action'] ?? '');
                     $iconClass = 'default';
                     $iconName  = 'bx-bell';
                     if (str_contains($action, 'PENDING') || str_contains($action, 'REQUEST')) {
-                        $iconClass = 'pending';
-                        $iconName = 'bx-time-five';
+                        $iconClass = 'pending'; $iconName = 'bx-time-five';
                     } elseif (str_contains($action, 'RELEASE')) {
-                        $iconClass = 'release';
-                        $iconName = 'bx-paper-plane';
+                        $iconClass = 'release'; $iconName = 'bx-paper-plane';
                     } elseif (str_contains($action, 'PREP') || str_contains($action, 'CONFIRM')) {
-                        $iconClass = 'prep';
-                        $iconName = 'bx-loader-circle';
+                        $iconClass = 'prep'; $iconName = 'bx-loader-circle';
                     } elseif (str_contains($action, 'RECEIV')) {
-                        $iconClass = 'receive';
-                        $iconName = 'bx-check-circle';
+                        $iconClass = 'receive'; $iconName = 'bx-check-circle';
                     }
                     $timeAgo = '';
                     if ($n['created_at']) {
                         $diff = time() - strtotime($n['created_at']);
-                        if ($diff < 60) $timeAgo = 'Just now';
-                        elseif ($diff < 3600) $timeAgo = floor($diff / 60) . 'm ago';
+                        if ($diff < 60)    $timeAgo = 'Just now';
+                        elseif ($diff < 3600)  $timeAgo = floor($diff / 60) . 'm ago';
                         elseif ($diff < 86400) $timeAgo = floor($diff / 3600) . 'h ago';
                         else $timeAgo = date('M j', strtotime($n['created_at']));
                     }
@@ -668,16 +606,24 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
 </nav>
 
 <script>
+    // ── Inject favicon ────────────────────────────────────────────────────────
+    (function() {
+        const favicon = document.createElement('link');
+        favicon.rel   = 'icon';
+        favicon.type  = 'image/x-icon';
+        favicon.href  = 'favicon.ico';
+        document.head.appendChild(favicon);
+    })();
+
     // ── SIDEBAR: Manual toggle only (no hover) ────────────────────────────────
     const sidebar = document.querySelector(".sidebar");
-    const toggle = document.querySelector(".toggle");
+    const toggle  = document.querySelector(".toggle");
     toggle.addEventListener("click", () => sidebar.classList.toggle("close"));
 
     // ── NOTIFICATION BELL ─────────────────────────────────────────────────────
     function toggleNotif(e) {
         e.stopPropagation();
         document.getElementById('notifDropdown').classList.toggle('open');
-        // Animate bell
         const icon = document.getElementById('bellIcon');
         icon.style.transform = 'rotate(20deg)';
         setTimeout(() => icon.style.transform = '', 300);
@@ -697,8 +643,8 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
     // ── Real-time badge polling every 5s ──────────────────────────────────────
     <?php if (hasPermission('asset_transfer')): ?>
         (function pollBadges() {
-            let lastPending = <?= $pendingCount ?>;
-            let lastPrep    = <?= $prepCount ?>;
+            let lastPending  = <?= $pendingCount ?>;
+            let lastPrep     = <?= $prepCount ?>;
             let lastReleased = <?= $releasedCount ?>;
 
             function renderBadge(linkEl, count, color, shadow, tooltipText) {
@@ -708,10 +654,10 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                 const badge = document.createElement('span');
                 badge.className = 'badge';
                 badge.textContent = count > 99 ? '99+' : count;
-                if (color) badge.style.background = color;
-                if (shadow) badge.style.boxShadow = shadow;
+                if (color)  badge.style.background = color;
+                if (shadow) badge.style.boxShadow  = shadow;
                 const tooltip = document.createElement('span');
-                tooltip.className = 'badge-tooltip';
+                tooltip.className   = 'badge-tooltip';
                 tooltip.textContent = tooltipText;
                 linkEl.appendChild(badge);
                 linkEl.appendChild(tooltip);
@@ -721,15 +667,14 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
                 const total = pending + prep + released;
                 const el = document.getElementById('bellCount');
                 if (!el) return;
-                el.textContent = total > 99 ? '99+' : total;
-                el.style.display = total > 0 ? 'flex' : 'none';
+                el.textContent    = total > 99 ? '99+' : total;
+                el.style.display  = total > 0 ? 'flex' : 'none';
 
-                // Update summary pills
                 const summary = document.querySelector('.notif-summary');
                 if (summary) {
                     summary.innerHTML = '';
-                    if (pending > 0) summary.innerHTML += `<span class="npill pending"><i class='bx bx-time-five'></i> ${pending} Pending</span>`;
-                    if (prep > 0)    summary.innerHTML += `<span class="npill prep"><i class='bx bx-loader-circle'></i> ${prep} Preparing</span>`;
+                    if (pending  > 0) summary.innerHTML += `<span class="npill pending"><i class='bx bx-time-five'></i> ${pending} Pending</span>`;
+                    if (prep     > 0) summary.innerHTML += `<span class="npill prep"><i class='bx bx-loader-circle'></i> ${prep} Preparing</span>`;
                     if (released > 0) summary.innerHTML += `<span class="npill released"><i class='bx bx-package'></i> ${released} For Receipt</span>`;
                 }
             }
@@ -747,16 +692,16 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
 
                     if (pending !== lastPending) {
                         lastPending = pending;
-                        renderBadge(document.getElementById('pulloutNavLink'), pending, null, null, `${pending} pending transfer${pending > 1 ? 's' : ''}`);
-                        renderBadge(document.getElementById('adminIncomingLink'), pending, null, null, `${pending} pending`);
+                        renderBadge(document.getElementById('pulloutNavLink'),    pending,  null,        null,                              `${pending} pending transfer${pending > 1 ? 's' : ''}`);
+                        renderBadge(document.getElementById('adminIncomingLink'), pending,  null,        null,                              `${pending} pending`);
                     }
                     if (prep !== lastPrep) {
                         lastPrep = prep;
-                        renderBadge(document.getElementById('adminPreparingLink'), prep, '#8e44ad', '0 2px 6px rgba(142,68,173,.5)', `${prep} being prepared`);
+                        renderBadge(document.getElementById('adminPreparingLink'), prep,    '#8e44ad',   '0 2px 6px rgba(142,68,173,.5)',   `${prep} being prepared`);
                     }
                     if (released !== lastReleased) {
                         lastReleased = released;
-                        renderBadge(document.getElementById('adminReceivingLink'), released, '#16a085', '0 2px 6px rgba(22,160,133,.5)', `${released} awaiting receipt`);
+                        renderBadge(document.getElementById('adminReceivingLink'), released, '#16a085',  '0 2px 6px rgba(22,160,133,.5)',   `${released} awaiting receipt`);
                     }
                     updateBellCount(pending, prep, released);
                 } catch (e) {}

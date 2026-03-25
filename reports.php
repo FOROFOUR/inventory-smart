@@ -6,6 +6,7 @@ $conn = getDBConnection();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,7 +49,7 @@ $conn = getDBConnection();
             transition: margin-left 0.3s ease;
         }
 
-        .sidebar:not(.close) ~ .content {
+        .sidebar:not(.close)~.content {
             margin-left: 260px;
         }
 
@@ -329,25 +330,64 @@ $conn = getDBConnection();
             font-weight: 500;
         }
 
-        .badge-new { background: #d4edda; color: #155724; }
-        .badge-used { background: #fff3cd; color: #856404; }
-        .badge-working { background: #d1ecf1; color: #0c5460; }
-        .badge-not-working { background: #f8d7da; color: #721c24; }
-        .badge-for-checking { background: #e2e3e5; color: #383d41; }
-        .badge-pending { background: #fff3cd; color: #856404; }
-        .badge-released { background: #d4edda; color: #155724; }
-        .badge-returned { background: #d1ecf1; color: #0c5460; }
+        .badge-new {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-used {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-working {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .badge-not-working {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-for-checking {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .badge-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-released {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-returned {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
 
         /* ──────────────────────────────────────
            PROFESSIONAL PRINT STYLES
         ────────────────────────────────────── */
         @media print {
+
             .sidebar,
             .page-header,
             .report-selector,
             .filters-section,
             .filter-actions,
-            .btn {
+            .btn,
+            .notification-bell,
+            .bell-icon,
+            .notif-bell,
+            [class*="bell"],
+            [class*="notif"],
+            .fixed,
+            .sticky {
                 display: none !important;
             }
 
@@ -379,7 +419,7 @@ $conn = getDBConnection();
                 background: white !important;
                 border-bottom: 3px solid #2c3e50 !important;
                 padding: 1rem 1.5rem 0.75rem !important;
-                text-align: left !important;
+                text-align: center !important;
                 margin-bottom: 0.75rem;
             }
 
@@ -398,10 +438,12 @@ $conn = getDBConnection();
                 display: flex !important;
                 gap: 2rem;
                 margin-top: 0.4rem !important;
-                justify-content: flex-start !important;
+                justify-content: center !important;
             }
 
-            .report-meta i { display: none; }
+            .report-meta i {
+                display: none;
+            }
 
             /* ── Summary Cards → Single horizontal bar ── */
             .summary-cards {
@@ -498,14 +540,37 @@ $conn = getDBConnection();
                 border-radius: 0 !important;
             }
 
-            .badge-new           { color: #155724 !important; }
-            .badge-used          { color: #856404 !important; }
-            .badge-working       { color: #0c5460 !important; }
-            .badge-not-working   { color: #c0392b !important; }
-            .badge-for-checking  { color: #6c757d !important; }
-            .badge-pending       { color: #856404 !important; }
-            .badge-released      { color: #155724 !important; }
-            .badge-returned      { color: #0c5460 !important; }
+            .badge-new {
+                color: #155724 !important;
+            }
+
+            .badge-used {
+                color: #856404 !important;
+            }
+
+            .badge-working {
+                color: #0c5460 !important;
+            }
+
+            .badge-not-working {
+                color: #c0392b !important;
+            }
+
+            .badge-for-checking {
+                color: #6c757d !important;
+            }
+
+            .badge-pending {
+                color: #856404 !important;
+            }
+
+            .badge-released {
+                color: #155724 !important;
+            }
+
+            .badge-returned {
+                color: #0c5460 !important;
+            }
 
             code {
                 font-family: monospace;
@@ -528,7 +593,7 @@ $conn = getDBConnection();
 
             @page {
                 size: A4 landscape;
-                margin: 1cm 1.2cm 1.5cm 1.2cm;
+                margin: 0.5cm 1.2cm 1.5cm 1.2cm;
             }
         }
 
@@ -545,110 +610,111 @@ $conn = getDBConnection();
         }
     </style>
 </head>
+
 <body>
 
-<div class="content">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1>
-            <i class='bx bx-file'></i>
-            Reports
-        </h1>
-        <p>Generates filtered and printable reports of assets and transactions</p>
-    </div>
-
-    <!-- Report Type Selector -->
-    <div class="report-selector">
-        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Select Report Type</h3>
-        <div class="report-types">
-            <div class="report-type-card active" data-report="assets" onclick="selectReportType('assets')">
-                <i class='bx bx-package'></i>
-                <h3>Assets Inventory</h3>
-                <p>Complete asset listing with status</p>
-            </div>
-            <div class="report-type-card" data-report="pullout" onclick="selectReportType('pullout')">
-                <i class='bx bx-export'></i>
-                <h3>Pull-Out Transactions</h3>
-                <p>Asset pull-out history</p>
-            </div>
-            <div class="report-type-card" data-report="summary" onclick="selectReportType('summary')">
-                <i class='bx bx-bar-chart'></i>
-                <h3>Summary Report</h3>
-                <p>Statistical overview</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="filters-section">
-        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
-            <i class='bx bx-filter'></i> Filters
-        </h3>
-        
-        <div class="filters-grid" id="filtersGrid">
-            <!-- Dynamic filters will load here -->
+    <div class="content">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>
+                <i class='bx bx-file'></i>
+                Reports
+            </h1>
+            <p>Generates filtered and printable reports of assets and transactions</p>
         </div>
 
-        <div class="filter-actions">
-            <button class="btn btn-secondary" onclick="resetFilters()">
-                <i class='bx bx-reset'></i>
-                Reset
-            </button>
-            <button class="btn btn-primary" onclick="generateReport()">
-                <i class='bx bx-show'></i>
-                Generate Report
-            </button>
-            <button class="btn btn-success" onclick="window.print()" id="printBtn" style="display: none;">
-                <i class='bx bx-printer'></i>
-                Print Report
-            </button>
-        </div>
-    </div>
-
-    <!-- Report Preview -->
-    <div class="report-preview" id="reportPreview">
-        <div class="report-header">
-            <h2 id="reportTitle">Asset Inventory Report</h2>
-            <div class="report-meta">
-                <span><i class='bx bx-calendar'></i> <strong>Generated:</strong> <span id="reportDate"></span></span>
-                <span><i class='bx bx-user'></i> <strong>By:</strong> <?php echo htmlspecialchars($_SESSION['name'] ?? 'Admin'); ?></span>
+        <!-- Report Type Selector -->
+        <div class="report-selector">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Select Report Type</h3>
+            <div class="report-types">
+                <div class="report-type-card active" data-report="assets" onclick="selectReportType('assets')">
+                    <i class='bx bx-package'></i>
+                    <h3>Assets Inventory</h3>
+                    <p>Complete asset listing with status</p>
+                </div>
+                <div class="report-type-card" data-report="pullout" onclick="selectReportType('pullout')">
+                    <i class='bx bx-export'></i>
+                    <h3>Pull-Out Transactions</h3>
+                    <p>Asset pull-out history</p>
+                </div>
+                <div class="report-type-card" data-report="summary" onclick="selectReportType('summary')">
+                    <i class='bx bx-bar-chart'></i>
+                    <h3>Summary Report</h3>
+                    <p>Statistical overview</p>
+                </div>
             </div>
         </div>
 
-        <div class="report-body" id="reportBody">
-            <!-- Report content will be loaded here -->
+        <!-- Filters Section -->
+        <div class="filters-section">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">
+                <i class='bx bx-filter'></i> Filters
+            </h3>
+
+            <div class="filters-grid" id="filtersGrid">
+                <!-- Dynamic filters will load here -->
+            </div>
+
+            <div class="filter-actions">
+                <button class="btn btn-secondary" onclick="resetFilters()">
+                    <i class='bx bx-reset'></i>
+                    Reset
+                </button>
+                <button class="btn btn-primary" onclick="generateReport()">
+                    <i class='bx bx-show'></i>
+                    Generate Report
+                </button>
+                <button class="btn btn-success" onclick="window.print()" id="printBtn" style="display: none;">
+                    <i class='bx bx-printer'></i>
+                    Print Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Report Preview -->
+        <div class="report-preview" id="reportPreview">
+            <div class="report-header">
+                <h2 id="reportTitle">Asset Inventory Report</h2>
+                <div class="report-meta">
+                    <span><i class='bx bx-calendar'></i> <strong>Generated:</strong> <span id="reportDate"></span></span>
+                    <span><i class='bx bx-user'></i> <strong>By:</strong> <?php echo htmlspecialchars($_SESSION['name'] ?? 'Admin'); ?></span>
+                </div>
+            </div>
+
+            <div class="report-body" id="reportBody">
+                <!-- Report content will be loaded here -->
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-    let currentReportType = 'assets';
-    let reportData = [];
+    <script>
+        let currentReportType = 'assets';
+        let reportData = [];
 
-    function selectReportType(type) {
-        currentReportType = type;
-        
-        // Update active card
-        document.querySelectorAll('.report-type-card').forEach(card => {
-            card.classList.remove('active');
-        });
-        document.querySelector(`[data-report="${type}"]`).classList.add('active');
+        function selectReportType(type) {
+            currentReportType = type;
 
-        // Load appropriate filters
-        loadFilters(type);
-        
-        // Hide report preview
-        document.getElementById('reportPreview').classList.remove('active');
-        document.getElementById('printBtn').style.display = 'none';
-    }
+            // Update active card
+            document.querySelectorAll('.report-type-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`[data-report="${type}"]`).classList.add('active');
 
-    function loadFilters(type) {
-        const filtersGrid = document.getElementById('filtersGrid');
-        
-        let filtersHTML = '';
-        
-        if (type === 'assets') {
-            filtersHTML = `
+            // Load appropriate filters
+            loadFilters(type);
+
+            // Hide report preview
+            document.getElementById('reportPreview').classList.remove('active');
+            document.getElementById('printBtn').style.display = 'none';
+        }
+
+        function loadFilters(type) {
+            const filtersGrid = document.getElementById('filtersGrid');
+
+            let filtersHTML = '';
+
+            if (type === 'assets') {
+                filtersHTML = `
                 <div class="filter-group">
                     <label>Category</label>
                     <select id="filterCategory">
@@ -679,8 +745,8 @@ $conn = getDBConnection();
                     </select>
                 </div>
             `;
-        } else if (type === 'pullout') {
-            filtersHTML = `
+            } else if (type === 'pullout') {
+                filtersHTML = `
                 <div class="filter-group">
                     <label>Status</label>
                     <select id="filterStatus">
@@ -699,8 +765,8 @@ $conn = getDBConnection();
                     <input type="date" id="filterDateTo">
                 </div>
             `;
-        } else if (type === 'summary') {
-            filtersHTML = `
+            } else if (type === 'summary') {
+                filtersHTML = `
                 <div class="filter-group">
                     <label>Period</label>
                     <select id="filterPeriod">
@@ -712,139 +778,143 @@ $conn = getDBConnection();
                     </select>
                 </div>
             `;
-        }
-        
-        filtersGrid.innerHTML = filtersHTML;
-        
-        // Load dynamic dropdowns if needed
-        if (type === 'assets') {
-            loadCategories();
-            loadLocations();
-        }
-    }
-
-    async function loadCategories() {
-        try {
-            const response = await fetch('inventory_api.php?action=get_categories');
-            const result = await response.json();
-            
-            if (result.success) {
-                const select = document.getElementById('filterCategory');
-                result.data.forEach(cat => {
-                    const option = document.createElement('option');
-                    option.value = cat.id;
-                    option.textContent = cat.name;
-                    select.appendChild(option);
-                });
             }
-        } catch (error) {
-            console.error('Error loading categories:', error);
-        }
-    }
 
-    async function loadLocations() {
-        try {
-            const response = await fetch('reports_api.php?action=get_locations');
-            const result = await response.json();
-            
-            if (result.success) {
-                const select = document.getElementById('filterLocation');
-                result.data.forEach(loc => {
-                    const option = document.createElement('option');
-                    option.value = loc;
-                    option.textContent = loc;
-                    select.appendChild(option);
-                });
+            filtersGrid.innerHTML = filtersHTML;
+
+            // Load dynamic dropdowns if needed
+            if (type === 'assets') {
+                loadCategories();
+                loadLocations();
             }
-        } catch (error) {
-            console.error('Error loading locations:', error);
         }
-    }
 
-    async function generateReport() {
-        try {
-            let params = new URLSearchParams({
-                action: 'generate_report',
-                type: currentReportType
+        async function loadCategories() {
+            try {
+                const response = await fetch('inventory_api.php?action=get_categories');
+                const result = await response.json();
+
+                if (result.success) {
+                    const select = document.getElementById('filterCategory');
+                    result.data.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.id;
+                        option.textContent = cat.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        async function loadLocations() {
+            try {
+                const response = await fetch('reports_api.php?action=get_locations');
+                const result = await response.json();
+
+                if (result.success) {
+                    const select = document.getElementById('filterLocation');
+                    result.data.forEach(loc => {
+                        const option = document.createElement('option');
+                        option.value = loc;
+                        option.textContent = loc;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading locations:', error);
+            }
+        }
+
+        async function generateReport() {
+            try {
+                let params = new URLSearchParams({
+                    action: 'generate_report',
+                    type: currentReportType
+                });
+
+                // Add filters based on report type
+                if (currentReportType === 'assets') {
+                    const category = document.getElementById('filterCategory')?.value || '';
+                    const status = document.getElementById('filterStatus')?.value || '';
+                    const condition = document.getElementById('filterCondition')?.value || '';
+                    const location = document.getElementById('filterLocation')?.value || '';
+
+                    if (category) params.append('category', category);
+                    if (status) params.append('status', status);
+                    if (condition) params.append('condition', condition);
+                    if (location) params.append('location', location);
+
+                } else if (currentReportType === 'pullout') {
+                    const status = document.getElementById('filterStatus')?.value || '';
+                    const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+                    const dateTo = document.getElementById('filterDateTo')?.value || '';
+
+                    if (status) params.append('status', status);
+                    if (dateFrom) params.append('date_from', dateFrom);
+                    if (dateTo) params.append('date_to', dateTo);
+
+                } else if (currentReportType === 'summary') {
+                    const period = document.getElementById('filterPeriod')?.value || 'all';
+                    params.append('period', period);
+                }
+
+                const response = await fetch(`reports_api.php?${params}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    reportData = result.data;
+                    displayReport(result);
+                } else {
+                    showNotification('Error generating report', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Failed to generate report', 'error');
+            }
+        }
+
+        function displayReport(result) {
+            const reportPreview = document.getElementById('reportPreview');
+            const reportTitle = document.getElementById('reportTitle');
+            const reportDate = document.getElementById('reportDate');
+            const reportBody = document.getElementById('reportBody');
+
+            const titles = {
+                'assets': 'Asset Inventory Report',
+                'pullout': 'Pull-Out Transactions Report',
+                'summary': 'Summary Report'
+            };
+            reportTitle.textContent = titles[currentReportType];
+
+            reportDate.textContent = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
 
-            // Add filters based on report type
             if (currentReportType === 'assets') {
-                const category = document.getElementById('filterCategory')?.value || '';
-                const status   = document.getElementById('filterStatus')?.value || '';
-                const condition = document.getElementById('filterCondition')?.value || '';
-                const location = document.getElementById('filterLocation')?.value || '';
-                
-                if (category)  params.append('category', category);
-                if (status)    params.append('status', status);
-                if (condition) params.append('condition', condition);
-                if (location)  params.append('location', location);
-
+                reportBody.innerHTML = renderAssetsReport(result.data, result.summary);
             } else if (currentReportType === 'pullout') {
-                const status   = document.getElementById('filterStatus')?.value || '';
-                const dateFrom = document.getElementById('filterDateFrom')?.value || '';
-                const dateTo   = document.getElementById('filterDateTo')?.value || '';
-                
-                if (status)   params.append('status', status);
-                if (dateFrom) params.append('date_from', dateFrom);
-                if (dateTo)   params.append('date_to', dateTo);
-
+                reportBody.innerHTML = renderPulloutReport(result.data, result.summary);
             } else if (currentReportType === 'summary') {
-                const period = document.getElementById('filterPeriod')?.value || 'all';
-                params.append('period', period);
+                reportBody.innerHTML = renderSummaryReport(result.data);
             }
 
-            const response = await fetch(`reports_api.php?${params}`);
-            const result = await response.json();
+            reportPreview.classList.add('active');
+            document.getElementById('printBtn').style.display = 'inline-flex';
+            reportPreview.scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
 
-            if (result.success) {
-                reportData = result.data;
-                displayReport(result);
-            } else {
-                showNotification('Error generating report', 'error');
+        function renderAssetsReport(data, summary) {
+            if (!data || data.length === 0) {
+                return '<div class="empty-state"><i class="bx bx-package"></i><h3>No assets found</h3></div>';
             }
-        } catch (error) {
-            console.error('Error:', error);
-            showNotification('Failed to generate report', 'error');
-        }
-    }
 
-    function displayReport(result) {
-        const reportPreview = document.getElementById('reportPreview');
-        const reportTitle   = document.getElementById('reportTitle');
-        const reportDate    = document.getElementById('reportDate');
-        const reportBody    = document.getElementById('reportBody');
-
-        const titles = {
-            'assets':  'Asset Inventory Report',
-            'pullout': 'Pull-Out Transactions Report',
-            'summary': 'Summary Report'
-        };
-        reportTitle.textContent = titles[currentReportType];
-
-        reportDate.textContent = new Date().toLocaleDateString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric'
-        });
-
-        if (currentReportType === 'assets') {
-            reportBody.innerHTML = renderAssetsReport(result.data, result.summary);
-        } else if (currentReportType === 'pullout') {
-            reportBody.innerHTML = renderPulloutReport(result.data, result.summary);
-        } else if (currentReportType === 'summary') {
-            reportBody.innerHTML = renderSummaryReport(result.data);
-        }
-
-        reportPreview.classList.add('active');
-        document.getElementById('printBtn').style.display = 'inline-flex';
-        reportPreview.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function renderAssetsReport(data, summary) {
-        if (!data || data.length === 0) {
-            return '<div class="empty-state"><i class="bx bx-package"></i><h3>No assets found</h3></div>';
-        }
-
-        let html = `
+            let html = `
             <div class="summary-cards">
                 <div class="summary-card">
                     <h4>Total Assets</h4>
@@ -881,8 +951,8 @@ $conn = getDBConnection();
                 <tbody>
         `;
 
-        data.forEach(item => {
-            html += `
+            data.forEach(item => {
+                html += `
                 <tr>
                     <td>#${item.id}</td>
                     <td>${item.category || 'N/A'}</td>
@@ -896,18 +966,18 @@ $conn = getDBConnection();
                     <td><strong>${item.active_count || 0}</strong></td>
                 </tr>
             `;
-        });
+            });
 
-        html += '</tbody></table>';
-        return html;
-    }
-
-    function renderPulloutReport(data, summary) {
-        if (!data || data.length === 0) {
-            return '<div class="empty-state"><i class="bx bx-export"></i><h3>No pull-out transactions found</h3></div>';
+            html += '</tbody></table>';
+            return html;
         }
 
-        let html = `
+        function renderPulloutReport(data, summary) {
+            if (!data || data.length === 0) {
+                return '<div class="empty-state"><i class="bx bx-export"></i><h3>No pull-out transactions found</h3></div>';
+            }
+
+            let html = `
             <div class="summary-cards">
                 <div class="summary-card">
                     <h4>Total Transactions</h4>
@@ -943,8 +1013,8 @@ $conn = getDBConnection();
                 <tbody>
         `;
 
-        data.forEach(item => {
-            html += `
+            data.forEach(item => {
+                html += `
                 <tr>
                     <td>#${item.id}</td>
                     <td>${item.asset_name || 'N/A'}</td>
@@ -957,14 +1027,14 @@ $conn = getDBConnection();
                     <td>${formatDate(item.created_at)}</td>
                 </tr>
             `;
-        });
+            });
 
-        html += '</tbody></table>';
-        return html;
-    }
+            html += '</tbody></table>';
+            return html;
+        }
 
-    function renderSummaryReport(data) {
-        return `
+        function renderSummaryReport(data) {
+            return `
             <div class="summary-cards">
                 <div class="summary-card">
                     <h4>Total Assets</h4>
@@ -1010,27 +1080,31 @@ $conn = getDBConnection();
                 </tbody>
             </table>
         `;
-    }
+        }
 
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
 
-    function resetFilters() {
-        document.querySelectorAll('select, input').forEach(el => {
-            if (el.tagName === 'SELECT') {
-                el.selectedIndex = 0;
-            } else {
-                el.value = '';
-            }
-        });
-    }
+        function resetFilters() {
+            document.querySelectorAll('select, input').forEach(el => {
+                if (el.tagName === 'SELECT') {
+                    el.selectedIndex = 0;
+                } else {
+                    el.value = '';
+                }
+            });
+        }
 
-    function showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
@@ -1041,17 +1115,18 @@ $conn = getDBConnection();
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             z-index: 10000;
         `;
-        notification.textContent = message;
-        document.body.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
-    }
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
 
-    // Load default filters on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        loadFilters('assets');
-    });
-</script>
+        // Load default filters on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadFilters('assets');
+        });
+    </script>
 
 </body>
+
 </html>
 <?php ob_end_flush(); ?>
