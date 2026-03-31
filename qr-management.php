@@ -323,19 +323,30 @@ $conn = getDBConnection();
         }
 
         /* Vertical company name on the left */
-        .qr-company-label {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-            font-size: 10px;
-            font-weight: 1000;
-            font-family: Arial, sans-serif;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            color: #111;
-            padding: 8px 1px;
-            margin-top: -30px;
-            white-space: nowrap;
-        }
+       .qr-company-label {
+    position: absolute;
+    left: 37.9mm; /* adjust depende sa gusto mong lapit */
+    top: 2.70mm; /* same sa QR top */
+    
+    height: 20.67mm; /* SAME as QR box */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+
+    font-size: 5.1px;
+    font-weight: 1000;
+    font-family: Arial, sans-serif;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #111;
+
+    white-space: nowrap;
+    padding: 0;
+    margin: 0;
+}
 
         /* QR image + sub-category label — absolutely positioned per label coords */
         .qr-content-wrapper {
