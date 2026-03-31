@@ -339,7 +339,7 @@ $conn = getDBConnection();
         .qr-company-label {
             writing-mode: vertical-rl;
             transform: rotate(180deg);
-            font-size: 10px;
+            font-size: 14px;
             font-weight: 1000;
             font-family: Arial, sans-serif;
             letter-spacing: 1.5px;
@@ -364,7 +364,7 @@ $conn = getDBConnection();
         .qr-image-box {
             border: 3.5px solid #000;
             border-radius: 10px;
-            padding: 3px;
+            padding: 1px;
             background: #fff;
             display: inline-block;
             width: 23.67mm;
@@ -719,9 +719,9 @@ function openPrintWindow(assets) {
         + '* { margin: 0; padding: 0; box-sizing: border-box; }'
         + 'html, body { width: 104mm; height: 50.8mm; overflow: hidden; background: white; }'
         + '.qr-print-item { width: 104mm; height: 50.8mm; position: relative; display: flex; align-items: center; overflow: hidden; }'
-        + '.qr-company-label { position: absolute; left: 37.9mm; top: 2.70mm; height: 20.67mm; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 5.1px; font-weight: 900; font-family: Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: #111; white-space: nowrap; }'
+        + '.qr-company-label { position: absolute; left: 38.9mm; top: 2.70mm; height: 20.67mm; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 5.1px; font-weight: 900; font-family: Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: #111; white-space: nowrap; }'
         + '.qr-content-wrapper { position: absolute; left: 40.20mm; top: 0.75mm; display: flex; flex-direction: column; align-items: center; }'
-        + '.qr-image-box { border: 3.5px solid #000; border-radius: 10px; padding: 3px; background: #fff; display: inline-block; width: 23.67mm; height: 23.67mm; overflow: hidden; }'
+        + '.qr-image-box { border: 3.5px solid #000; border-radius: 10px; padding: 1px; background: #fff; display: inline-block; width: 20.67mm; height: 20.67mm; overflow: hidden; }'
         + '.qr-image-box img { width: 100%; height: 100%; display: block; }'
         + '.asset-info { font-size: 9px; font-weight: 700; font-family: Arial, sans-serif; margin-top: 4px; text-align: center; width: 23.67mm; word-wrap: break-word; white-space: normal; }'
         + '</style></head><body>'
@@ -777,7 +777,6 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(n);
     setTimeout(() => n.remove(), 3000);
 }
-
 // ── Download ──────────────────────────────────────────────────────────────
 function downloadQR(assetId) {
     const link = document.createElement('a');
