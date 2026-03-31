@@ -66,6 +66,7 @@ include 'sidebar.php';
         .btn-danger    { background: var(--danger); color: white; }
         .btn-danger:hover { background: #c0392b; transform: translateY(-2px); }
         select.btn { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23636e72' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; padding-right: 3rem; }
+        select.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .table-container { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; }
         .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -144,7 +145,7 @@ include 'sidebar.php';
         .edit-img-tile { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: var(--bg-main); border: 2px solid var(--border); transition: all .2s; }
         .edit-img-tile:hover { border-color: var(--danger); box-shadow: 0 4px 12px rgba(214,48,49,.15); }
         .edit-img-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .edit-img-tile .tile-icon { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 2rem; color: #1a73e8; }
+        .edit-img-tile .tile-icon { display: flex; align-items: center; justify-content: height: 100%; font-size: 2rem; color: #1a73e8; }
         .edit-img-tile .delete-img-btn { position: absolute; top: 4px; right: 4px; background: rgba(214,48,49,.88); border: none; color: white; border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1rem; z-index: 2; opacity: 0; transition: opacity .2s; }
         .edit-img-tile:hover .delete-img-btn { opacity: 1; }
         .img-add-box { background: var(--bg-main); border: 2px dashed var(--border); border-radius: 10px; padding: 1.25rem; }
@@ -275,7 +276,16 @@ include 'sidebar.php';
             <input type="text" id="searchInput" placeholder="Search by brand, model, serial number...">
         </div>
         <div class="filter-group">
-            <select id="categoryFilter" class="btn btn-secondary"><option value="">All Categories</option></select>
+            <!-- Category filter -->
+            <select id="categoryFilter" class="btn btn-secondary">
+                <option value="">All Categories</option>
+            </select>
+
+            <!-- ── SUBCATEGORY FILTER (new) ── -->
+            <select id="subcategoryFilter" class="btn btn-secondary" disabled>
+                <option value="">All Types</option>
+            </select>
+
             <select id="statusFilter" class="btn btn-secondary">
                 <option value="">All Status</option>
                 <option value="WORKING">Working</option>
@@ -369,12 +379,10 @@ include 'sidebar.php';
             <div class="img-mgmt-section" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:2px solid var(--border);">
                 <h4 class="img-mgmt-title"><i class='bx bx-image-alt'></i> Manage Photos</h4>
 
-                <!-- Existing images gallery -->
                 <div class="edit-img-gallery" id="editImgGallery">
                     <div class="img-loading"><i class='bx bx-loader-alt bx-spin'></i> Loading photos…</div>
                 </div>
 
-                <!-- Add new image -->
                 <div class="img-add-box">
                     <div class="img-add-box-label"><i class='bx bx-plus-circle'></i> Add New Photo</div>
                     <div class="img-add-row">
@@ -471,13 +479,14 @@ include 'sidebar.php';
                             <div class="custom-dropdown" id="purpose_dropdown"></div>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Requested By <span class="required">*</span></label>
-                        <div class="custom-select-wrapper">
-                            <input type="text" id="requested_by_search" class="custom-select-input" placeholder="Search name..." autocomplete="off" oninput="filterDropdown('requested_by')" onfocus="showDropdown('requested_by')" onblur="hideDropdown('requested_by')">
-                            <input type="hidden" name="requested_by" id="requested_by_value">
-                            <div class="custom-dropdown" id="requested_by_dropdown"></div>
-                        </div>
+                <div class="form-group">
+    <label>Requested By</label>
+    <input type="text" class="custom-select-input" 
+           value="<?php echo htmlspecialchars($_SESSION['name'] ?? ''); ?>" 
+           readonly style="background:#f1f2f6;color:var(--text-secondary);cursor:not-allowed;">
+    <input type="hidden" name="requested_by" id="requested_by_value" 
+           value="<?php echo htmlspecialchars($_SESSION['name'] ?? ''); ?>">
+</div>
                     </div>
                 </form>
                 <div class="form-actions">
@@ -527,7 +536,14 @@ function selectLocPanel(loc){selectedLocation=loc;document.getElementById('locat
 // ── Inventory load & render ───────────────────────────────────────────────────
 async function loadInventory() {
     try {
-        const params=new URLSearchParams({action:'get_inventory',search:document.getElementById('searchInput').value,category:document.getElementById('categoryFilter').value,status:document.getElementById('statusFilter').value,location:selectedLocation});
+        const params=new URLSearchParams({
+            action:      'get_inventory',
+            search:      document.getElementById('searchInput').value,
+            category:    document.getElementById('categoryFilter').value,
+            subcategory: document.getElementById('subcategoryFilter').value, // ← ADDED
+            status:      document.getElementById('statusFilter').value,
+            location:    selectedLocation
+        });
         const response=await fetch(`inventory_api.php?${params}`);
         const result=await response.json();
         if(result.success){inventoryData=result.data;renderInventoryTable();updateStats();}
@@ -568,23 +584,17 @@ function renderInventoryTable() {
 
 function updateStats() {
     const records = inventoryData.length;
-
     const sumBeg = (filterFn) =>
-        inventoryData
-            .filter(filterFn)
-            .reduce((s, i) => s + (parseInt(i.beg_balance_count) || 0), 0);
-
+        inventoryData.filter(filterFn).reduce((s, i) => s + (parseInt(i.beg_balance_count) || 0), 0);
     const workingQty  = sumBeg(i => i.status === 'WORKING');
     const totalQty    = sumBeg(() => true);
     const checkingQty = sumBeg(i => i.status === 'FOR CHECKING');
     const notWorkQty  = sumBeg(i => i.status === 'NOT WORKING');
     const transitQty  = inventoryData.reduce((s, i) => s + (parseInt(i.for_pullout) || 0), 0);
-
     document.getElementById('totalAssets').textContent    = workingQty;
     document.getElementById('activeItems').textContent    = totalQty;
     document.getElementById('pulledOut').textContent      = transitQty;
     document.getElementById('forChecking').textContent    = checkingQty;
-
     document.getElementById('kpiSubRecords').textContent  = `${records} asset record${records !== 1 ? 's' : ''}`;
     document.getElementById('kpiSubAssets').textContent   = `${totalQty} total units`;
     document.getElementById('kpiSubChecking').textContent = notWorkQty > 0 ? `${notWorkQty} units not working` : 'need attention';
@@ -683,11 +693,9 @@ async function openEditModal(id){
         _editReturnedCount=parseInt(item.beg_balance_count)-parseInt(item.active_count)-_editReleasedCount||0;
         document.getElementById('activeCountHint').textContent='Current available items. Adjusts Beginning Balance automatically.';
         document.getElementById('activeCountHint').style.color='';
-        // Reset image inputs
         document.getElementById('newImgFile').value='';
         document.getElementById('newImgUrl').value='';
         document.getElementById('editModal').classList.add('active');
-        // Load image gallery for this asset
         loadEditImages(id);
     }catch(error){showNotification('Failed to open edit form','error');}
 }
@@ -709,47 +717,29 @@ async function loadEditImages(assetId) {
     try {
         const res    = await fetch(`inventory_api.php?action=get_asset_details&asset_id=${assetId}`);
         const result = await res.json();
-        if (!result.success) {
-            gallery.innerHTML = '<div class="img-loading" style="color:var(--danger);">Failed to load photos.</div>';
-            return;
-        }
+        if (!result.success) { gallery.innerHTML = '<div class="img-loading" style="color:var(--danger);">Failed to load photos.</div>'; return; }
         renderEditGallery(assetId, result.data.images || []);
-    } catch(e) {
-        gallery.innerHTML = '<div class="img-loading" style="color:var(--danger);">Error loading photos.</div>';
-    }
+    } catch(e) { gallery.innerHTML = '<div class="img-loading" style="color:var(--danger);">Error loading photos.</div>'; }
 }
 
 function renderEditGallery(assetId, images) {
     const gallery = document.getElementById('editImgGallery');
     gallery.innerHTML = '';
-
-    if (!images.length) {
-        gallery.innerHTML = '<div class="img-empty">No photos yet. Add one below.</div>';
-        return;
-    }
-
+    if (!images.length) { gallery.innerHTML = '<div class="img-empty">No photos yet. Add one below.</div>'; return; }
     images.forEach(img => {
         const tile = document.createElement('div');
         tile.className = 'edit-img-tile';
-
         let inner = '';
         if (img.type === 'gdrive' && img.thumb) {
-            inner = `<img src="${escHtml(img.thumb)}" alt="Photo"
-                         onerror="this.parentElement.querySelector('.tile-icon').style.display='flex';this.style.display='none';">
+            inner = `<img src="${escHtml(img.thumb)}" alt="Photo" onerror="this.parentElement.querySelector('.tile-icon').style.display='flex';this.style.display='none';">
                      <div class="tile-icon" style="display:none;"><i class='bx bxl-google'></i></div>`;
         } else if (img.type === 'image' && img.url) {
             inner = `<img src="${escHtml(img.url)}" alt="Photo">`;
         } else {
             inner = `<div class="tile-icon"><i class='bx bxl-google'></i></div>`;
         }
-
         const imageId = img.image_id || 0;
-        tile.innerHTML = `
-            ${inner}
-            <button class="delete-img-btn" title="Delete photo"
-                    onclick="deleteAssetImage(${assetId}, ${imageId})">
-                <i class='bx bx-trash'></i>
-            </button>`;
+        tile.innerHTML = `${inner}<button class="delete-img-btn" title="Delete photo" onclick="deleteAssetImage(${assetId}, ${imageId})"><i class='bx bx-trash'></i></button>`;
         gallery.appendChild(tile);
     });
 }
@@ -758,10 +748,7 @@ async function deleteAssetImage(assetId, imageId) {
     if (!imageId) { showNotification('Cannot delete — image ID not found.', 'error'); return; }
     if (!confirm('Delete this photo? This cannot be undone.')) return;
     try {
-        const res    = await fetch('inventory_api.php?action=delete_asset_image', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({ asset_id: assetId, image_id: imageId })
-        });
+        const res    = await fetch('inventory_api.php?action=delete_asset_image', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({asset_id:assetId,image_id:imageId})});
         const result = await res.json();
         if (result.success) { showNotification('Photo deleted.', 'success'); loadEditImages(assetId); }
         else showNotification(result.error || 'Delete failed.', 'error');
@@ -772,32 +759,17 @@ async function addAssetImage() {
     const assetId   = parseInt(document.getElementById('editAssetId').value);
     const fileInput = document.getElementById('newImgFile');
     const urlInput  = document.getElementById('newImgUrl');
-
     if (!assetId) { showNotification('No asset selected.', 'error'); return; }
-
     const formData = new FormData();
     formData.append('asset_id', assetId);
-
-    if (fileInput.files.length > 0) {
-        formData.append('image', fileInput.files[0]);
-    } else if (urlInput.value.trim()) {
-        formData.append('drive_url', urlInput.value.trim());
-    } else {
-        showNotification('Please select a file or enter a Drive URL.', 'error');
-        return;
-    }
-
+    if (fileInput.files.length > 0) { formData.append('image', fileInput.files[0]); }
+    else if (urlInput.value.trim()) { formData.append('drive_url', urlInput.value.trim()); }
+    else { showNotification('Please select a file or enter a Drive URL.', 'error'); return; }
     try {
-        const res    = await fetch('inventory_api.php?action=add_asset_image', { method:'POST', body: formData });
+        const res    = await fetch('inventory_api.php?action=add_asset_image', {method:'POST',body:formData});
         const result = await res.json();
-        if (result.success) {
-            showNotification('Photo added!', 'success');
-            fileInput.value = '';
-            urlInput.value  = '';
-            loadEditImages(assetId);
-        } else {
-            showNotification(result.error || 'Upload failed.', 'error');
-        }
+        if (result.success) { showNotification('Photo added!', 'success'); fileInput.value=''; urlInput.value=''; loadEditImages(assetId); }
+        else showNotification(result.error || 'Upload failed.', 'error');
     } catch(e) { showNotification('Upload failed.', 'error'); }
 }
 
@@ -836,8 +808,18 @@ function filterDropdown(key){buildDropdown(key);document.getElementById(DROPDOWN
 function showDropdown(key){buildDropdown(key);document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='block';}
 function hideDropdown(key){setTimeout(()=>{document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='none';if(!document.getElementById(DROPDOWN_CONFIG[key].valueId).value)document.getElementById(DROPDOWN_CONFIG[key].searchId).value='';},200);}
 function selectDropdownItem(key,val){document.getElementById(DROPDOWN_CONFIG[key].searchId).value=val;document.getElementById(DROPDOWN_CONFIG[key].valueId).value=val;document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='none';}
-function resetTransferForm(){document.getElementById('pulloutForm').reset();Object.keys(DROPDOWN_CONFIG).forEach(key=>{document.getElementById(DROPDOWN_CONFIG[key].searchId).value='';document.getElementById(DROPDOWN_CONFIG[key].valueId).value='';document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='none';});document.getElementById('from_sub_location_value').value='';}
-
+function resetTransferForm(){
+    document.getElementById('pulloutForm').reset();
+    // Skip requested_by — excluded na sa DROPDOWN_CONFIG
+    ['from','to','purpose'].forEach(key=>{
+        document.getElementById(DROPDOWN_CONFIG[key].searchId).value='';
+        document.getElementById(DROPDOWN_CONFIG[key].valueId).value='';
+        document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='none';
+    });
+    document.getElementById('from_sub_location_value').value='';
+    // Re-set ang requested_by value after reset()
+    document.getElementById('requested_by_value').value = '<?php echo addslashes($_SESSION['name'] ?? ''); ?>';
+}
 async function submitPullout(){
     const form=document.getElementById('pulloutForm');const formData=new FormData(form);
     const data={asset_id:formData.get('asset_id'),quantity:parseInt(formData.get('quantity')),date_needed:formData.get('date_needed'),from_location:formData.get('from_location'),from_sub_location:(document.getElementById('from_sub_location_value').value||'').trim(),to_location:formData.get('to_location'),purpose:formData.get('purpose'),requested_by:formData.get('requested_by')};
@@ -863,11 +845,53 @@ function showNotification(message,type='info'){
     setTimeout(()=>{n.style.animation='slideOut .3s ease';setTimeout(()=>n.remove(),300);},4000);
 }
 
-async function loadCategories(){try{const response=await fetch('inventory_api.php?action=get_categories');const result=await response.json();if(result.success){const select=document.getElementById('categoryFilter');result.data.forEach(cat=>{const o=document.createElement('option');o.value=cat.id;o.textContent=cat.name;select.appendChild(o);});}}catch(error){console.error('Error loading categories:',error);}}
+// ── Load categories + subcategory filter logic ────────────────────────────────
+async function loadCategories() {
+    try {
+        const response = await fetch('inventory_api.php?action=get_categories');
+        const result   = await response.json();
+        if (result.success) {
+            const select = document.getElementById('categoryFilter');
+            result.data.forEach(cat => {
+                const o = document.createElement('option');
+                o.value = cat.id;
+                o.textContent = cat.name;
+                select.appendChild(o);
+            });
+        }
+    } catch(error) { console.error('Error loading categories:', error); }
+}
 
-// ── Event listeners ───────────────────────────────────────────────────────────
+// Category change → load subcategories
+document.getElementById('categoryFilter').addEventListener('change', async function() {
+    const catId  = this.value;
+    const subSel = document.getElementById('subcategoryFilter');
+    subSel.innerHTML = '<option value="">All Types</option>';
+    subSel.disabled  = true;
+
+    if (catId) {
+        try {
+            const res    = await fetch(`inventory_api.php?action=get_subcategories&category_id=${catId}`);
+            const result = await res.json();
+            if (result.success && result.data.length) {
+                result.data.forEach(sub => {
+                    const o = document.createElement('option');
+                    o.value = sub.id;
+                    o.textContent = sub.name;
+                    subSel.appendChild(o);
+                });
+                subSel.disabled = false;
+            }
+        } catch(e) { console.error('Error loading subcategories:', e); }
+    }
+    loadInventory();
+});
+
+// Subcategory change → reload inventory
+document.getElementById('subcategoryFilter').addEventListener('change', loadInventory);
+
+// ── Other event listeners ─────────────────────────────────────────────────────
 document.getElementById('searchInput').addEventListener('input',function(){renderInventoryTable();clearTimeout(window._searchTimer);window._searchTimer=setTimeout(loadInventory,300);});
-document.getElementById('categoryFilter').addEventListener('change',loadInventory);
 document.getElementById('statusFilter').addEventListener('change',loadInventory);
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{overlay.addEventListener('click',function(e){if(e.target===this)closeModal(this.id);});});
 document.addEventListener('DOMContentLoaded',function(){loadCategories();loadInventory();});

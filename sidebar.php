@@ -41,20 +41,43 @@ $prepCount     = 0;
 $releasedCount = 0;
 
 if (hasPermission('asset_transfer')) {
-    $s = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING'");
-    if ($s && $s->execute()) $pendingCount = (int)($s->get_result()->fetch_assoc()['cnt'] ?? 0);
+    $isEmployee = strtoupper($userRole) === 'EMPLOYEE';
+    $byUser     = $isEmployee ? " AND requested_by = ?" : "";
 
-    $s2 = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'CONFIRMED'");
-    if ($s2 && $s2->execute()) $prepCount = (int)($s2->get_result()->fetch_assoc()['cnt'] ?? 0);
+    $s = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING'" . $byUser);
+    if ($s) {
+        if ($isEmployee) $s->bind_param("s", $userName);
+        $s->execute();
+        $pendingCount = (int)($s->get_result()->fetch_assoc()['cnt'] ?? 0);
+    }
 
-    $s3 = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'RELEASED'");
-    if ($s3 && $s3->execute()) $releasedCount = (int)($s3->get_result()->fetch_assoc()['cnt'] ?? 0);
+    $s2 = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'CONFIRMED'" . $byUser);
+    if ($s2) {
+        if ($isEmployee) $s2->bind_param("s", $userName);
+        $s2->execute();
+        $prepCount = (int)($s2->get_result()->fetch_assoc()['cnt'] ?? 0);
+    }
+
+    $s3 = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'RELEASED'" . $byUser);
+    if ($s3) {
+        if ($isEmployee) $s3->bind_param("s", $userName);
+        $s3->execute();
+        $releasedCount = (int)($s3->get_result()->fetch_assoc()['cnt'] ?? 0);
+    }
 }
 
 // ── Recent notifications (last 10 activity logs) ──────────────────────────────
 $notifRows = [];
-$nq = $conn->query("SELECT user_name, action, description, created_at FROM activity_logs ORDER BY created_at DESC LIMIT 10");
-if ($nq) while ($nr = $nq->fetch_assoc()) $notifRows[] = $nr;
+if (strtoupper($userRole) === 'EMPLOYEE') {
+    $nq = $conn->prepare("SELECT user_name, action, description, created_at FROM activity_logs WHERE user_name = ? ORDER BY created_at DESC LIMIT 10");
+    $nq->bind_param("s", $userName);
+    $nq->execute();
+    $nqResult = $nq->get_result();
+    while ($nr = $nqResult->fetch_assoc()) $notifRows[] = $nr;
+} else {
+    $nq = $conn->query("SELECT user_name, action, description, created_at FROM activity_logs ORDER BY created_at DESC LIMIT 10");
+    if ($nq) while ($nr = $nq->fetch_assoc()) $notifRows[] = $nr;
+}
 
 $totalBell = $pendingCount + $prepCount + $releasedCount;
 ?>

@@ -204,7 +204,6 @@ $stats       = $statsResult->fetch_assoc();
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="closeModal()"><i class='bx bx-x'></i> Close</button>
             <button class="btn btn-danger" id="modalCancelBtn" style="display:none;" onclick="confirmCancel(currentId)"><i class='bx bx-block'></i> Cancel Transfer</button>
-            <a class="btn btn-primary" id="modalPreparingLink" href="admin-incoming.php" style="display:none; text-decoration:none;"><i class='bx bx-loader-circle'></i> Go to Incoming Order</a>
             <button class="btn btn-primary" id="modalActionBtn" style="display:none;">Update Status</button>
         </div>
     </div>
@@ -216,26 +215,25 @@ $stats       = $statsResult->fetch_assoc();
     let currentLocation = '';
     let currentId       = null;
 
-function renderStatus(item) {
-    const s = (item.status || '').toUpperCase();
-    const step = parseInt(item.prep_step ?? 0);
+    function renderStatus(item) {
+        const s    = (item.status || '').toUpperCase();
+        const step = parseInt(item.prep_step ?? 0);
 
-    if (s === 'CONFIRMED' && step >= 4) {
-        return `<span class="badge badge-ready">✓ Ready to Release</span>`;
+        if (s === 'CONFIRMED' && step >= 4) {
+            return `<span class="badge badge-ready">✓ Ready to Release</span>`;
+        }
+
+        const statusMap = {
+            PENDING:   { label: 'PENDING',   class: 'badge-pending' },
+            RELEASED:  { label: 'RECEIVED',  class: 'badge-released' },
+            RETURNED:  { label: 'RETURNED',  class: 'badge-returned' },
+            CANCELLED: { label: 'CANCELLED', class: 'badge-cancelled' },
+            CONFIRMED: { label: 'CONFIRMED', class: 'badge-confirmed' }
+        };
+
+        const cfg = statusMap[s] || { label: s, class: 'badge-pending' };
+        return `<span class="badge ${cfg.class}">${cfg.label}</span>`;
     }
-
-    const statusMap = {
-        PENDING:   { label: 'PENDING',   class: 'badge-pending' },
-        RELEASED:  { label: 'RECEIVED',  class: 'badge-released' },
-        RETURNED:  { label: 'RETURNED',  class: 'badge-returned' },
-        CANCELLED: { label: 'CANCELLED', class: 'badge-cancelled' },
-        CONFIRMED: { label: 'CONFIRMED', class: 'badge-confirmed' }
-    };
-
-    const cfg = statusMap[s] || { label: s, class: 'badge-pending' };
-
-    return `<span class="badge ${cfg.class}">${cfg.label}</span>`;
-}
 
     async function loadLocations() {
         try {
@@ -292,9 +290,9 @@ function renderStatus(item) {
         }
         const isReturned = item.status === 'RETURNED';
         return {
-            from: isReturned ? (to || '—') : (from || '—'),
-            to:   isReturned ? (from || '—') : (to || '—'),
-            label: (item.purpose || '').replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').replace(/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i, '').trim() || '—',
+            from:     isReturned ? (to   || '—') : (from || '—'),
+            to:       isReturned ? (from || '—') : (to   || '—'),
+            label:    (item.purpose || '').replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').replace(/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i, '').trim() || '—',
             returned: isReturned
         };
     }
@@ -303,6 +301,7 @@ function renderStatus(item) {
         if (!purpose) return '—';
         return purpose.replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').replace(/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i, '').trim() || '—';
     }
+
     function cleanReceivedBy(val) { if (!val) return '—'; return val.replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').trim() || '—'; }
     function hl(val, term) { if (!term || !val) return val || ''; const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return String(val).replace(new RegExp(`(${esc})`, 'gi'), '<mark>$1</mark>'); }
 
@@ -318,10 +317,9 @@ function renderStatus(item) {
             const route   = getRoute(item);
             const purpose = cleanPurpose(item.purpose);
 
-            // ── Thumbnail — gdrive-aware ──────────────────────────────────
             let thumbHtml;
             if (item.thumbnail && item.thumbnail_type === 'gdrive') {
-              thumbHtml = `<img class="thumb-img gdrive-thumb"
+                thumbHtml = `<img class="thumb-img gdrive-thumb"
     src="${encodeURI(item.thumbnail)}"
     data-url="${encodeURI(item.thumbnail_url || item.thumbnail)}"
     alt="asset"
@@ -361,16 +359,14 @@ function renderStatus(item) {
         });
     }
 
-    document.addEventListener('click', function(e){
-    if(e.target.classList.contains('gdrive-thumb')){
-        e.stopPropagation();
-        const url = e.target.dataset.url;
-        if(url){
-            window.open(url,'_blank');
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('gdrive-thumb')) {
+            e.stopPropagation();
+            const url = e.target.dataset.url;
+            if (url) window.open(url, '_blank');
         }
-    }
-});
-    
+    });
+
     async function openViewModal(id) {
         currentId = id;
         try {
@@ -382,7 +378,6 @@ function renderStatus(item) {
             const route   = getRoute(item);
             const purpose = cleanPurpose(item.purpose);
 
-            // ── Gallery — handles regular images and Google Drive file thumbnails ──
             const gallery = document.getElementById('modalGallery');
             gallery.innerHTML = '';
             if (item.images && item.images.length > 0) {
@@ -443,14 +438,13 @@ function renderStatus(item) {
                 <div class="detail-item"><div class="detail-label">Received At</div><div class="detail-value">${item.released_at ? formatDateTime(item.released_at) : '—'}</div></div>
                 <div class="detail-item"><div class="detail-label">Returned At</div><div class="detail-value">${item.returned_at ? formatDateTime(item.returned_at) : '—'}</div></div>`;
 
-            const actionBtn     = document.getElementById('modalActionBtn');
-            const cancelBtn     = document.getElementById('modalCancelBtn');
-            const preparingLink = document.getElementById('modalPreparingLink');
-            actionBtn.style.display = cancelBtn.style.display = preparingLink.style.display = 'none';
+            const actionBtn = document.getElementById('modalActionBtn');
+            const cancelBtn = document.getElementById('modalCancelBtn');
+            actionBtn.style.display = cancelBtn.style.display = 'none';
             actionBtn.className = 'btn';
 
             if (item.status === 'PENDING') {
-                cancelBtn.style.display = preparingLink.style.display = '';
+                cancelBtn.style.display = '';
             } else if (item.status === 'RELEASED') {
                 actionBtn.style.display = '';
                 actionBtn.innerHTML = '<i class="bx bx-undo"></i> Mark as Returned';

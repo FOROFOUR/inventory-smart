@@ -791,6 +791,13 @@ if ($bellStmt && $bellStmt->bind_param("ss", $locLike, $locLike) && $bellStmt->e
                         <?php endif; ?>
                     </a>
                 </li>
+                
+                <li class="nav-link <?= isActive('warehouse-release.php') ?>">
+    <a href="warehouse-release.php">
+        <i class='bx bx-paper-plane icon'></i>
+        <span class="text nav-text">Release</span>
+    </a>
+</li>
                 <li class="nav-link <?= isActive('warehouse-receiving.php') ?>">
                     <a href="warehouse-receiving.php" id="receivingNavLink">
                         <i class='bx bx-package icon'></i>

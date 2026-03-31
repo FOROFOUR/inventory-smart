@@ -13,8 +13,7 @@ $conn = getDBConnection();
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="css/style.css">
-    <!-- QRCode library — stored locally, no CDN needed -->
-  
+
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -306,64 +305,77 @@ $conn = getDBConnection();
             .print-area { position: absolute; left: 0; top: 0; width: 100%; }
             .qr-print-item { page-break-inside: avoid; }
         }
+
         .print-area { display: none; }
-     .qr-print-item {    
-    text-align: center;
-    margin: 12px;
-    display: inline-flex;
-    align-items: center;
-    gap: 0;
-}
 
-/* Vertical company name on the left */
-.qr-company-label {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-size: 10px;
-    font-weight: 1000;
-    font-family: Arial, sans-serif;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #111;
-    margin-right: 0;
-padding: 8px 1px;
-    margin-top: -30px;
-    white-space: nowrap;
+        /* ── QR Print Item — matched to 104mm x 50.8mm label ── */
+        .qr-print-item {
+            width: 104mm;
+            height: 50.8mm;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            overflow: hidden;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+            margin: 0;
+            padding: 0;
+        }
 
+        /* Vertical company name on the left */
+        .qr-company-label {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 10px;
+            font-weight: 1000;
+            font-family: Arial, sans-serif;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #111;
+            padding: 8px 1px;
+            margin-top: -30px;
+            white-space: nowrap;
+        }
 
-}
-/* QR + label wrapper */
-.qr-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
+        /* QR image + sub-category label — absolutely positioned per label coords */
+        .qr-content-wrapper {
+            position: absolute;
+            left: 40.20mm;
+            top: 0.75mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-/* Only the QR image has the border */
-.qr-image-box {
-    border: 3.5px solid #000;
-    border-radius: 10px;
-    padding: 3px;
-    background: #fff;
-    display: inline-block;
-}
+        /* Border only around the QR image */
+        .qr-image-box {
+            border: 3.5px solid #000;
+            border-radius: 10px;
+            padding: 3px;
+            background: #fff;
+            display: inline-block;
+            width: 23.67mm;
+            height: 23.67mm;
+            overflow: hidden;
+        }
 
-.qr-print-item .asset-info {
-    font-size: 12px;
-    font-weight: 700;
-    font-family: Arial, sans-serif;
-    margin-top: 6px;
-    text-align: center;
-}
-.qr-print-item .asset-sub {
-    font-size: 10px;
-    color: #555;
-    margin-top: 2px;
-    font-family: Arial, sans-serif;
-}
+        .qr-image-box img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
 
-
-        
+        /* Sub-category label below the QR */
+        .qr-print-item .asset-info {
+            font-size: 9px;
+            font-weight: 700;
+            font-family: Arial, sans-serif;
+            margin-top: 4px;
+            text-align: center;
+            width: 23.67mm;
+            word-wrap: break-word;
+            white-space: normal;
+        }
     </style>
 </head>
 <body>
@@ -374,10 +386,10 @@ padding: 8px 1px;
     <div class="page-header">
         <h1><i class='bx bx-qr' style="vertical-align:middle;margin-right:0.5rem;"></i>Generate QR</h1>
         <p>Scan any QR code to instantly view asset details on your phone or tablet.</p>
-       <div class="network-badge">
-    <span class="dot"></span>
-    LAN: <span id="currentIP"></span> • Same Wi-Fi required to scan
-</div>
+        <div class="network-badge">
+            <span class="dot"></span>
+            LAN: <span id="currentIP"></span> • Same Wi-Fi required to scan
+        </div>
     </div>
 
     <!-- Bulk Actions -->
@@ -410,8 +422,8 @@ padding: 8px 1px;
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
-                     <th>Asset / Category</th>
-<th>Brand / Model & Serial</th>
+                        <th>Asset / Category</th>
+                        <th>Brand / Model & Serial</th>
                         <th>Status</th>
                         <th>QR URL</th>
                         <th>QR Preview</th>
@@ -501,7 +513,7 @@ function renderTable() {
     tbody.innerHTML = '';
 
     if (assetsData.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9">
+        tbody.innerHTML = `<tr><td colspan="7">
             <div class="empty-state">
                 <i class='bx bx-qr'></i>
                 <h3>No assets found</h3>
@@ -511,61 +523,46 @@ function renderTable() {
     }
 
     assetsData.forEach(asset => {
-        const qrId  = `qr-${asset.id}`;
-        const url   = asset.qr_url;
-        const label = asset.qr_label || ('ASSET-' + String(asset.id).padStart(5,'0'));
+        const url     = asset.qr_url;
         const checked = selectedAssets.has(asset.id) ? 'checked' : '';
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><input type="checkbox" class="asset-checkbox" value="${asset.id}"
                     onchange="toggleAssetSelection(${asset.id})" ${checked}></td>
-        <td>
-  <div style="font-weight:600;font-size:0.92rem;">${asset.asset_type || '—'}</div>
-  <div style="font-size:0.78rem;color:#636e72;margin-top:3px;">${asset.category || '—'}</div>
-</td>
-<td>
-  <div style="font-weight:500;">${[asset.brand, asset.model].filter(Boolean).join(' ') || '—'}</div>
-  <div style="margin-top:3px;">
-    <code style="background:#f0f0f0;padding:2px 6px;border-radius:5px;font-size:0.78rem;">${asset.serial_number || 'N/A'}</code>
-  </div>
-</td>
+            <td>
+                <div style="font-weight:600;font-size:0.92rem;">${asset.asset_type || '—'}</div>
+                <div style="font-size:0.78rem;color:#636e72;margin-top:3px;">${asset.category || '—'}</div>
+            </td>
+            <td>
+                <div style="font-weight:500;">${[asset.brand, asset.model].filter(Boolean).join(' ') || '—'}</div>
+                <div style="margin-top:3px;">
+                    <code style="background:#f0f0f0;padding:2px 6px;border-radius:5px;font-size:0.78rem;">${asset.serial_number || 'N/A'}</code>
+                </div>
+            </td>
             <td>${statusBadge(asset.status)}</td>
             <td>
                 <span class="url-chip" title="${url}">
                     <i class='bx bx-link-alt'></i>${url}
                 </span>
             </td>
-           <td class="qr-cell">
-    <img src="generate_qr.php?id=${asset.id}" 
-         class="qr-preview"
-         width="80"
-         onclick="openModal(${asset.id})">
-</td>
+            <td class="qr-cell">
+                <img src="generate_qr.php?id=${asset.id}"
+                     class="qr-preview"
+                     width="80"
+                     onclick="openModal(${asset.id})">
+            </td>
             <td>
                 <button class="print-btn" onclick="printSingleQR(${asset.id})">
                     <i class='bx bx-printer'></i> Print
                 </button>
-                  <button class="print-btn" style="margin-left:5px;"
-        onclick="downloadQR(${asset.id})">
-        <i class='bx bx-download'></i> Download
-    </button>
+                <button class="print-btn" style="margin-left:5px;"
+                    onclick="downloadQR(${asset.id})">
+                    <i class='bx bx-download'></i> Download
+                </button>
             </td>`;
 
         tbody.appendChild(row);
-
-        // Generate QR preview — use qr_url (LAN URL), fallback to asset ID
-        const qrContent = asset.qr_url
-            || asset.qr_code
-           || `${window.location.origin}/inventory-smart/asset-view.php?id=${asset.id}`;
-
-        setTimeout(() => {
-            const canvas = document.getElementById(qrId);
-            if (canvas) {
-                QRCode.toCanvas(canvas, qrContent, { width:80, margin:1,
-                    color:{ dark:'#000000', light:'#FFFFFF' } });
-            }
-        }, 0);
     });
 
     updateSelectedCount();
@@ -637,6 +634,7 @@ function printSelectedQR() {
     generatePrintContent(selected);
     window.print();
 }
+
 function generatePrintContent(assets) {
     const printArea = document.getElementById('printArea');
     printArea.innerHTML = '';
@@ -651,7 +649,7 @@ function generatePrintContent(assets) {
         companyLabel.className = 'qr-company-label';
         companyLabel.textContent = 'The Table Group Inc.';
 
-        // Right side: QR + asset name
+        // Absolutely positioned QR + sub-category label
         const contentWrapper = document.createElement('div');
         contentWrapper.className = 'qr-content-wrapper';
 
@@ -661,29 +659,22 @@ function generatePrintContent(assets) {
 
         const img = document.createElement('img');
         img.src = `generate_qr.php?id=${asset.id}`;
-        img.style.width = '180px';
-        img.style.display = 'block';
-
         imageBox.appendChild(img);
 
-        // Asset name OUTSIDE the border
+        // Sub-category only — no brand/model
         const info = document.createElement('div');
         info.className = 'asset-info';
-        info.textContent = `${asset.asset_type || ''} ${asset.category || ''}`.trim();
-
-        const sub = document.createElement('div');
-        sub.className = 'asset-sub';
-        sub.textContent = [asset.brand, asset.model].filter(Boolean).join(' ') || '';
+        info.textContent = asset.sub_category || '—';
 
         contentWrapper.appendChild(imageBox);
         contentWrapper.appendChild(info);
-        if (sub.textContent) contentWrapper.appendChild(sub);
 
         item.appendChild(companyLabel);
         item.appendChild(contentWrapper);
         printArea.appendChild(item);
     });
 }
+
 // ── Categories ────────────────────────────────────────────────────────────
 async function loadCategories() {
     try {
@@ -711,6 +702,16 @@ function showNotification(message, type = 'info') {
     setTimeout(() => n.remove(), 3000);
 }
 
+// ── Download ──────────────────────────────────────────────────────────────
+function downloadQR(assetId) {
+    const link = document.createElement('a');
+    link.href = `generate_qr.php?id=${assetId}`;
+    link.download = `QR-ASSET-${assetId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 // ── Event listeners ───────────────────────────────────────────────────────
 let searchTimeout;
 document.getElementById('searchInput').addEventListener('input', () => {
@@ -722,21 +723,10 @@ window.addEventListener('afterprint', () => {
     document.getElementById('printArea').style.display = 'none';
 });
 
-function downloadQR(assetId) {
-    const link = document.createElement('a');
-    link.href = `generate_qr.php?id=${assetId}`;
-    link.download = `QR-ASSET-${assetId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
-
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadCategories();
     loadAssets();
-
-    // Auto detect current IP / host
     document.getElementById('currentIP').textContent = window.location.host;
 });
 </script>

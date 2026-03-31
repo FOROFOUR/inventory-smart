@@ -44,10 +44,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit();
     }
 
-    // ── GET DETAILS (for release modal preview) ───────────────────────────────
+    // ── GET DETAILS (for release modal preview + view modal) ──────────────────
     if ($action === 'get_details') {
         $stmt = $conn->prepare("
-            SELECT p.*, a.brand, a.model, a.serial_number,
+            SELECT p.*, a.brand, a.model, a.serial_number, a.location AS asset_location,
+                   a.sub_location AS asset_sub_location, a.condition, a.status AS asset_status,
+                   a.description AS asset_description,
                    c.name AS category_name, sc.name AS subcategory_name
             FROM pull_out_transactions p
             LEFT JOIN assets         a  ON p.asset_id        = a.id
@@ -67,26 +69,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $row['purpose'] = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $row['purpose'] ?? ''));
         $row['purpose'] = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i', '', $row['purpose']));
 
-        // Thumbnail — gdrive-aware
-        $imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 1");
+        // All images for view modal
+        $imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 10");
         $imgStmt->bind_param("i", $row['asset_id']);
         $imgStmt->execute();
-        $img = $imgStmt->get_result()->fetch_assoc();
-        if ($img) {
+        $imgResult = $imgStmt->get_result();
+        $images = [];
+        while ($img = $imgResult->fetch_assoc()) {
             if ($img['image_path'] === 'gdrive_folder' && !empty($img['drive_url'])) {
                 if (preg_match('#/file/d/([a-zA-Z0-9_-]+)#', $img['drive_url'], $m) ||
                     preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $img['drive_url'], $m)) {
-                    $row['thumbnail']      = "https://drive.google.com/thumbnail?id={$m[1]}&sz=w200";
-                    $row['thumbnail_type'] = 'gdrive';
-                    $row['thumbnail_url']  = $img['drive_url'];
+                    $images[] = [
+                        'type'  => 'gdrive',
+                        'thumb' => "https://drive.google.com/thumbnail?id={$m[1]}&sz=w400",
+                        'url'   => $img['drive_url'],
+                    ];
                 } else {
-                    $row['thumbnail'] = null; $row['thumbnail_type'] = 'gdrive_folder'; $row['thumbnail_url'] = $img['drive_url'];
+                    $images[] = ['type' => 'gdrive_folder', 'url' => $img['drive_url'], 'thumb' => null];
                 }
-            } else {
-                $row['thumbnail']      = '/' . ltrim($img['image_path'], '/');
-                $row['thumbnail_type'] = 'image';
-                $row['thumbnail_url']  = null;
+            } else if (!empty($img['image_path']) && $img['image_path'] !== 'gdrive_folder') {
+                $images[] = ['type' => 'image', 'url' => '/' . ltrim($img['image_path'], '/'), 'thumb' => null];
             }
+        }
+        $row['images'] = $images;
+
+        // First image thumbnail
+        if (!empty($images)) {
+            $first = $images[0];
+            $row['thumbnail']      = $first['thumb'] ?? $first['url'];
+            $row['thumbnail_type'] = $first['type'];
+            $row['thumbnail_url']  = $first['url'];
         } else {
             $row['thumbnail'] = null; $row['thumbnail_type'] = null; $row['thumbnail_url'] = null;
         }
@@ -100,108 +112,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $released_by  = htmlspecialchars(trim($_POST['released_by']  ?? ''));
         $delivered_by = htmlspecialchars(trim($_POST['delivered_by'] ?? ''));
 
-        if (empty($released_by)) { echo json_encode(['success' => false, 'message' => 'Released By is required.']); exit(); }
+        if (empty($released_by))  { echo json_encode(['success' => false, 'message' => 'Released By is required.']);  exit(); }
         if (empty($delivered_by)) { echo json_encode(['success' => false, 'message' => 'Delivered By is required.']); exit(); }
 
-        $txnStmt = $conn->prepare("
-            SELECT asset_id, quantity, purpose, from_location, to_location, location_received
-            FROM pull_out_transactions WHERE id = ? AND status = 'CONFIRMED'
-        ");
+        $txnStmt = $conn->prepare("SELECT id, asset_id, quantity, from_location, to_location FROM pull_out_transactions WHERE id = ? AND status = 'CONFIRMED'");
         $txnStmt->bind_param("i", $id);
         $txnStmt->execute();
         $txn = $txnStmt->get_result()->fetch_assoc();
 
-        if (!$txn) { echo json_encode(['success' => false, 'message' => 'Already processed or not found.']); exit(); }
-
-        $assetId  = $txn['asset_id'];
-        $quantity = (int) $txn['quantity'];
-        $purpose  = $txn['purpose'];
-
-        $fromLocation = $txn['from_location'] ?? '';
-        $toLocation   = $txn['to_location']   ?? $txn['location_received'] ?? '';
-
-        if (empty($fromLocation) && !empty($purpose)) {
-            if (preg_match('/From:\s*(.+?)\s*→/', $purpose, $m)) $fromLocation = trim($m[1]);
+        if (!$txn) {
+            echo json_encode(['success' => false, 'message' => 'Already processed or not found.']);
+            exit();
         }
-        if (empty($toLocation) && !empty($purpose)) {
-            if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $purpose, $m)) $toLocation = trim($m[1]);
-        }
-
-        $toParts        = explode(' / ', $toLocation, 2);
-        $toMainLocation = trim($toParts[0]);
-        $toSubLocation  = isset($toParts[1]) ? trim($toParts[1]) : '';
-        $fromParts        = explode(' / ', $fromLocation, 2);
-        $fromMainLocation = trim($fromParts[0]);
-
-        $assetStmt = $conn->prepare("SELECT * FROM assets WHERE id = ?");
-        $assetStmt->bind_param("i", $assetId);
-        $assetStmt->execute();
-        $srcAsset = $assetStmt->get_result()->fetch_assoc();
-
-        $srcBalance = (int) $srcAsset['beg_balance_count'];
-        $newSrcBal  = max(0, $srcBalance - $quantity);
-
-        // Case A: Full transfer
-        if ($newSrcBal === 0) {
-            $upd = $conn->prepare("UPDATE assets SET location = ?, sub_location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-            $upd->bind_param("ssii", $toMainLocation, $toSubLocation, $quantity, $assetId);
-            $upd->execute();
-            $destAssetId = $assetId;
-
-        // Case B: Partial transfer
-        } else {
-            $upd = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-            $upd->bind_param("ii", $newSrcBal, $assetId);
-            $upd->execute();
-
-            $find = $conn->prepare("
-                SELECT id, beg_balance_count FROM assets
-                WHERE location = ? AND sub_category_id = ? AND brand = ? AND id != ?
-                ORDER BY id LIMIT 1
-            ");
-            $find->bind_param("sisi", $toMainLocation, $srcAsset['sub_category_id'], $srcAsset['brand'], $assetId);
-            $find->execute();
-            $destAsset = $find->get_result()->fetch_assoc();
-
-            if ($destAsset) {
-                $newDestBal = (int) $destAsset['beg_balance_count'] + $quantity;
-                $upd2 = $conn->prepare("UPDATE assets SET beg_balance_count = ?, location = ?, sub_location = ?, updated_at = NOW() WHERE id = ?");
-                $upd2->bind_param("issi", $newDestBal, $toMainLocation, $toSubLocation, $destAsset['id']);
-                $upd2->execute();
-                $destAssetId = $destAsset['id'];
-            } else {
-                $ins = $conn->prepare("
-                    INSERT INTO assets
-                        (category_id, sub_category_id, brand, model, serial_number,
-                         `condition`, status, location, sub_location, description,
-                         beg_balance_count, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-                ");
-                $ins->bind_param(
-                    "iissssssssi",
-                    $srcAsset['category_id'], $srcAsset['sub_category_id'],
-                    $srcAsset['brand'], $srcAsset['model'], $srcAsset['serial_number'],
-                    $srcAsset['condition'], $srcAsset['status'],
-                    $toMainLocation, $toSubLocation, $srcAsset['description'], $quantity
-                );
-                $ins->execute();
-                $destAssetId = $conn->insert_id;
-
-                // Copy images — including drive_url
-                $imgFetch = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ?");
-                $imgFetch->bind_param("i", $assetId);
-                $imgFetch->execute();
-                $imgCopy = $conn->prepare("INSERT INTO asset_images (asset_id, image_path, drive_url) VALUES (?, ?, ?)");
-                while ($img = $imgFetch->get_result()->fetch_assoc()) {
-                    $imgCopy->bind_param("iss", $destAssetId, $img['image_path'], $img['drive_url']);
-                    $imgCopy->execute();
-                }
-            }
-        }
-
-        $saveDest = $conn->prepare("UPDATE pull_out_transactions SET purpose = CONCAT(COALESCE(purpose, ''), ' [dest:$destAssetId]') WHERE id = ?");
-        $saveDest->bind_param("i", $id);
-        $saveDest->execute();
 
         $rel = $conn->prepare("
             UPDATE pull_out_transactions
@@ -212,7 +134,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $rel->bind_param("ssi", $released_by, $delivered_by, $id);
         $rel->execute();
 
-        $desc = "Pull-out #$id RELEASED by $released_by (Delivered by: $delivered_by). Asset #{$assetId} -{$quantity} @ {$fromMainLocation} → {$toMainLocation} (dest #{$destAssetId} +{$quantity})";
+        if ($rel->affected_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Already processed.']);
+            exit();
+        }
+
+        $fromLocation = $txn['from_location'] ?? '';
+        $toLocation   = $txn['to_location']   ?? '';
+
+        $desc = "Pull-out #$id RELEASED by $released_by (Delivered by: $delivered_by). Asset #{$txn['asset_id']} x{$txn['quantity']} from {$fromLocation} → {$toLocation}. Awaiting receipt confirmation.";
         $log  = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'RELEASE_PULLOUT', ?)");
         $log->bind_param("ss", $user_name, $desc);
         $log->execute();
@@ -362,6 +292,8 @@ while ($lr = $locRows->fetch_assoc()) {
         .btn-secondary:hover { background: #d5dbdb; }
         .btn-export   { background: #16a085; color: white; }
         .btn-export:hover { background: #138d75; }
+        .btn-view { background: #2980b9; color: white; }
+        .btn-view:hover { background: #2471a3; }
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
         .prep-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border-left: 4px solid var(--purple); padding: 1.25rem 1.5rem; transition: transform .2s, box-shadow .2s, border-left-color .3s; }
         .prep-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
@@ -397,22 +329,33 @@ while ($lr = $locRows->fetch_assoc()) {
         .prep-actions { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--border); }
         .empty-state { text-align: center; padding: 3.5rem; color: var(--muted); grid-column: 1/-1; }
         .empty-state i { font-size: 3.5rem; opacity: .25; display: block; margin-bottom: .75rem; }
+
+        /* ── MODALS ── */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); z-index: 9999; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal { background: var(--white); border-radius: 16px; width: 95%; max-width: 460px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: slideUp .25s ease; }
+        .modal.modal-wide { max-width: 680px; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .modal-header h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: .5rem; }
         .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); border-radius: 6px; padding: .2rem .4rem; }
         .modal-close:hover { background: var(--border); }
-        .modal-body   { padding: 1.5rem; }
+        .modal-body   { padding: 1.5rem; max-height: 75vh; overflow-y: auto; }
         .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; justify-content: flex-end; }
+
+        /* ── RELEASE MODAL ── */
         .release-asset-card { display: flex; align-items: center; gap: 1rem; background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem; border: 1px solid var(--border); }
         .release-thumb { width: 58px; height: 58px; border-radius: 8px; background: #e8ecf0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--muted); overflow: hidden; }
         .release-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .release-info .asset-name   { font-size: 1rem; font-weight: 700; }
-        .release-info .asset-type   { font-size: .82rem; color: var(--muted); }
-        .release-info .asset-serial { font-size: .75rem; font-family: monospace; background: #e8ecf0; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 3px; }
+        .release-info .asset-name   { font-size: 1.05rem; font-weight: 800; color: var(--text); letter-spacing: -.2px; }
+        .release-info .asset-type   { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+        .release-info .asset-serial {
+            font-size: .78rem; font-family: 'Courier New', monospace; font-weight: 700;
+            background: #2c3e50; color: #fff;
+            padding: 2px 8px; border-radius: 4px;
+            display: inline-block; margin-top: 5px;
+            letter-spacing: .5px;
+        }
         .release-details { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem .75rem; margin-bottom: 1.25rem; }
         .rd-item .rd-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
         .rd-item .rd-value { font-size: .88rem; font-weight: 600; color: var(--text); }
@@ -421,6 +364,46 @@ while ($lr = $locRows->fetch_assoc()) {
         .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: .4rem; }
         .form-group input, .form-group textarea { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: .7rem 1rem; font-family: 'Space Grotesk', sans-serif; font-size: .9rem; outline: none; transition: border-color .2s; }
         .form-group input:focus, .form-group textarea:focus { border-color: var(--purple); }
+        .info-note { background: #f0e6f6; border: 1px solid #d7bde2; border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem; font-size: .82rem; color: #6c3483; display: flex; align-items: flex-start; gap: .5rem; }
+        .info-note i { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+        /* ── VIEW DETAILS MODAL ── */
+        .view-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .75rem; margin-bottom: 1.5rem; }
+        .view-gallery-item { border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #f4f6f9; border: 2px solid var(--border); cursor: pointer; transition: all .2s; position: relative; }
+        .view-gallery-item:hover { border-color: var(--purple); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(142,68,173,.15); }
+        .view-gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .view-gallery-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 2.5rem; }
+        .view-gdrive-badge { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,.55)); padding: .3rem .5rem; display: flex; align-items: center; gap: .3rem; }
+        .view-gdrive-badge i { color: white; font-size: .85rem; }
+        .view-gdrive-badge span { color: white; font-size: .65rem; font-weight: 600; }
+
+        .view-section-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 1.25rem 0 .75rem; padding-bottom: .4rem; border-bottom: 2px solid var(--border); }
+        .view-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; }
+        .view-detail-item { background: #f8f9fa; border-radius: 8px; padding: .75rem 1rem; border-left: 3px solid var(--purple); }
+        .view-detail-item.full { grid-column: 1 / -1; }
+        .view-detail-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 700; margin-bottom: .25rem; }
+        .view-detail-value { font-size: .92rem; font-weight: 600; color: var(--text); word-break: break-word; }
+        .view-asset-name { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: .2rem; letter-spacing: -.3px; }
+        .view-asset-type { font-size: .85rem; color: var(--muted); margin-bottom: .75rem; }
+        .view-serial-badge {
+            display: inline-flex; align-items: center; gap: .4rem;
+            background: #2c3e50; color: #fff;
+            font-family: 'Courier New', monospace; font-weight: 700;
+            font-size: .82rem; letter-spacing: .5px;
+            padding: .35rem .85rem; border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .view-serial-badge i { font-size: .9rem; opacity: .7; }
+        .view-route-row { display: flex; align-items: center; gap: .75rem; background: #f0e6f6; border-radius: 10px; padding: .85rem 1rem; margin: .75rem 0; }
+        .view-route-row .vr-loc { flex: 1; }
+        .view-route-row .vr-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--purple); font-weight: 700; }
+        .view-route-row .vr-value { font-size: .95rem; font-weight: 700; color: var(--text); }
+        .view-route-row .vr-arrow { font-size: 1.4rem; color: var(--purple); flex-shrink: 0; }
+        .badge-condition { display: inline-block; padding: .25rem .65rem; border-radius: 6px; font-size: .78rem; font-weight: 700; text-transform: uppercase; }
+        .badge-new { background: #d5f5e3; color: #1e8449; }
+        .badge-used { background: #fef3cd; color: #856404; }
+
+        /* ── TOAST ── */
         .toast { position: fixed; top: 20px; right: 20px; padding: .9rem 1.4rem; border-radius: 10px; color: white; font-weight: 600; font-size: .875rem; z-index: 10000; animation: toastIn .3s ease; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
         .toast.success { background: var(--green); }
         .toast.error   { background: var(--red); }
@@ -517,6 +500,7 @@ while ($lr = $locRows->fetch_assoc()) {
                         <?php endif; ?>
                     </div>
                     <div class="prep-actions">
+                        <button class="btn btn-view" onclick="openView(<?php echo $r['id']; ?>)"><i class='bx bx-show'></i> View</button>
                         <button class="btn btn-danger"  onclick="openCancel(<?php echo $r['id']; ?>)"><i class='bx bx-x'></i> Cancel</button>
                         <button class="btn btn-warning" onclick="revertToPending(<?php echo $r['id']; ?>)"><i class='bx bx-undo'></i> Revert</button>
                         <button class="btn btn-success" id="releaseBtn-<?php echo $r['id']; ?>"
@@ -531,7 +515,58 @@ while ($lr = $locRows->fetch_assoc()) {
         </div>
     </div>
 
-    <!-- Release Modal -->
+    <!-- ═══════════════════════════════════════════════════════════
+         VIEW DETAILS MODAL
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal modal-wide">
+            <div class="modal-header" style="background: linear-gradient(135deg, #8e44ad 0%, #6c3483 100%); color: white; border-bottom: none;">
+                <h3 style="color:white;"><i class='bx bx-info-circle'></i> Asset Details</h3>
+                <button class="modal-close" onclick="closeModal('viewModal')" style="color:white; background:rgba(255,255,255,.15);"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading state -->
+                <div id="viewLoading" style="text-align:center;padding:2rem;color:var(--muted);">
+                    <i class='bx bx-loader-alt bx-spin' style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
+                    Loading details...
+                </div>
+                <!-- Content -->
+                <div id="viewContent" style="display:none;">
+                    <!-- Asset name + serial -->
+                    <div id="viewAssetName" class="view-asset-name"></div>
+                    <div id="viewAssetType" class="view-asset-type"></div>
+                    <div id="viewSerialBadge" style="display:none;" class="view-serial-badge">
+                        <i class='bx bx-barcode'></i>
+                        <span id="viewSerialText"></span>
+                    </div>
+
+                    <!-- Photo gallery -->
+                    <div class="view-section-title"><i class='bx bx-image-alt' style="margin-right:.3rem;"></i>Photos</div>
+                    <div class="view-gallery" id="viewGallery"></div>
+
+                    <!-- Transfer info -->
+                    <div class="view-section-title"><i class='bx bx-transfer-alt' style="margin-right:.3rem;"></i>Transfer Info</div>
+                    <div id="viewRouteRow" class="view-route-row">
+                        <div class="vr-loc"><div class="vr-label">From</div><div class="vr-value" id="viewFrom">—</div></div>
+                        <i class='bx bx-right-arrow-alt vr-arrow'></i>
+                        <div class="vr-loc"><div class="vr-label">To</div><div class="vr-value" id="viewTo">—</div></div>
+                    </div>
+                    <div class="view-detail-grid" id="viewTxnGrid"></div>
+
+                    <!-- Asset info -->
+                    <div class="view-section-title"><i class='bx bx-package' style="margin-right:.3rem;"></i>Asset Info</div>
+                    <div class="view-detail-grid" id="viewAssetGrid"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewModal')"><i class='bx bx-x'></i> Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         RELEASE MODAL
+    ═══════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="releaseModal">
         <div class="modal">
             <div class="modal-header">
@@ -554,6 +589,10 @@ while ($lr = $locRows->fetch_assoc()) {
                     <div class="rd-item"><div class="rd-label">Quantity</div><div class="rd-value" id="releaseQty">—</div></div>
                     <div class="rd-item"><div class="rd-label">Requested By</div><div class="rd-value" id="releaseReqBy">—</div></div>
                 </div>
+                <div class="info-note">
+                    <i class='bx bx-info-circle'></i>
+                    <span>Releasing lang ang gagawin dito. Ang inventory update (location, balance) ay mangyayari sa <strong>Receiving</strong> kapag na-confirm na ang resibo.</span>
+                </div>
                 <hr class="divider">
                 <div class="form-group"><label>Released By <span style="color:var(--red)">*</span></label><input type="text" id="releaseReleasedBy" placeholder="Name of person releasing the asset"></div>
                 <div class="form-group"><label>Delivered By <span style="color:var(--red)">*</span></label><input type="text" id="releaseDeliveredBy" placeholder="Name of person delivering the asset"></div>
@@ -565,7 +604,9 @@ while ($lr = $locRows->fetch_assoc()) {
         </div>
     </div>
 
-    <!-- Cancel Modal -->
+    <!-- ═══════════════════════════════════════════════════════════
+         CANCEL MODAL
+    ═══════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="cancelModal">
         <div class="modal">
             <div class="modal-header">
@@ -646,8 +687,98 @@ while ($lr = $locRows->fetch_assoc()) {
             if (btn) { btn.disabled = !isReady; btn.title = isReady ? '' : 'Complete all steps first'; }
         }
 
+        // ── VIEW DETAILS MODAL ───────────────────────────────────────────────
+        async function openView(id) {
+            document.getElementById('viewLoading').style.display  = 'block';
+            document.getElementById('viewContent').style.display  = 'none';
+            document.getElementById('viewModal').classList.add('active');
+
+            try {
+                const body = new FormData();
+                body.append('action', 'get_details'); body.append('id', id);
+                const res    = await fetch('admin-preparing.php', { method: 'POST', body });
+                const result = await res.json();
+                if (!result.success) { showToast('Could not load details.', 'error'); closeModal('viewModal'); return; }
+
+                const d = result.data;
+
+                // Asset name + serial
+                document.getElementById('viewAssetName').textContent = `${d.brand || ''} ${d.model || ''}`.trim() || '—';
+                document.getElementById('viewAssetType').textContent = [d.category_name, d.subcategory_name].filter(Boolean).join(' › ') || '';
+
+                const serialBadge = document.getElementById('viewSerialBadge');
+                if (d.serial_number) {
+                    document.getElementById('viewSerialText').textContent = d.serial_number;
+                    serialBadge.style.display = 'inline-flex';
+                } else {
+                    serialBadge.style.display = 'none';
+                }
+
+                // Gallery
+                const gallery = document.getElementById('viewGallery');
+                gallery.innerHTML = '';
+                if (d.images && d.images.length > 0) {
+                    d.images.forEach(img => {
+                        const tile = document.createElement('div');
+                        tile.className = 'view-gallery-item';
+                        if (img.type === 'gdrive' && img.thumb) {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.innerHTML = `
+                                <img src="${img.thumb}" alt="Asset photo"
+                                     onerror="this.parentElement.innerHTML='<div class=\\"view-gallery-placeholder\\"><i class=\\"bx bxl-google\\"></i></div>'">
+                                <div class="view-gdrive-badge">
+                                    <i class='bx bxl-google'></i>
+                                    <span>Open in Drive</span>
+                                </div>`;
+                        } else if (img.type === 'gdrive_folder') {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.style.background = 'linear-gradient(135deg,#e8f5e9,#f1f8e9)';
+                            tile.style.border = '2px solid #a5d6a7';
+                            tile.innerHTML = `<div class="view-gallery-placeholder" style="flex-direction:column;gap:.4rem;font-size:1rem;">
+                                <i class='bx bxl-google' style="font-size:2rem;color:#1a73e8;"></i>
+                                <span style="font-size:.7rem;color:#1a73e8;font-weight:600;">View on Drive</span>
+                            </div>`;
+                        } else {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.innerHTML = `<img src="${img.url}" alt="Asset photo" onerror="this.parentElement.innerHTML='<div class=\\"view-gallery-placeholder\\"><i class=\\"bx bx-image\\"></i></div>'">`;
+                        }
+                        gallery.appendChild(tile);
+                    });
+                } else {
+                    gallery.innerHTML = `<div class="view-gallery-item"><div class="view-gallery-placeholder"><i class='bx bx-image'></i></div></div>`;
+                }
+
+                // Route
+                document.getElementById('viewFrom').textContent = d.from_location || '—';
+                document.getElementById('viewTo').textContent   = d.to_location   || '—';
+
+                // Transfer detail grid
+                const purpose = (d.purpose || '').replace(/\s*\[(dest_asset_id|dest):\d+\]/g, '').replace(/\s*\|?\s*From:.+?→.+$/i, '').trim() || '—';
+                document.getElementById('viewTxnGrid').innerHTML = `
+                    <div class="view-detail-item"><div class="view-detail-label">Transaction #</div><div class="view-detail-value">#${d.id}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Quantity</div><div class="view-detail-value"><strong style="font-size:1.1rem;">${d.quantity} pcs</strong></div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Requested By</div><div class="view-detail-value">${d.requested_by || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Date Needed</div><div class="view-detail-value">${d.date_needed ? new Date(d.date_needed).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div></div>
+                    <div class="view-detail-item full"><div class="view-detail-label">Purpose</div><div class="view-detail-value">${purpose}</div></div>`;
+
+                // Asset info grid
+                document.getElementById('viewAssetGrid').innerHTML = `
+                    <div class="view-detail-item"><div class="view-detail-label">Category</div><div class="view-detail-value">${d.category_name || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Type</div><div class="view-detail-value">${d.subcategory_name || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Condition</div><div class="view-detail-value"><span class="badge-condition badge-${(d.condition||'').toLowerCase()}">${d.condition || '—'}</span></div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Asset Location</div><div class="view-detail-value">${d.asset_location || '—'}</div></div>
+                    ${d.asset_sub_location ? `<div class="view-detail-item"><div class="view-detail-label">Sub-Location</div><div class="view-detail-value">${d.asset_sub_location}</div></div>` : ''}
+                    ${d.asset_description ? `<div class="view-detail-item full"><div class="view-detail-label">Description</div><div class="view-detail-value">${d.asset_description}</div></div>` : ''}`;
+
+                document.getElementById('viewLoading').style.display = 'none';
+                document.getElementById('viewContent').style.display = 'block';
+
+            } catch (e) { showToast('Failed to load details.', 'error'); closeModal('viewModal'); }
+        }
+
+        // ── RELEASE MODAL ────────────────────────────────────────────────────
         async function openRelease(id) {
-            document.getElementById('releaseId').value         = id;
+            document.getElementById('releaseId').value          = id;
             document.getElementById('releaseReleasedBy').value  = '';
             document.getElementById('releaseDeliveredBy').value = '';
             document.getElementById('releaseAssetName').textContent = 'Loading...';
@@ -657,9 +788,7 @@ while ($lr = $locRows->fetch_assoc()) {
             document.getElementById('releaseTo').textContent    = '—';
             document.getElementById('releaseQty').textContent   = '—';
             document.getElementById('releaseReqBy').textContent = '—';
-
-            const thumb = document.getElementById('releaseThumb');
-            thumb.innerHTML = "<i class='bx bx-image-alt'></i>";
+            document.getElementById('releaseThumb').innerHTML   = "<i class='bx bx-image-alt'></i>";
             document.getElementById('releaseModal').classList.add('active');
 
             try {
@@ -672,18 +801,18 @@ while ($lr = $locRows->fetch_assoc()) {
                 const d = result.data;
                 document.getElementById('releaseAssetName').textContent = `${d.brand || ''} ${d.model || ''}`.trim() || '—';
                 document.getElementById('releaseAssetType').textContent = d.subcategory_name || '';
+
                 if (d.serial_number) {
                     const s = document.getElementById('releaseAssetSerial');
-                    s.textContent = d.serial_number; s.style.display = 'inline-block';
+                    s.textContent = d.serial_number;
+                    s.style.display = 'inline-block';
                 }
 
-                // ── Thumbnail — gdrive-aware ──
+                // Thumbnail
                 if (d.thumbnail && d.thumbnail_type === 'gdrive') {
-                    thumb.innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;"
-                        onerror="this.parentElement.innerHTML='<i class=\\'bx bxl-google\\'></i>'"
-                        onclick="window.open('${d.thumbnail_url || d.thumbnail}','_blank')">`;
+                    document.getElementById('releaseThumb').innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'bx bxl-google\\'></i>'">`;
                 } else if (d.thumbnail) {
-                    thumb.innerHTML = `<img src="${d.thumbnail}" onerror="this.parentElement.innerHTML='<i class=\\'bx bx-image-alt\\'></i>'">`;
+                    document.getElementById('releaseThumb').innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'bx bx-image-alt\\'></i>'">`;
                 }
 
                 document.getElementById('releaseFrom').textContent  = d.from_location || '—';

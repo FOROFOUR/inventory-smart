@@ -123,8 +123,6 @@ function buildImageList($conn, $assetId) {
                 $images[] = ['image_id' => $img['id'], 'type' => 'gdrive_folder', 'url' => $url, 'thumb' => null];
             }
         } elseif (!empty($img['image_path']) && $img['image_path'] !== 'gdrive_folder') {
-            // Path in DB is stored as: inventory-smart/uploads/assets/filename.png
-            // So prefix with / to make it root-relative
             $images[] = ['image_id' => $img['id'], 'type' => 'image', 'url' => '/' . ltrim($img['image_path'], '/')];
         }
     }
@@ -137,10 +135,11 @@ function buildImageList($conn, $assetId) {
 // =============================================================================
 function getInventory($conn)
 {
-    $search   = $_GET['search']   ?? '';
-    $category = $_GET['category'] ?? '';
-    $status   = $_GET['status']   ?? '';
-    $location = $_GET['location'] ?? '';
+    $search      = $_GET['search']      ?? '';
+    $category    = $_GET['category']    ?? '';
+    $subcategory = $_GET['subcategory'] ?? ''; // ← ADDED
+    $status      = $_GET['status']      ?? '';
+    $location    = $_GET['location']    ?? '';
 
     try {
         $sql = "SELECT 
@@ -176,9 +175,10 @@ function getInventory($conn)
             $params = array_merge($params, [$s,$s,$s,$s,$s,$s,$s,$s,$s]);
             $types .= 'sssssssss';
         }
-        if (!empty($category)) { $sql .= " AND c.id = ?";       $params[] = $category; $types .= 'i'; }
-        if (!empty($status))   { $sql .= " AND a.status = ?";   $params[] = $status;   $types .= 's'; }
-        if (!empty($location)) { $sql .= " AND a.location = ?"; $params[] = $location; $types .= 's'; }
+        if (!empty($category))    { $sql .= " AND c.id = ?";              $params[] = $category;    $types .= 'i'; }
+        if (!empty($subcategory)) { $sql .= " AND a.sub_category_id = ?"; $params[] = $subcategory; $types .= 'i'; } // ← ADDED
+        if (!empty($status))      { $sql .= " AND a.status = ?";          $params[] = $status;      $types .= 's'; }
+        if (!empty($location))    { $sql .= " AND a.location = ?";        $params[] = $location;    $types .= 's'; }
 
         $sql .= " GROUP BY a.id ORDER BY a.id DESC";
 
@@ -358,7 +358,17 @@ function submitPullout($conn)
     if ($fromLocation === $toLocation) { echo json_encode(['success'=>false,'error'=>'Source and recipient location cannot be the same']); return; }
 
     try {
-        $checkStmt = $conn->prepare("SELECT (a.beg_balance_count - COALESCE(SUM(CASE WHEN p.status='PENDING' THEN p.quantity ELSE 0 END),0)) AS active_count FROM assets a LEFT JOIN pull_out_transactions p ON a.id=p.asset_id WHERE a.id=? GROUP BY a.id");
+        // FIX: Gamitin ang PENDING+CONFIRMED+RELEASED para consistent sa getInventory()
+        $checkStmt = $conn->prepare("
+            SELECT (a.beg_balance_count 
+                    - COALESCE(SUM(CASE WHEN p.status IN ('PENDING','CONFIRMED','RELEASED') 
+                                   THEN p.quantity ELSE 0 END), 0)
+                   ) AS active_count
+            FROM assets a
+            LEFT JOIN pull_out_transactions p ON a.id = p.asset_id
+            WHERE a.id = ?
+            GROUP BY a.id
+        ");
         $checkStmt->bind_param("i", $assetId);
         $checkStmt->execute();
         $activeData = $checkStmt->get_result()->fetch_assoc();
@@ -459,7 +469,6 @@ function deleteAssetImage($conn)
     }
 
     try {
-        // Fetch image_path first so we can delete the physical file if local upload
         $stmt = $conn->prepare("SELECT image_path FROM asset_images WHERE id = ? AND asset_id = ?");
         $stmt->bind_param("ii", $imageId, $assetId);
         $stmt->execute();
@@ -468,7 +477,6 @@ function deleteAssetImage($conn)
 
         if (!$img) { echo json_encode(['success'=>false,'error'=>'Image not found']); return; }
 
-        // Delete physical file if it's a local upload (not gdrive_folder)
         if (!empty($img['image_path']) && $img['image_path'] !== 'gdrive_folder') {
             $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/' . ltrim($img['image_path'], '/');
             if (file_exists($fullPath)) @unlink($fullPath);
@@ -548,7 +556,6 @@ function addAssetImage($conn)
             echo json_encode(['success'=>false,'error'=>'Failed to save uploaded file. Check folder permissions.']); return;
         }
 
-        // Build URL-friendly relative path using the actual script base path
         $scriptDir    = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
         $basePath     = rtrim($scriptDir, '/');
         $relativePath = ltrim($basePath . '/uploads/assets/' . $filename, '/');

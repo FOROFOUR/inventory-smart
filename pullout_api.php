@@ -52,7 +52,7 @@ function getDriveFileId($url) {
     return null;
 }
 
-// ── Helper: build full image list (same as inventory_api) ────────────────────
+// ── Helper: build full image list ────────────────────────────────────────────
 function buildImageList($conn, $assetId) {
     $stmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id ASC LIMIT 10");
     if (!$stmt) return [];
@@ -63,17 +63,10 @@ function buildImageList($conn, $assetId) {
     while ($img = $result->fetch_assoc()) {
         if ($img['image_path'] === 'gdrive_folder' && !empty($img['drive_url'])) {
             $url = $img['drive_url'];
-
-            // ── Google Sheets embedded image — treat as gdrive tile with thumb ──
             if (isSheetsImageUrl($url)) {
-                $images[] = [
-                    'type'  => 'gdrive',
-                    'url'   => $url,
-                    'thumb' => $url,
-                ];
+                $images[] = ['type' => 'gdrive', 'url' => $url, 'thumb' => $url];
                 continue;
             }
-
             $fileId = getDriveFileId($url);
             if ($fileId) {
                 $images[] = [
@@ -93,7 +86,7 @@ function buildImageList($conn, $assetId) {
     return $images;
 }
 
-// ── Helper: get first image for thumbnail display in table ───────────────────
+// ── Helper: get first image for thumbnail ────────────────────────────────────
 function getFirstImage($conn, $assetId) {
     $stmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 1");
     if (!$stmt) return ['thumb' => null, 'type' => null];
@@ -105,16 +98,9 @@ function getFirstImage($conn, $assetId) {
 
     if ($img['image_path'] === 'gdrive_folder' && !empty($img['drive_url'])) {
         $url = $img['drive_url'];
-
-        // ── Google Sheets image — treat as gdrive so thumbnail + fallback work ──
         if (isSheetsImageUrl($url)) {
-            return [
-                'thumb' => $url,
-                'type'  => 'gdrive',
-                'url'   => $url,
-            ];
+            return ['thumb' => $url, 'type' => 'gdrive', 'url' => $url];
         }
-
         $fileId = getDriveFileId($url);
         if ($fileId) {
             return [
@@ -167,8 +153,14 @@ function getPullouts($conn) {
             $params = array_merge($params, [$s,$s,$s,$s,$s,$s,$s,$s,$s,$s]);
             $types .= 'ssssssssss';
         }
-        if (!empty($status))   { $sql .= " AND p.status = ?";                                               $params[] = $status;            $types .= 's'; }
-        if (!empty($location)) { $locLike = $location . '%'; $sql .= " AND (p.from_location LIKE ? OR p.to_location LIKE ? OR p.location_received LIKE ?)"; $params = array_merge($params, [$locLike,$locLike,$locLike]); $types .= 'sss'; }
+        if (!empty($status))   { $sql .= " AND p.status = ?"; $params[] = $status; $types .= 's'; }
+      $userRole = $_SESSION['role'] ?? '';
+if (strtoupper($userRole) === 'EMPLOYEE') {
+    $userName = $_SESSION['name'] ?? '';
+    $sql .= " AND p.requested_by = ?";
+    $params[] = $userName;
+    $types .= 's';
+}
 
         $sql .= " ORDER BY p.id DESC";
 
@@ -191,7 +183,6 @@ function getPullouts($conn) {
                 if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $row['purpose'], $m)) $row['to_location'] = trim($m[1]);
             }
 
-            // First image for table thumbnail — gdrive-aware + sheets-aware
             $first = getFirstImage($conn, $row['asset_id']);
             $row['thumbnail']      = $first['thumb'];
             $row['thumbnail_type'] = $first['type'];
@@ -241,7 +232,6 @@ function getPulloutDetails($conn) {
             if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $item['purpose'], $m)) $item['to_location'] = trim($m[1]);
         }
 
-        // Full image list — gdrive-aware + sheets-aware
         $item['images'] = buildImageList($conn, $item['asset_id']);
 
         echo json_encode(['success' => true, 'data' => $item]);
@@ -253,16 +243,25 @@ function getPulloutDetails($conn) {
 
 // =============================================================================
 // UPDATE STATUS
+// FIX: RELEASED block now only updates the transaction status — NO asset
+//      table changes. All inventory updates (balance deduction, location
+//      move, new asset record) happen in admin-receiving.php on RECEIVED.
 // =============================================================================
 function updateStatus($conn) {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { echo json_encode(['success'=>false,'error'=>'Invalid request method']); return; }
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'error' => 'Invalid request method']);
+        return;
+    }
 
     $data      = json_decode(file_get_contents('php://input'), true);
     $id        = intval($data['id']   ?? 0);
     $newStatus = trim($data['status'] ?? '');
 
-    $allowed = ['RELEASED','RETURNED','CANCELLED','CONFIRMED'];
-    if (!$id || !in_array($newStatus, $allowed)) { echo json_encode(['success'=>false,'error'=>'Invalid parameters']); return; }
+    $allowed = ['RELEASED', 'RETURNED', 'CANCELLED', 'CONFIRMED'];
+    if (!$id || !in_array($newStatus, $allowed)) {
+        echo json_encode(['success' => false, 'error' => 'Invalid parameters']);
+        return;
+    }
 
     try {
         $txnStmt = $conn->prepare("SELECT asset_id, quantity, purpose, from_location, to_location, location_received, status FROM pull_out_transactions WHERE id = ?");
@@ -271,120 +270,104 @@ function updateStatus($conn) {
         $txn = $txnStmt->get_result()->fetch_assoc();
         if (!$txn) throw new Exception('Transaction not found');
 
-        $assetId       = $txn['asset_id'];
-        $quantity      = intval($txn['quantity']);
-        $purpose       = $txn['purpose'];
-        $fromLocation  = $txn['from_location'] ?? '';
-        $toLocation    = $txn['to_location']   ?? $txn['location_received'] ?? '';
+        $assetId      = $txn['asset_id'];
+        $quantity     = intval($txn['quantity']);
+        $purpose      = $txn['purpose'];
+        $fromLocation = $txn['from_location'] ?? '';
+        $toLocation   = $txn['to_location']   ?? $txn['location_received'] ?? '';
 
-        if (empty($fromLocation) && !empty($purpose)) { if (preg_match('/From:\s*(.+?)\s*→/', $purpose, $m)) $fromLocation = trim($m[1]); }
-        if (empty($toLocation)   && !empty($purpose)) { if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $purpose, $m)) $toLocation = trim($m[1]); }
+        if (empty($fromLocation) && !empty($purpose)) {
+            if (preg_match('/From:\s*(.+?)\s*→/', $purpose, $m)) $fromLocation = trim($m[1]);
+        }
+        if (empty($toLocation) && !empty($purpose)) {
+            if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $purpose, $m)) $toLocation = trim($m[1]);
+        }
 
         $userName = $_SESSION['name'] ?? 'Unknown';
 
+        // ── CONFIRMED ─────────────────────────────────────────────────────────
         if ($newStatus === 'CONFIRMED') {
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'CONFIRMED' WHERE id = ? AND status = 'PENDING'");
-            $stmt->bind_param("i", $id); $stmt->execute();
-            if ($stmt->affected_rows === 0) { echo json_encode(['success'=>false,'error'=>'Already processed or not found.']); return; }
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            if ($stmt->affected_rows === 0) {
+                echo json_encode(['success' => false, 'error' => 'Already processed or not found.']);
+                return;
+            }
             $desc = "Transfer #$id CONFIRMED by $userName";
 
+        // ── RELEASED — STATUS UPDATE ONLY ────────────────────────────────────
+        // NO asset table changes here. Inventory update happens in
+        // admin-receiving.php when the asset is physically received.
         } elseif ($newStatus === 'RELEASED') {
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'RELEASED', released_at = NOW() WHERE id = ?");
-            $stmt->bind_param("i", $id); $stmt->execute();
-
-            $assetStmt = $conn->prepare("SELECT * FROM assets WHERE id = ?");
-            $assetStmt->bind_param("i", $assetId); $assetStmt->execute();
-            $srcAsset  = $assetStmt->get_result()->fetch_assoc();
-            $newSrcBal = max(0, intval($srcAsset['beg_balance_count']) - $quantity);
-
-            $toParts        = explode(' / ', $toLocation, 2);
-            $toMainLocation = trim($toParts[0]);
-            $toSubLocation  = isset($toParts[1]) ? trim($toParts[1]) : '';
-            $fromParts        = explode(' / ', $fromLocation, 2);
-            $fromMainLocation = trim($fromParts[0]);
-
-            if ($newSrcBal === 0) {
-                $updSrc = $conn->prepare("UPDATE assets SET location = ?, sub_location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                $updSrc->bind_param("ssii", $toMainLocation, $toSubLocation, $quantity, $assetId);
-                $updSrc->execute();
-                $destAssetId = $assetId;
-            } else {
-                $updSrc = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                $updSrc->bind_param("ii", $newSrcBal, $assetId); $updSrc->execute();
-
-                $findStmt = $conn->prepare("SELECT id, beg_balance_count FROM assets WHERE location = ? AND sub_category_id = ? AND brand = ? AND id != ? ORDER BY id LIMIT 1");
-                $findStmt->bind_param("sisi", $toMainLocation, $srcAsset['sub_category_id'], $srcAsset['brand'], $assetId);
-                $findStmt->execute();
-                $destAsset = $findStmt->get_result()->fetch_assoc();
-
-                if ($destAsset) {
-                    $newDestBal = intval($destAsset['beg_balance_count']) + $quantity;
-                    $updDest = $conn->prepare("UPDATE assets SET beg_balance_count = ?, location = ?, sub_location = ?, updated_at = NOW() WHERE id = ?");
-                    $updDest->bind_param("issi", $newDestBal, $toMainLocation, $toSubLocation, $destAsset['id']); $updDest->execute();
-                    $destAssetId = $destAsset['id'];
-                } else {
-                    $ins = $conn->prepare("INSERT INTO assets (category_id, sub_category_id, brand, model, serial_number, `condition`, status, location, sub_location, description, beg_balance_count, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?, NOW(), NOW())");
-                    $ins->bind_param("iissssssssi", $srcAsset['category_id'], $srcAsset['sub_category_id'], $srcAsset['brand'], $srcAsset['model'], $srcAsset['serial_number'], $srcAsset['condition'], $srcAsset['status'], $toMainLocation, $toSubLocation, $srcAsset['description'], $quantity);
-                    $ins->execute();
-                    $destAssetId = $conn->insert_id;
-
-                    // Copy images to new asset — including drive_url
-                    $imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ?");
-                    $imgStmt->bind_param("i", $assetId); $imgStmt->execute();
-                    $imgs  = $imgStmt->get_result();
-                    $cpImg = $conn->prepare("INSERT INTO asset_images (asset_id, image_path, drive_url) VALUES (?,?,?)");
-                    while ($img = $imgs->fetch_assoc()) {
-                        $cpImg->bind_param("iss", $destAssetId, $img['image_path'], $img['drive_url']);
-                        $cpImg->execute();
-                    }
-                }
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            if ($stmt->affected_rows === 0) {
+                echo json_encode(['success' => false, 'error' => 'Already processed or not found.']);
+                return;
             }
+            $desc = "Transfer #$id RELEASED: Asset #$assetId x{$quantity} from {$fromLocation} → {$toLocation}. Awaiting receipt — inventory not yet updated.";
 
-            $updTxn = $conn->prepare("UPDATE pull_out_transactions SET purpose = CONCAT(COALESCE(purpose,''), ' [dest:$destAssetId]') WHERE id = ?");
-            $updTxn->bind_param("i", $id); $updTxn->execute();
-            $desc = "Transfer #$id RELEASED: Asset #$assetId -{$quantity} @ {$fromMainLocation} to {$toMainLocation} (dest #{$destAssetId} +{$quantity})";
-
+        // ── RETURNED ──────────────────────────────────────────────────────────
         } elseif ($newStatus === 'RETURNED') {
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'RETURNED', returned_at = NOW() WHERE id = ?");
-            $stmt->bind_param("i", $id); $stmt->execute();
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
 
+            // Find dest asset ID tag written during RECEIVED
             $destAssetId = 0;
             if (preg_match('/\[dest:(\d+)\]/', $purpose, $dm)) $destAssetId = intval($dm[1]);
 
             if ($destAssetId && $destAssetId === $assetId) {
+                // Full transfer was done — move back to source
                 $updSrc = $conn->prepare("UPDATE assets SET location = ?, beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                $updSrc->bind_param("sii", $fromLocation, $quantity, $assetId); $updSrc->execute();
+                $updSrc->bind_param("sii", $fromLocation, $quantity, $assetId);
+                $updSrc->execute();
             } else {
+                // Partial transfer — reduce dest, restore source
                 if ($destAssetId) {
                     $destStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
-                    $destStmt->bind_param("i", $destAssetId); $destStmt->execute();
+                    $destStmt->bind_param("i", $destAssetId);
+                    $destStmt->execute();
                     $destRow    = $destStmt->get_result()->fetch_assoc();
                     $newDestBal = max(0, intval($destRow['beg_balance_count'] ?? 0) - $quantity);
                     if ($newDestBal === 0) {
-                        $delImg = $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?"); $delImg->bind_param("i", $destAssetId); $delImg->execute();
-                        $delDest = $conn->prepare("DELETE FROM assets WHERE id = ?"); $delDest->bind_param("i", $destAssetId); $delDest->execute();
+                        $delImg = $conn->prepare("DELETE FROM asset_images WHERE asset_id = ?");
+                        $delImg->bind_param("i", $destAssetId);
+                        $delImg->execute();
+                        $delDest = $conn->prepare("DELETE FROM assets WHERE id = ?");
+                        $delDest->bind_param("i", $destAssetId);
+                        $delDest->execute();
                     } else {
                         $updDest = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                        $updDest->bind_param("ii", $newDestBal, $destAssetId); $updDest->execute();
+                        $updDest->bind_param("ii", $newDestBal, $destAssetId);
+                        $updDest->execute();
                     }
                 }
+                // Restore source balance
                 $srcStmt = $conn->prepare("SELECT beg_balance_count FROM assets WHERE id = ?");
-                $srcStmt->bind_param("i", $assetId); $srcStmt->execute();
+                $srcStmt->bind_param("i", $assetId);
+                $srcStmt->execute();
                 $srcRow    = $srcStmt->get_result()->fetch_assoc();
                 $newSrcBal = intval($srcRow['beg_balance_count'] ?? 0) + $quantity;
                 $updSrc    = $conn->prepare("UPDATE assets SET beg_balance_count = ?, updated_at = NOW() WHERE id = ?");
-                $updSrc->bind_param("ii", $newSrcBal, $assetId); $updSrc->execute();
+                $updSrc->bind_param("ii", $newSrcBal, $assetId);
+                $updSrc->execute();
             }
             $desc = "Transfer #$id RETURNED: {$quantity} pcs back to {$fromLocation} (source asset #{$assetId})";
 
+        // ── CANCELLED ─────────────────────────────────────────────────────────
         } else {
             $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'CANCELLED' WHERE id = ?");
-            $stmt->bind_param("i", $id); $stmt->execute();
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
             $desc = "Transfer #$id CANCELLED: Asset #$assetId ($quantity pcs) — no balance change";
         }
 
         $logStmt = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'UPDATE_TRANSFER', ?)");
-        $logStmt->bind_param("ss", $userName, $desc); $logStmt->execute();
+        $logStmt->bind_param("ss", $userName, $desc);
+        $logStmt->execute();
 
         echo json_encode(['success' => true, 'message' => "Status updated to $newStatus"]);
 
@@ -404,16 +387,19 @@ function getLocations($conn) {
                     UNION ALL SELECT location_received AS loc FROM pull_out_transactions WHERE location_received IS NOT NULL AND location_received != ''
                 ) AS combined ORDER BY main_loc ASC";
         $locResult = $conn->query($locSql);
-        $locations = []; $seen = [];
+        $locations = [];
+        $seen      = [];
         while ($row = $locResult->fetch_assoc()) {
             $loc = trim($row['main_loc']);
             if ($loc === '' || isset($seen[$loc])) continue;
             $seen[$loc] = true;
-            $countStmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING' AND (from_location = ? OR from_location LIKE ?)");
-            $exact = $loc; $like = $loc . ' /%';
-            $countStmt->bind_param("ss", $exact, $like); $countStmt->execute();
-            $countRow     = $countStmt->get_result()->fetch_assoc();
-            $locations[] = ['location' => $loc, 'pending_count' => (int)($countRow['cnt'] ?? 0)];
+            $countStmt  = $conn->prepare("SELECT COUNT(*) AS cnt FROM pull_out_transactions WHERE status = 'PENDING' AND (from_location = ? OR from_location LIKE ?)");
+            $exact = $loc;
+            $like  = $loc . ' /%';
+            $countStmt->bind_param("ss", $exact, $like);
+            $countStmt->execute();
+            $countRow    = $countStmt->get_result()->fetch_assoc();
+            $locations[] = ['location' => $loc, 'pending_count' => (int) ($countRow['cnt'] ?? 0)];
         }
         echo json_encode(['success' => true, 'data' => $locations]);
     } catch (Exception $e) {

@@ -4,24 +4,17 @@ ob_start();
 require_once __DIR__ . '/../config.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: ../landing.php");
-    exit();
-}
+if (!isset($_SESSION['user_id'])) { header("Location: ../landing.php"); exit(); }
 
-$conn      = getDBConnection();
-$userId    = $_SESSION['user_id'];
+$conn   = getDBConnection();
+$userId = $_SESSION['user_id'];
 
-// Get current warehouse user info
 $uStmt = $conn->prepare("SELECT name, role, warehouse_location FROM users WHERE id = ?");
 $uStmt->bind_param("i", $userId);
 $uStmt->execute();
 $user = $uStmt->get_result()->fetch_assoc();
 
-if (($user['role'] ?? '') !== 'WAREHOUSE') {
-    header("Location: ../landing.php");
-    exit();
-}
+if (($user['role'] ?? '') !== 'WAREHOUSE') { header("Location: ../landing.php"); exit(); }
 
 $user_name         = $user['name']              ?? 'Warehouse Staff';
 $warehouseLocation = $user['warehouse_location'] ?? '';
@@ -35,16 +28,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $id     = (int) ($_POST['id'] ?? 0);
     $action = $_POST['action'];
 
-    if (!$id) {
-        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
-        exit();
-    }
+    if (!$id) { echo json_encode(['success' => false, 'message' => 'Invalid ID.']); exit(); }
 
     // ── GET DETAILS ───────────────────────────────────────────────────────────
     if ($action === 'get_details') {
-        $stmt = $conn->prepare("
+        $locLike = $warehouseLocation . '%';
+        $stmt    = $conn->prepare("
             SELECT p.*, a.brand, a.model, a.serial_number, a.condition,
                    a.location AS asset_location, a.sub_location AS asset_sub_location,
+                   a.description AS asset_description,
                    c.name AS category_name, sc.name AS subcategory_name
             FROM pull_out_transactions p
             LEFT JOIN assets         a  ON p.asset_id        = a.id
@@ -53,15 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             WHERE p.id = ? AND p.status = 'RELEASED'
               AND (p.to_location LIKE ? OR p.to_location = ?)
         ");
-        $locLike = $warehouseLocation . '%';
         $stmt->bind_param("iss", $id, $locLike, $warehouseLocation);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 
-        if (!$row) {
-            echo json_encode(['success' => false, 'message' => 'Not found or not assigned to your warehouse.']);
-            exit();
-        }
+        if (!$row) { echo json_encode(['success' => false, 'message' => 'Not found or not assigned to your warehouse.']); exit(); }
 
         $row['purpose'] = trim(preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/', '', $row['purpose'] ?? ''));
         $row['purpose'] = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i', '', $row['purpose']));
@@ -70,26 +59,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $row['to_main_location'] = trim($toParts[0]);
         $row['to_sub_location']  = isset($toParts[1]) ? trim($toParts[1]) : '';
 
-        // Thumbnail — gdrive-aware
-        $imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 1");
+        // All images
+        $imgStmt = $conn->prepare("SELECT image_path, drive_url FROM asset_images WHERE asset_id = ? ORDER BY id LIMIT 10");
         $imgStmt->bind_param("i", $row['asset_id']);
         $imgStmt->execute();
-        $img = $imgStmt->get_result()->fetch_assoc();
-        if ($img) {
+        $imgResult = $imgStmt->get_result();
+        $images    = [];
+        while ($img = $imgResult->fetch_assoc()) {
             if ($img['image_path'] === 'gdrive_folder' && !empty($img['drive_url'])) {
                 if (preg_match('#/file/d/([a-zA-Z0-9_-]+)#', $img['drive_url'], $m) ||
                     preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $img['drive_url'], $m)) {
-                    $row['thumbnail']      = "https://drive.google.com/thumbnail?id={$m[1]}&sz=w200";
-                    $row['thumbnail_type'] = 'gdrive';
-                    $row['thumbnail_url']  = $img['drive_url'];
+                    $images[] = ['type' => 'gdrive', 'thumb' => "https://drive.google.com/thumbnail?id={$m[1]}&sz=w400", 'url' => $img['drive_url']];
                 } else {
-                    $row['thumbnail'] = null; $row['thumbnail_type'] = 'gdrive_folder'; $row['thumbnail_url'] = $img['drive_url'];
+                    $images[] = ['type' => 'gdrive_folder', 'url' => $img['drive_url'], 'thumb' => null];
                 }
-            } else {
-                $row['thumbnail']      = '/' . ltrim($img['image_path'], '/');
-                $row['thumbnail_type'] = 'image';
-                $row['thumbnail_url']  = null;
+            } elseif (!empty($img['image_path']) && $img['image_path'] !== 'gdrive_folder') {
+                $images[] = ['type' => 'image', 'url' => '/' . ltrim($img['image_path'], '/'), 'thumb' => null];
             }
+        }
+        $imgStmt->close();
+        $row['images'] = $images;
+
+        // Thumbnail
+        if (!empty($images)) {
+            $first = $images[0];
+            $row['thumbnail']      = $first['thumb'] ?? $first['url'];
+            $row['thumbnail_type'] = $first['type'];
+            $row['thumbnail_url']  = $first['url'];
         } else {
             $row['thumbnail'] = null; $row['thumbnail_type'] = null; $row['thumbnail_url'] = null;
         }
@@ -103,27 +99,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $received_by  = htmlspecialchars(trim($_POST['received_by']     ?? ''));
         $to_sub_input = htmlspecialchars(trim($_POST['to_sub_location']  ?? ''));
 
-        if (empty($received_by)) {
-            echo json_encode(['success' => false, 'message' => 'Received By is required.']);
-            exit();
-        }
+        if (empty($received_by)) { echo json_encode(['success' => false, 'message' => 'Received By is required.']); exit(); }
 
-        // Verify it belongs to this warehouse
-        $txnStmt = $conn->prepare("
-            SELECT id, asset_id, quantity, from_location, to_location
-            FROM pull_out_transactions
-            WHERE id = ? AND status = 'RELEASED'
-              AND (to_location LIKE ? OR to_location = ?)
-        ");
         $locLike = $warehouseLocation . '%';
+        $txnStmt = $conn->prepare("SELECT id, asset_id, quantity, from_location, to_location FROM pull_out_transactions WHERE id = ? AND status = 'RELEASED' AND (to_location LIKE ? OR to_location = ?)");
         $txnStmt->bind_param("iss", $id, $locLike, $warehouseLocation);
         $txnStmt->execute();
         $txn = $txnStmt->get_result()->fetch_assoc();
 
-        if (!$txn) {
-            echo json_encode(['success' => false, 'message' => 'Already processed or not assigned to your warehouse.']);
-            exit();
-        }
+        if (!$txn) { echo json_encode(['success' => false, 'message' => 'Already processed or not assigned to your warehouse.']); exit(); }
 
         $assetId    = $txn['asset_id'];
         $quantity   = (int) $txn['quantity'];
@@ -133,31 +117,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $toMainLocation = trim($toParts[0]);
         $toSubLocation  = $to_sub_input !== '' ? $to_sub_input : (isset($toParts[1]) ? trim($toParts[1]) : '');
 
-        // Update asset sub_location
-        // Update BOTH main location AND sub_location so inventory reflects the new location
         $updAsset = $conn->prepare("UPDATE assets SET location = ?, sub_location = ?, updated_at = NOW() WHERE id = ?");
         $updAsset->bind_param("ssi", $toMainLocation, $toSubLocation, $assetId);
         $updAsset->execute();
 
-        // Update to_location with sub
         $finalToLocation = $toSubLocation !== '' ? $toMainLocation . ' / ' . $toSubLocation : $toMainLocation;
-        $updTxnLoc = $conn->prepare("UPDATE pull_out_transactions SET to_location = ? WHERE id = ?");
+        $updTxnLoc       = $conn->prepare("UPDATE pull_out_transactions SET to_location = ? WHERE id = ?");
         $updTxnLoc->bind_param("si", $finalToLocation, $id);
         $updTxnLoc->execute();
 
-        // Mark received
-        $stmt = $conn->prepare("
-            UPDATE pull_out_transactions
-            SET status = 'RECEIVED', received_at = NOW(), received_by = ?
-            WHERE id = ? AND status = 'RELEASED'
-        ");
+        $stmt = $conn->prepare("UPDATE pull_out_transactions SET status = 'RECEIVED', received_at = NOW(), received_by = ? WHERE id = ? AND status = 'RELEASED'");
         $stmt->bind_param("si", $received_by, $id);
         $stmt->execute();
 
-        if ($stmt->affected_rows === 0) {
-            echo json_encode(['success' => false, 'message' => 'Already processed.']);
-            exit();
-        }
+        if ($stmt->affected_rows === 0) { echo json_encode(['success' => false, 'message' => 'Already processed.']); exit(); }
 
         $desc = "Pull-out #$id RECEIVED by $received_by at {$toMainLocation}" . ($toSubLocation ? " / $toSubLocation" : '') . ". Asset #{$assetId} x{$quantity}.";
         $log  = $conn->prepare("INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'RECEIVE_PULLOUT', ?)");
@@ -178,18 +151,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 $search     = trim($_GET['search'] ?? '');
 $dateFilter = trim($_GET['date']   ?? '');
 
-// Base query — only items heading TO this warehouse
-$sql    = "
-    SELECT p.*, a.brand, a.model, a.serial_number,
-           c.name AS category_name, sc.name AS subcategory_name
-    FROM pull_out_transactions p
-    LEFT JOIN assets         a  ON p.asset_id        = a.id
-    LEFT JOIN categories     c  ON a.category_id     = c.id
-    LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
-    WHERE p.status = 'RELEASED'
-      AND (p.to_location LIKE ? OR p.to_location = ?)
-";
 $locLike = $warehouseLocation . '%';
+$sql     = "SELECT p.*, a.brand, a.model, a.serial_number, c.name AS category_name, sc.name AS subcategory_name
+            FROM pull_out_transactions p
+            LEFT JOIN assets         a  ON p.asset_id        = a.id
+            LEFT JOIN categories     c  ON a.category_id     = c.id
+            LEFT JOIN sub_categories sc ON a.sub_category_id = sc.id
+            WHERE p.status = 'RELEASED'
+              AND (p.to_location LIKE ? OR p.to_location = ?)";
 $params  = [$locLike, $warehouseLocation];
 $types   = 'ss';
 
@@ -199,11 +168,7 @@ if ($search !== '') {
     $params  = array_merge($params, [$l, $l, $l, $l]);
     $types  .= 'ssss';
 }
-if ($dateFilter !== '') {
-    $sql    .= " AND DATE(p.released_at) = ?";
-    $params[] = $dateFilter;
-    $types   .= 's';
-}
+if ($dateFilter !== '') { $sql .= " AND DATE(p.released_at) = ?"; $params[] = $dateFilter; $types .= 's'; }
 $sql .= " ORDER BY p.released_at ASC";
 
 $stmt = $conn->prepare($sql);
@@ -213,7 +178,6 @@ $result = $stmt->get_result();
 $rows   = [];
 while ($r = $result->fetch_assoc()) $rows[] = $r;
 
-// Stats
 $stRelStmt = $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RELEASED' AND (to_location LIKE ? OR to_location = ?)");
 $stRelStmt->bind_param("ss", $locLike, $warehouseLocation);
 $stRelStmt->execute();
@@ -241,31 +205,13 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Space Grotesk', sans-serif; }
         body { background: var(--bg); color: var(--text); }
-
-        /* ── Layout — matches warehouse sidebar width ── */
         .content { margin-left: 88px; padding: 2rem; transition: margin-left .3s; min-height: 100vh; }
         .sidebar:not(.close) ~ .content { margin-left: 250px; }
-
-        /* ── Page header ── */
-        .page-header {
-            background: linear-gradient(135deg, #16a085 0%, #0e6655 100%);
-            border-radius: 16px; padding: 2rem 2rem 1.5rem;
-            color: white; margin-bottom: 1.5rem; position: relative; overflow: hidden;
-        }
-        .page-header::before {
-            content: ''; position: absolute; top: -50%; right: -5%;
-            width: 300px; height: 300px; background: rgba(255,255,255,.08); border-radius: 50%;
-        }
+        .page-header { background: linear-gradient(135deg, #16a085 0%, #0e6655 100%); border-radius: 16px; padding: 2rem 2rem 1.5rem; color: white; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
+        .page-header::before { content: ''; position: absolute; top: -50%; right: -5%; width: 300px; height: 300px; background: rgba(255,255,255,.08); border-radius: 50%; }
         .page-header h1 { font-size: 1.6rem; font-weight: 700; position: relative; z-index: 1; display: flex; align-items: center; gap: .6rem; }
         .page-header p  { font-size: .9rem; opacity: .85; margin-top: .25rem; position: relative; z-index: 1; }
-        .warehouse-pill {
-            display: inline-flex; align-items: center; gap: .4rem;
-            background: rgba(255,255,255,.18); border-radius: 20px;
-            padding: .3rem .9rem; font-size: .8rem; font-weight: 600;
-            margin-top: .6rem; position: relative; z-index: 1;
-        }
-
-        /* ── Stats ── */
+        .warehouse-pill { display: inline-flex; align-items: center; gap: .4rem; background: rgba(255,255,255,.18); border-radius: 20px; padding: .3rem .9rem; font-size: .8rem; font-weight: 600; margin-top: .6rem; position: relative; z-index: 1; }
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .stat-card { background: var(--white); border-radius: var(--radius); padding: 1.25rem 1.5rem; box-shadow: var(--shadow); display: flex; align-items: center; gap: 1rem; }
         .stat-icon { width: 46px; height: 46px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
@@ -274,8 +220,6 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         .stat-icon.amber { background: #fef3cd; color: var(--amber); }
         .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
         .stat-label { font-size: .75rem; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
-
-        /* ── Filters ── */
         .filters { background: var(--white); border-radius: var(--radius); padding: 1rem 1.25rem; box-shadow: var(--shadow); display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
         .filters input { border: 1.5px solid var(--border); border-radius: 8px; padding: .6rem 1rem; font-family: 'Space Grotesk', sans-serif; font-size: .875rem; color: var(--text); outline: none; background: white; transition: border-color .2s; }
         .filters input:focus { border-color: var(--teal); }
@@ -286,10 +230,10 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         .btn:disabled { opacity: .45; cursor: not-allowed; }
         .btn-teal      { background: var(--teal); color: white; }
         .btn-teal:hover:not(:disabled) { background: #138d75; }
+        .btn-view      { background: var(--blue); color: white; }
+        .btn-view:hover { background: #2471a3; }
         .btn-secondary { background: #ecf0f1; color: var(--text); }
         .btn-secondary:hover { background: #d5dbdb; }
-
-        /* ── Cards ── */
         .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
         .recv-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border-left: 4px solid var(--teal); padding: 1.25rem 1.5rem; transition: transform .2s, box-shadow .2s; }
         .recv-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.1); }
@@ -317,31 +261,32 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         .empty-state { text-align: center; padding: 3.5rem; color: var(--muted); grid-column: 1/-1; }
         .empty-state i { font-size: 3.5rem; opacity: .25; display: block; margin-bottom: .75rem; }
 
-        /* ── Modal ── */
+        /* ── MODALS ── */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(3px); z-index: 9999; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal { background: var(--white); border-radius: 16px; width: 95%; max-width: 540px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: slideUp .25s ease; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal.modal-wide { max-width: 660px; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .modal-header h3 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: .5rem; }
         .modal-close { background: none; border: none; font-size: 1.4rem; cursor: pointer; color: var(--muted); border-radius: 6px; padding: .2rem .4rem; }
         .modal-close:hover { background: var(--border); }
-        .modal-body { padding: 1.5rem; overflow-y: auto; }
+        .modal-body   { padding: 1.5rem; overflow-y: auto; flex: 1; }
         .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; justify-content: flex-end; flex-shrink: 0; }
+
+        /* Receive modal */
         .modal-asset-card { display: flex; align-items: center; gap: 1rem; background: #f8f9fa; border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem; border: 1px solid var(--border); }
         .modal-thumb { width: 60px; height: 60px; border-radius: 8px; background: #e8ecf0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--muted); overflow: hidden; }
         .modal-thumb img { width: 100%; height: 100%; object-fit: cover; }
-        .modal-asset-info .a-name   { font-size: 1rem; font-weight: 700; }
-        .modal-asset-info .a-type   { font-size: .82rem; color: var(--muted); }
-        .modal-asset-info .a-serial { font-size: .75rem; font-family: monospace; background: #e8ecf0; padding: 1px 6px; border-radius: 4px; display: inline-block; margin-top: 3px; }
+        .modal-asset-info .a-name   { font-size: 1.05rem; font-weight: 800; color: var(--text); letter-spacing: -.2px; }
+        .modal-asset-info .a-type   { font-size: .82rem; color: var(--muted); margin-top: 2px; }
+        .modal-asset-info .a-serial { font-size: .78rem; font-family: 'Courier New', monospace; font-weight: 700; background: #2c3e50; color: #fff; padding: 2px 8px; border-radius: 4px; display: inline-block; margin-top: 5px; letter-spacing: .5px; }
         .modal-details { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem .75rem; margin-bottom: 1.25rem; }
         .md-item .md-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; font-weight: 600; }
         .md-item .md-value { font-size: .88rem; font-weight: 600; color: var(--text); }
         .md-item.full { grid-column: 1/-1; }
         .modal-personnel-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
         .modal-personnel-chip { display: flex; align-items: center; gap: .4rem; border-radius: 8px; padding: .55rem 1rem; font-size: .84rem; }
-        .modal-personnel-chip i { font-size: 1.05rem; }
-        .modal-personnel-chip span { color: var(--muted); margin-right: .15rem; }
         .modal-personnel-chip.purple { background: #f0e6f6; color: var(--purple); }
         .modal-personnel-chip.blue   { background: #d6eaf8; color: var(--blue); }
         .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
@@ -352,7 +297,34 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         .form-group small { font-size: .78rem; color: var(--muted); margin-top: .3rem; display: block; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
 
-        /* ── Toast ── */
+        /* View modal */
+        .view-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: .75rem; margin-bottom: 1.5rem; }
+        .view-gallery-item { border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #f4f6f9; border: 2px solid var(--border); cursor: pointer; transition: all .2s; position: relative; }
+        .view-gallery-item:hover { border-color: var(--teal); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(22,160,133,.15); }
+        .view-gallery-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .view-gallery-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 2.5rem; }
+        .view-gdrive-badge { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,.55)); padding: .3rem .5rem; display: flex; align-items: center; gap: .3rem; }
+        .view-gdrive-badge i { color: white; font-size: .85rem; }
+        .view-gdrive-badge span { color: white; font-size: .65rem; font-weight: 600; }
+        .view-section-title { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 1.25rem 0 .75rem; padding-bottom: .4rem; border-bottom: 2px solid var(--border); }
+        .view-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: .75rem; }
+        .view-detail-item { background: #f8f9fa; border-radius: 8px; padding: .75rem 1rem; border-left: 3px solid var(--teal); }
+        .view-detail-item.full { grid-column: 1/-1; }
+        .view-detail-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); font-weight: 700; margin-bottom: .25rem; }
+        .view-detail-value { font-size: .92rem; font-weight: 600; color: var(--text); word-break: break-word; }
+        .view-asset-name { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: .2rem; letter-spacing: -.3px; }
+        .view-asset-type { font-size: .85rem; color: var(--muted); margin-bottom: .75rem; }
+        .view-serial-badge { display: inline-flex; align-items: center; gap: .4rem; background: #2c3e50; color: #fff; font-family: 'Courier New', monospace; font-weight: 700; font-size: .82rem; letter-spacing: .5px; padding: .35rem .85rem; border-radius: 6px; margin-bottom: 1rem; }
+        .view-serial-badge i { font-size: .9rem; opacity: .7; }
+        .view-route-row { display: flex; align-items: center; gap: .75rem; background: #e8f8f5; border-radius: 10px; padding: .85rem 1rem; margin: .75rem 0; }
+        .view-route-row .vr-loc { flex: 1; }
+        .view-route-row .vr-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .5px; color: var(--teal); font-weight: 700; }
+        .view-route-row .vr-value { font-size: .95rem; font-weight: 700; color: var(--text); }
+        .view-route-row .vr-arrow { font-size: 1.4rem; color: var(--teal); flex-shrink: 0; }
+        .badge-condition { display: inline-block; padding: .25rem .65rem; border-radius: 6px; font-size: .78rem; font-weight: 700; text-transform: uppercase; }
+        .badge-new  { background: #d5f5e3; color: #1e8449; }
+        .badge-used { background: #fef3cd; color: #856404; }
+
         .toast { position: fixed; top: 20px; right: 20px; padding: .9rem 1.4rem; border-radius: 10px; color: white; font-weight: 600; font-size: .875rem; z-index: 10000; animation: toastIn .3s ease; box-shadow: 0 4px 16px rgba(0,0,0,.2); }
         .toast.success { background: var(--green); }
         .toast.error   { background: var(--red); }
@@ -363,7 +335,6 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
     <?php include 'warehouse_sidebar.php'; ?>
 
     <div class="content">
-        <!-- Page Header -->
         <div class="page-header">
             <h1><i class='bx bx-package'></i> Receiving</h1>
             <p>Confirm delivery of assets coming into your warehouse</p>
@@ -372,41 +343,17 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
             <?php endif; ?>
         </div>
 
-        <!-- Stats -->
         <div class="stats-row">
-            <div class="stat-card">
-                <div class="stat-icon teal"><i class='bx bx-package'></i></div>
-                <div>
-                    <div class="stat-value" id="statReleased"><?php echo $totalReleased; ?></div>
-                    <div class="stat-label">Awaiting Receipt</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon green"><i class='bx bx-check-double'></i></div>
-                <div>
-                    <div class="stat-value"><?php echo $totalReceived; ?></div>
-                    <div class="stat-label">Total Received</div>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon amber"><i class='bx bx-filter'></i></div>
-                <div>
-                    <div class="stat-value"><?php echo count($rows); ?></div>
-                    <div class="stat-label">Showing</div>
-                </div>
-            </div>
+            <div class="stat-card"><div class="stat-icon teal"><i class='bx bx-package'></i></div><div><div class="stat-value" id="statReleased"><?php echo $totalReleased; ?></div><div class="stat-label">Awaiting Receipt</div></div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class='bx bx-check-double'></i></div><div><div class="stat-value"><?php echo $totalReceived; ?></div><div class="stat-label">Total Received</div></div></div>
+            <div class="stat-card"><div class="stat-icon amber"><i class='bx bx-filter'></i></div><div><div class="stat-value"><?php echo count($rows); ?></div><div class="stat-label">Showing</div></div></div>
         </div>
 
-        <!-- Filters -->
         <div class="filters">
-            <div class="search-wrap">
-                <i class='bx bx-search'></i>
-                <input type="text" id="searchInput" placeholder="Search asset, requester, origin..." value="<?php echo htmlspecialchars($search); ?>">
-            </div>
+            <div class="search-wrap"><i class='bx bx-search'></i><input type="text" id="searchInput" placeholder="Search asset, requester, origin..." value="<?php echo htmlspecialchars($search); ?>"></div>
             <input type="date" id="dateInput" value="<?php echo htmlspecialchars($dateFilter); ?>" title="Filter by released date">
         </div>
 
-        <!-- Cards -->
         <div class="cards-grid" id="cardsGrid">
             <?php if (empty($rows)): ?>
                 <div class="empty-state">
@@ -432,45 +379,30 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
                         </div>
                         <span class="status-badge"><i class='bx bx-paper-plane'></i> Released</span>
                     </div>
-
                     <?php if ($r['released_by'] || !empty($r['delivered_by'])): ?>
                     <div class="personnel-chips">
                         <?php if ($r['released_by']): ?><span class="chip chip-purple"><i class='bx bx-user-check'></i> Released by: <?php echo htmlspecialchars($r['released_by']); ?></span><?php endif; ?>
                         <?php if (!empty($r['delivered_by'])): ?><span class="chip chip-blue"><i class='bx bx-car'></i> Delivered by: <?php echo htmlspecialchars($r['delivered_by']); ?></span><?php endif; ?>
                     </div>
                     <?php endif; ?>
-
                     <div class="released-time"><i class='bx bx-time-five'></i> Released: <?php echo $releasedAt; ?></div>
-
                     <div class="route-box">
-                        <div class="loc">
-                            <div class="loc-label">From</div>
-                            <div class="loc-value"><?php echo htmlspecialchars($from); ?></div>
-                        </div>
+                        <div class="loc"><div class="loc-label">From</div><div class="loc-value"><?php echo htmlspecialchars($from); ?></div></div>
                         <i class='bx bx-right-arrow-alt arrow'></i>
-                        <div class="loc destination">
-                            <div class="loc-label">Your Warehouse</div>
-                            <div class="loc-value"><?php echo htmlspecialchars($to); ?></div>
-                        </div>
+                        <div class="loc destination"><div class="loc-label">Your Warehouse</div><div class="loc-value"><?php echo htmlspecialchars($to); ?></div></div>
                     </div>
-
                     <div class="meta-grid">
                         <div class="meta-item"><div class="mlabel">Quantity</div><div class="mvalue"><?php echo $r['quantity']; ?> pcs</div></div>
                         <div class="meta-item"><div class="mlabel">Type</div><div class="mvalue"><?php echo htmlspecialchars($r['subcategory_name'] ?? '—'); ?></div></div>
                         <div class="meta-item"><div class="mlabel">Requested By</div><div class="mvalue"><?php echo htmlspecialchars($r['requested_by'] ?? '—'); ?></div></div>
                         <div class="meta-item"><div class="mlabel">Date Needed</div><div class="mvalue"><?php echo $r['date_needed'] ? date('M j, Y', strtotime($r['date_needed'])) : '—'; ?></div></div>
                         <?php if ($purpose !== '—'): ?>
-                        <div class="meta-item" style="grid-column:1/-1;">
-                            <div class="mlabel">Purpose</div>
-                            <div class="mvalue"><?php echo htmlspecialchars($purpose); ?></div>
-                        </div>
+                        <div class="meta-item" style="grid-column:1/-1;"><div class="mlabel">Purpose</div><div class="mvalue"><?php echo htmlspecialchars($purpose); ?></div></div>
                         <?php endif; ?>
                     </div>
-
                     <div class="card-actions">
-                        <button class="btn btn-teal" onclick="openReceive(<?php echo $r['id']; ?>)">
-                            <i class='bx bx-check-double'></i> Mark as Received
-                        </button>
+                        <button class="btn btn-view" onclick="openView(<?php echo $r['id']; ?>)"><i class='bx bx-show'></i> View</button>
+                        <button class="btn btn-teal" onclick="openReceive(<?php echo $r['id']; ?>)"><i class='bx bx-check-double'></i> Mark as Received</button>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -478,7 +410,47 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
         </div>
     </div>
 
-    <!-- Receive Modal -->
+    <!-- ═══════════════════════════════════════════════════════════
+         VIEW MODAL
+    ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal modal-wide" style="display:flex;flex-direction:column;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#16a085 0%,#0e6655 100%);color:white;border-bottom:none;flex-shrink:0;">
+                <h3 style="color:white;"><i class='bx bx-info-circle'></i> Item Details</h3>
+                <button class="modal-close" onclick="closeModal('viewModal')" style="color:white;background:rgba(255,255,255,.15);"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="modal-body" style="overflow-y:auto;flex:1;">
+                <div id="viewLoading" style="text-align:center;padding:2rem;color:var(--muted);">
+                    <i class='bx bx-loader-alt bx-spin' style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>Loading details...
+                </div>
+                <div id="viewContent" style="display:none;">
+                    <div id="viewAssetName" class="view-asset-name"></div>
+                    <div id="viewAssetType" class="view-asset-type"></div>
+                    <div id="viewSerialBadge" style="display:none;" class="view-serial-badge"><i class='bx bx-barcode'></i><span id="viewSerialText"></span></div>
+
+                    <div class="view-section-title"><i class='bx bx-image-alt' style="margin-right:.3rem;"></i>Photos</div>
+                    <div class="view-gallery" id="viewGallery"></div>
+
+                    <div class="view-section-title"><i class='bx bx-transfer-alt' style="margin-right:.3rem;"></i>Transfer Info</div>
+                    <div class="view-route-row">
+                        <div class="vr-loc"><div class="vr-label">From</div><div class="vr-value" id="viewFrom">—</div></div>
+                        <i class='bx bx-right-arrow-alt vr-arrow'></i>
+                        <div class="vr-loc"><div class="vr-label">Your Warehouse</div><div class="vr-value" id="viewTo">—</div></div>
+                    </div>
+                    <div class="view-detail-grid" id="viewTxnGrid"></div>
+
+                    <div class="view-section-title"><i class='bx bx-package' style="margin-right:.3rem;"></i>Asset Info</div>
+                    <div class="view-detail-grid" id="viewAssetGrid"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="flex-shrink:0;">
+                <button class="btn btn-secondary" onclick="closeModal('viewModal')"><i class='bx bx-x'></i> Close</button>
+                <button class="btn btn-teal" id="viewReceiveBtn" onclick="openReceiveFromView()"><i class='bx bx-check-double'></i> Mark as Received</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECEIVE MODAL -->
     <div class="modal-overlay" id="receiveModal">
         <div class="modal">
             <div class="modal-header">
@@ -487,7 +459,6 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
             </div>
             <div class="modal-body">
                 <input type="hidden" id="receiveId">
-
                 <div class="modal-asset-card">
                     <div class="modal-thumb" id="receiveThumb"><i class='bx bx-image-alt'></i></div>
                     <div class="modal-asset-info">
@@ -496,7 +467,6 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
                         <div class="a-serial" id="receiveAssetSerial" style="display:none;"></div>
                     </div>
                 </div>
-
                 <div class="modal-details">
                     <div class="md-item"><div class="md-label">From</div><div class="md-value" id="receiveFrom">—</div></div>
                     <div class="md-item"><div class="md-label">Destination</div><div class="md-value" id="receiveTo">—</div></div>
@@ -505,14 +475,11 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
                     <div class="md-item"><div class="md-label">Date Needed</div><div class="md-value" id="receiveDateNeeded">—</div></div>
                     <div class="md-item full"><div class="md-label">Purpose</div><div class="md-value" id="receivePurpose">—</div></div>
                 </div>
-
                 <div class="modal-personnel-row" id="receivePersonnelRow" style="display:none;">
-                    <div class="modal-personnel-chip purple" id="receiveReleasedByChip" style="display:none;"><i class='bx bx-user-check'></i><span>Released by</span><strong id="receiveReleasedBy">—</strong></div>
-                    <div class="modal-personnel-chip blue"   id="receiveDeliveredByChip" style="display:none;"><i class='bx bx-car'></i><span>Delivered by</span><strong id="receiveDeliveredBy">—</strong></div>
+                    <div class="modal-personnel-chip purple" id="receiveReleasedByChip" style="display:none;"><i class='bx bx-user-check'></i><span style="color:var(--muted);margin-right:.15rem;">Released by</span><strong id="receiveReleasedBy">—</strong></div>
+                    <div class="modal-personnel-chip blue"   id="receiveDeliveredByChip" style="display:none;"><i class='bx bx-car'></i><span style="color:var(--muted);margin-right:.15rem;">Delivered by</span><strong id="receiveDeliveredBy">—</strong></div>
                 </div>
-
                 <hr class="divider">
-
                 <div class="form-row">
                     <div class="form-group">
                         <label>Exact Sub-Location</label>
@@ -527,29 +494,107 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('receiveModal')">Cancel</button>
-                <button class="btn btn-teal" id="confirmReceiveBtn" onclick="submitReceive()">
-                    <i class='bx bx-check-double'></i> Confirm Receipt
-                </button>
+                <button class="btn btn-teal" id="confirmReceiveBtn" onclick="submitReceive()"><i class='bx bx-check-double'></i> Confirm Receipt</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ── Filters ──────────────────────────────────────────────────────────
+        let currentViewId = null;
+        let cachedDetails = {};
+
         function applyFilters() {
-            const p = new URLSearchParams({
-                search: document.getElementById('searchInput').value,
-                date:   document.getElementById('dateInput').value
-            });
+            const p = new URLSearchParams({ search: document.getElementById('searchInput').value, date: document.getElementById('dateInput').value });
             window.location.href = 'warehouse-receiving.php?' + p.toString();
         }
         document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') applyFilters(); });
         document.getElementById('dateInput').addEventListener('change', applyFilters);
 
-        // ── Open modal ───────────────────────────────────────────────────────
+        // ── VIEW MODAL ────────────────────────────────────────────────────────
+        async function openView(id) {
+            currentViewId = id;
+            document.getElementById('viewLoading').style.display = 'block';
+            document.getElementById('viewContent').style.display = 'none';
+            document.getElementById('viewModal').classList.add('active');
+
+            try {
+                let d = cachedDetails[id];
+                if (!d) {
+                    const body = new FormData();
+                    body.append('action', 'get_details'); body.append('id', id);
+                    const res    = await fetch('warehouse-receiving.php', { method: 'POST', body });
+                    const result = await res.json();
+                    if (!result.success) { showToast('Could not load details.', 'error'); closeModal('viewModal'); return; }
+                    d = result.data;
+                    cachedDetails[id] = d;
+                }
+
+                document.getElementById('viewAssetName').textContent = `${d.brand || ''} ${d.model || ''}`.trim() || '—';
+                document.getElementById('viewAssetType').textContent = [d.category_name, d.subcategory_name].filter(Boolean).join(' › ') || '';
+
+                const serialBadge = document.getElementById('viewSerialBadge');
+                if (d.serial_number) { document.getElementById('viewSerialText').textContent = d.serial_number; serialBadge.style.display = 'inline-flex'; }
+                else { serialBadge.style.display = 'none'; }
+
+                // Gallery
+                const gallery = document.getElementById('viewGallery');
+                gallery.innerHTML = '';
+                if (d.images && d.images.length > 0) {
+                    d.images.forEach(img => {
+                        const tile = document.createElement('div');
+                        tile.className = 'view-gallery-item';
+                        if (img.type === 'gdrive' && img.thumb) {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.innerHTML = `<img src="${img.thumb}" alt="photo" onerror="this.parentElement.innerHTML='<div class=\\"view-gallery-placeholder\\"><i class=\\"bx bxl-google\\"></i></div>'">
+                                <div class="view-gdrive-badge"><i class='bx bxl-google'></i><span>Open in Drive</span></div>`;
+                        } else if (img.type === 'gdrive_folder') {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.style.cssText = 'background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border:2px solid #a5d6a7;';
+                            tile.innerHTML = `<div class="view-gallery-placeholder" style="flex-direction:column;gap:.4rem;"><i class='bx bxl-google' style="font-size:2rem;color:#1a73e8;"></i><span style="font-size:.7rem;color:#1a73e8;font-weight:600;">View on Drive</span></div>`;
+                        } else {
+                            tile.onclick = () => window.open(img.url, '_blank');
+                            tile.innerHTML = `<img src="${img.url}" alt="photo" onerror="this.parentElement.innerHTML='<div class=\\"view-gallery-placeholder\\"><i class=\\"bx bx-image\\"></i></div>'">`;
+                        }
+                        gallery.appendChild(tile);
+                    });
+                } else {
+                    gallery.innerHTML = `<div class="view-gallery-item"><div class="view-gallery-placeholder"><i class='bx bx-image'></i></div></div>`;
+                }
+
+                document.getElementById('viewFrom').textContent = d.from_location || '—';
+                document.getElementById('viewTo').textContent   = d.to_main_location || d.to_location || '—';
+
+                const purpose = (d.purpose || '').replace(/\s*\[(dest_asset_id|dest):\d+\]/g,'').replace(/\s*\|?\s*From:.+?→.+$/i,'').trim() || '—';
+                document.getElementById('viewTxnGrid').innerHTML = `
+                    <div class="view-detail-item"><div class="view-detail-label">Transaction #</div><div class="view-detail-value">#${d.id}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Quantity</div><div class="view-detail-value"><strong style="font-size:1.1rem;">${d.quantity} pcs</strong></div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Requested By</div><div class="view-detail-value">${d.requested_by || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Date Needed</div><div class="view-detail-value">${d.date_needed ? new Date(d.date_needed).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'}</div></div>
+                    ${d.released_by ? `<div class="view-detail-item"><div class="view-detail-label">Released By</div><div class="view-detail-value">${d.released_by}</div></div>` : ''}
+                    ${d.delivered_by ? `<div class="view-detail-item"><div class="view-detail-label">Delivered By</div><div class="view-detail-value">${d.delivered_by}</div></div>` : ''}
+                    <div class="view-detail-item full"><div class="view-detail-label">Purpose</div><div class="view-detail-value">${purpose}</div></div>`;
+
+                document.getElementById('viewAssetGrid').innerHTML = `
+                    <div class="view-detail-item"><div class="view-detail-label">Category</div><div class="view-detail-value">${d.category_name || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Type</div><div class="view-detail-value">${d.subcategory_name || '—'}</div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Condition</div><div class="view-detail-value"><span class="badge-condition badge-${(d.condition||'').toLowerCase()}">${d.condition || '—'}</span></div></div>
+                    <div class="view-detail-item"><div class="view-detail-label">Current Location</div><div class="view-detail-value">${d.asset_location || '—'}</div></div>
+                    ${d.asset_sub_location ? `<div class="view-detail-item"><div class="view-detail-label">Sub-Location</div><div class="view-detail-value">${d.asset_sub_location}</div></div>` : ''}
+                    ${d.asset_description ? `<div class="view-detail-item full"><div class="view-detail-label">Description</div><div class="view-detail-value">${d.asset_description}</div></div>` : ''}`;
+
+                document.getElementById('viewLoading').style.display = 'none';
+                document.getElementById('viewContent').style.display = 'block';
+            } catch(e) { showToast('Failed to load details.', 'error'); closeModal('viewModal'); }
+        }
+
+        function openReceiveFromView() {
+            closeModal('viewModal');
+            openReceive(currentViewId);
+        }
+
+        // ── RECEIVE MODAL ─────────────────────────────────────────────────────
         async function openReceive(id) {
-            // Reset modal
-            document.getElementById('receiveId').value = id;
+            document.getElementById('receiveId').value          = id;
             document.getElementById('receiveReceivedBy').value  = '';
             document.getElementById('receiveSubLocation').value = '';
             document.getElementById('receiveAssetName').textContent    = 'Loading...';
@@ -566,114 +611,85 @@ $totalReceived = (int) $stRecStmt->get_result()->fetch_row()[0];
             document.getElementById('receiveReleasedByChip').style.display  = 'none';
             document.getElementById('receiveDeliveredByChip').style.display = 'none';
             document.getElementById('receiveThumb').innerHTML = "<i class='bx bx-image-alt'></i>";
-
             document.getElementById('receiveModal').classList.add('active');
 
             try {
-                const body = new FormData();
-                body.append('action', 'get_details');
-                body.append('id', id);
-                const res    = await fetch('warehouse-receiving.php', { method: 'POST', body });
-                const result = await res.json();
-                if (!result.success) { showToast(result.message || 'Could not load details.', 'error'); return; }
+                let d = cachedDetails[id];
+                if (!d) {
+                    const body = new FormData();
+                    body.append('action', 'get_details'); body.append('id', id);
+                    const res    = await fetch('warehouse-receiving.php', { method: 'POST', body });
+                    const result = await res.json();
+                    if (!result.success) { showToast(result.message || 'Could not load details.', 'error'); return; }
+                    d = result.data;
+                    cachedDetails[id] = d;
+                }
 
-                const d = result.data;
                 document.getElementById('receiveAssetName').textContent = `${d.brand || ''} ${d.model || ''}`.trim() || '—';
                 document.getElementById('receiveAssetType').textContent  = d.subcategory_name || '';
-
                 if (d.serial_number) {
                     const s = document.getElementById('receiveAssetSerial');
-                    s.textContent = d.serial_number;
-                    s.style.display = 'inline-block';
+                    s.textContent = d.serial_number; s.style.display = 'inline-block';
                 }
-
-                // Thumbnail
                 const thumb = document.getElementById('receiveThumb');
                 if (d.thumbnail && d.thumbnail_type === 'gdrive') {
-                    thumb.innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;"
-                        onerror="this.parentElement.innerHTML='<i class=\\'bx bxl-google\\'></i>'"
-                        onclick="window.open('${d.thumbnail_url || d.thumbnail}','_blank')">`;
+                    thumb.innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;cursor:pointer;" onerror="this.parentElement.innerHTML='<i class=\\'bx bxl-google\\'></i>'" onclick="window.open('${d.thumbnail_url || d.thumbnail}','_blank')">`;
                 } else if (d.thumbnail) {
-                    thumb.innerHTML = `<img src="${d.thumbnail}" onerror="this.parentElement.innerHTML='<i class=\\'bx bx-image-alt\\'></i>'">`;
+                    thumb.innerHTML = `<img src="${d.thumbnail}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<i class=\\'bx bx-image-alt\\'></i>'">`;
                 }
-
-                document.getElementById('receiveFrom').textContent = d.from_location || '—';
-                document.getElementById('receiveTo').textContent   = d.to_main_location || d.to_location || '—';
-                document.getElementById('receiveQty').textContent  = `${d.quantity || '—'} pcs`;
+                document.getElementById('receiveFrom').textContent       = d.from_location || '—';
+                document.getElementById('receiveTo').textContent         = d.to_main_location || d.to_location || '—';
+                document.getElementById('receiveQty').textContent        = `${d.quantity || '—'} pcs`;
                 document.getElementById('receiveReqBy').textContent      = d.requested_by || '—';
-                document.getElementById('receiveDateNeeded').textContent = d.date_needed
-                    ? new Date(d.date_needed).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-                document.getElementById('receivePurpose').textContent = d.purpose || '—';
-                document.getElementById('receiveToHint').textContent  = d.to_main_location || 'warehouse';
+                document.getElementById('receiveDateNeeded').textContent = d.date_needed ? new Date(d.date_needed).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+                document.getElementById('receivePurpose').textContent    = d.purpose || '—';
+                document.getElementById('receiveToHint').textContent     = d.to_main_location || 'warehouse';
 
                 let showPersonnel = false;
                 if (d.released_by)  { document.getElementById('receiveReleasedBy').textContent  = d.released_by;  document.getElementById('receiveReleasedByChip').style.display  = 'flex'; showPersonnel = true; }
                 if (d.delivered_by) { document.getElementById('receiveDeliveredBy').textContent = d.delivered_by; document.getElementById('receiveDeliveredByChip').style.display = 'flex'; showPersonnel = true; }
-                if (showPersonnel)    document.getElementById('receivePersonnelRow').style.display = 'flex';
-
+                if (showPersonnel) document.getElementById('receivePersonnelRow').style.display = 'flex';
                 if (d.to_sub_location) document.getElementById('receiveSubLocation').value = d.to_sub_location;
-
-            } catch (e) { showToast('Failed to load details.', 'error'); }
+            } catch(e) { showToast('Failed to load details.', 'error'); }
         }
 
-        // ── Submit receive ───────────────────────────────────────────────────
         async function submitReceive() {
             const id     = document.getElementById('receiveId').value;
             const rb     = document.getElementById('receiveReceivedBy').value.trim();
             const subLoc = document.getElementById('receiveSubLocation').value.trim();
-
             if (!rb) { showToast('Please enter who received the asset.', 'error'); return; }
 
             const btn = document.getElementById('confirmReceiveBtn');
-            btn.disabled = true;
-            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
+            btn.disabled = true; btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
 
             const body = new FormData();
-            body.append('action', 'receive');
-            body.append('id', id);
-            body.append('received_by', rb);
-            body.append('to_sub_location', subLoc);
+            body.append('action', 'receive'); body.append('id', id);
+            body.append('received_by', rb); body.append('to_sub_location', subLoc);
 
             const res    = await fetch('warehouse-receiving.php', { method: 'POST', body });
             const result = await res.json();
-
-            btn.disabled = false;
-            btn.innerHTML = "<i class='bx bx-check-double'></i> Confirm Receipt";
+            btn.disabled = false; btn.innerHTML = "<i class='bx bx-check-double'></i> Confirm Receipt";
 
             showToast(result.message, result.success ? 'success' : 'error');
             if (result.success) {
                 closeModal('receiveModal');
+                delete cachedDetails[id];
                 document.getElementById('card-' + id)?.remove();
                 updateStat(-1);
-                // Show empty state if no more cards
                 if (!document.querySelector('.recv-card')) {
-                    document.getElementById('cardsGrid').innerHTML = `
-                        <div class="empty-state">
-                            <i class='bx bx-check-circle' style="color:var(--green);opacity:.5"></i>
-                            <p>All items received!</p>
-                            <small>No more pending items for your warehouse.</small>
-                        </div>`;
+                    document.getElementById('cardsGrid').innerHTML = `<div class="empty-state"><i class='bx bx-check-circle' style="color:var(--green);opacity:.5"></i><p>All items received!</p><small>No more pending items for your warehouse.</small></div>`;
                 }
             }
         }
 
-        function updateStat(delta) {
-            const s = document.getElementById('statReleased');
-            if (s) s.textContent = Math.max(0, parseInt(s.textContent) + delta);
-        }
+        function updateStat(delta) { const s = document.getElementById('statReleased'); if (s) s.textContent = Math.max(0, parseInt(s.textContent) + delta); }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        document.querySelectorAll('.modal-overlay').forEach(m => {
-            m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
-        });
+        document.querySelectorAll('.modal-overlay').forEach(m => { m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); }); });
         function showToast(msg, type = 'success') {
-            const t = document.createElement('div');
-            t.className   = 'toast ' + type;
-            t.textContent = msg;
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 3500);
+            const t = document.createElement('div'); t.className = 'toast ' + type; t.textContent = msg;
+            document.body.appendChild(t); setTimeout(() => t.remove(), 3500);
         }
 
-        // ── Auto-refresh every 30s to catch newly released items ─────────────
         setInterval(() => { window.location.reload(); }, 30000);
     </script>
 </body>
