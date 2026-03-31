@@ -299,11 +299,24 @@ $conn = getDBConnection();
         .modal-box { position: relative; }
 
         /* ── Print Styles ── */
+        @page {
+            size: 104mm 50.8mm;
+            margin: 0;
+        }
+
         @media print {
             body * { visibility: hidden; }
             .print-area, .print-area * { visibility: visible; }
-            .print-area { position: absolute; left: 0; top: 0; width: 100%; }
-            .qr-print-item { page-break-inside: avoid; }
+            .print-area {
+                position: fixed;
+                left: 0; top: 0;
+                width: 104mm;
+                height: 50.8mm;
+            }
+            .qr-print-item {
+                page-break-after: always;
+                page-break-inside: avoid;
+            }
         }
 
         .print-area { display: none; }
@@ -323,30 +336,19 @@ $conn = getDBConnection();
         }
 
         /* Vertical company name on the left */
-       .qr-company-label {
-    position: absolute;
-    left: 37.9mm; /* adjust depende sa gusto mong lapit */
-    top: 2.70mm; /* same sa QR top */
-    
-    height: 20.67mm; /* SAME as QR box */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-
-    font-size: 5.1px;
-    font-weight: 1000;
-    font-family: Arial, sans-serif;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    color: #111;
-
-    white-space: nowrap;
-    padding: 0;
-    margin: 0;
-}
+        .qr-company-label {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 10px;
+            font-weight: 1000;
+            font-family: Arial, sans-serif;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #111;
+            padding: 8px 1px;
+            margin-top: -30px;
+            white-space: nowrap;
+        }
 
         /* QR image + sub-category label — absolutely positioned per label coords */
         .qr-content-wrapper {
@@ -387,6 +389,27 @@ $conn = getDBConnection();
             word-wrap: break-word;
             white-space: normal;
         }
+    /* ── Print Instruction Modal ── */
+    .print-modal-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.6); z-index: 99999;
+        align-items: center; justify-content: center;
+    }
+    .print-modal-overlay.active { display: flex; }
+    .print-modal-box {
+        background: white; border-radius: 16px; padding: 2rem;
+        max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+    .print-modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: #2d3436; }
+    .print-modal-box p { font-size: 0.85rem; color: #636e72; margin-bottom: 1.2rem; }
+    .print-steps {
+        background: #f5f3ff; border-radius: 10px; padding: 1rem;
+        text-align: left; margin-bottom: 1.2rem; font-size: 0.82rem;
+        color: #2d3436; line-height: 1.8;
+    }
+    .print-steps b { color: #695CFE; }
+    .print-modal-btns { display: flex; gap: 0.75rem; justify-content: center; }
     </style>
 </head>
 <body>
@@ -458,6 +481,28 @@ $conn = getDBConnection();
                     <?php endfor; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Print Instruction Modal -->
+<div class="print-modal-overlay" id="printInstructModal">
+    <div class="print-modal-box">
+        <h3><i class='bx bx-printer' style="color:#695CFE"></i> Before You Print</h3>
+        <p>Para mawala ang header/footer at page number, sundan ang steps na ito:</p>
+        <div class="print-steps">
+            1. Sa print dialog, hanapin ang <b>More settings</b> o <b>Options</b><br>
+            2. I-uncheck ang <b>Headers and footers</b><br>
+            3. I-set ang <b>Margins</b> sa <b>None</b><br>
+            4. Pindutin ang <b>Print</b>
+        </div>
+        <div class="print-modal-btns">
+            <button class="btn btn-primary" id="proceedPrintBtn">
+                <i class='bx bx-printer'></i> Proceed to Print
+            </button>
+            <button class="btn btn-filter" onclick="document.getElementById('printInstructModal').classList.remove('active')">
+                Cancel
+            </button>
         </div>
     </div>
 </div>
@@ -605,7 +650,7 @@ function closeModal(e) {
 }
 
 function printModalQR() {
-    if (modalAsset) { generatePrintContent([modalAsset]); window.print(); }
+    if (modalAsset) showPrintModal([modalAsset]);
 }
 
 // ── Selection ─────────────────────────────────────────────────────────────
@@ -632,59 +677,79 @@ function updateSelectedCount() {
 }
 
 // ── Print ─────────────────────────────────────────────────────────────────
+let pendingPrintAssets = [];
+
+function showPrintModal(assets) {
+    pendingPrintAssets = assets;
+    document.getElementById('printInstructModal').classList.add('active');
+}
+
 function printSingleQR(assetId) {
     const asset = assetsData.find(a => a.id === assetId);
     if (!asset) return;
-    generatePrintContent([asset]);
-    window.print();
+    showPrintModal([asset]);
 }
 
 function printSelectedQR() {
     if (selectedAssets.size === 0) { showNotification('Please select at least one asset', 'error'); return; }
     const selected = assetsData.filter(a => selectedAssets.has(a.id));
-    generatePrintContent(selected);
-    window.print();
+    showPrintModal(selected);
 }
 
-function generatePrintContent(assets) {
-    const printArea = document.getElementById('printArea');
-    printArea.innerHTML = '';
-    printArea.style.display = 'block';
+function openPrintWindow(assets) {
+    const win = window.open('', '_blank', 'width=420,height=220');
 
-    assets.forEach(asset => {
-        const item = document.createElement('div');
-        item.className = 'qr-print-item';
-
-        // Left vertical company name
-        const companyLabel = document.createElement('div');
-        companyLabel.className = 'qr-company-label';
-        companyLabel.textContent = 'The Table Group Inc.';
-
-        // Absolutely positioned QR + sub-category label
-        const contentWrapper = document.createElement('div');
-        contentWrapper.className = 'qr-content-wrapper';
-
-        // QR image inside border box
-        const imageBox = document.createElement('div');
-        imageBox.className = 'qr-image-box';
-
-        const img = document.createElement('img');
-        img.src = `generate_qr.php?id=${asset.id}`;
-        imageBox.appendChild(img);
-
-        // Sub-category only — no brand/model
-        const info = document.createElement('div');
-        info.className = 'asset-info';
-        info.textContent = asset.sub_category || '—';
-
-        contentWrapper.appendChild(imageBox);
-        contentWrapper.appendChild(info);
-
-        item.appendChild(companyLabel);
-        item.appendChild(contentWrapper);
-        printArea.appendChild(item);
+    let rows = '';
+    assets.forEach(function(asset) {
+        rows += '<div class="qr-print-item">'
+            + '<div class="qr-company-label">The Table Group Inc.</div>'
+            + '<div class="qr-content-wrapper">'
+            + '<div class="qr-image-box">'
+            + '<img src="generate_qr.php?id=' + asset.id + '" />'
+            + '</div>'
+            + '<div class="asset-info">' + (asset.asset_type || '&mdash;') + '</div>'
+            + '</div>'
+            + '</div>';
     });
+
+    var html = '<!DOCTYPE html>'
+        + '<html><head><meta charset="UTF-8"><title>Print QR</title>'
+        + '<style>'
+        + '@page { size: 104mm 50.8mm; margin: 0; }'
+        + '* { margin: 0; padding: 0; box-sizing: border-box; }'
+        + 'html, body { width: 104mm; height: 50.8mm; overflow: hidden; background: white; }'
+        + '.qr-print-item { width: 104mm; height: 50.8mm; position: relative; display: flex; align-items: center; overflow: hidden; }'
+        + '.qr-company-label { position: absolute; left: 37.9mm; top: 2.70mm; height: 20.67mm; display: flex; align-items: center; justify-content: center; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 5.1px; font-weight: 900; font-family: Arial, sans-serif; letter-spacing: 1px; text-transform: uppercase; color: #111; white-space: nowrap; }'
+        + '.qr-content-wrapper { position: absolute; left: 40.20mm; top: 0.75mm; display: flex; flex-direction: column; align-items: center; }'
+        + '.qr-image-box { border: 3.5px solid #000; border-radius: 10px; padding: 3px; background: #fff; display: inline-block; width: 23.67mm; height: 23.67mm; overflow: hidden; }'
+        + '.qr-image-box img { width: 100%; height: 100%; display: block; }'
+        + '.asset-info { font-size: 9px; font-weight: 700; font-family: Arial, sans-serif; margin-top: 4px; text-align: center; width: 23.67mm; word-wrap: break-word; white-space: normal; }'
+        + '</style></head><body>'
+        + rows
+        + '<scr' + 'ipt>'
+        + 'var images = document.querySelectorAll("img");'
+        + 'var loaded = 0; var total = images.length;'
+        + 'function tryPrint() { loaded++; if (loaded >= total) { setTimeout(doPrint, 200); } }'
+        + 'function doPrint() {'
+        + '    document.execCommand && document.execCommand("print", false, null) || window.print();'
+        + '    setTimeout(function(){ window.close(); }, 1000);'
+        + '}'
+        + 'if (total === 0) { setTimeout(doPrint, 200); }'
+        + 'else { images.forEach(function(img) { if (img.complete) { tryPrint(); } else { img.onload = img.onerror = tryPrint; } }); }'
+        + '</scr' + 'ipt>'
+        + '</body></html>';
+
+    win.document.write(html);
+    win.document.close();
 }
+
+// ── Proceed Print btn ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('proceedPrintBtn').addEventListener('click', function() {
+        document.getElementById('printInstructModal').classList.remove('active');
+        openPrintWindow(pendingPrintAssets);
+    });
+});
 
 // ── Categories ────────────────────────────────────────────────────────────
 async function loadCategories() {
