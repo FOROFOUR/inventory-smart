@@ -277,9 +277,9 @@ body {
 /* ✅ FIX: Eye toggle button — properly centered inside input */
 .toggle-password {
     position: absolute;
-    right: 14px;
+    right: 35px;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(48%);
     background: none;
     border: none;
     color: var(--text-secondary);
