@@ -75,8 +75,7 @@ body {
     position: relative;
     z-index: 1;
     max-width: 500px;
-     margin-bottom: 150px;
-
+    margin-bottom: 150px;
 }
 
 .back-link {
@@ -246,16 +245,21 @@ body {
     align-items: center;
 }
 
-.input-wrapper i {
+/* Left icon (user, lock, etc.) */
+.input-wrapper > i {
     position: absolute;
     left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
     color: var(--text-secondary);
     font-size: 16px;
+    pointer-events: none;
+    z-index: 1;
 }
 
 .input-wrapper input {
     width: 100%;
-    padding: 14px 16px 14px 48px;
+    padding: 14px 48px 14px 48px; /* right padding para hindi matakpan ng eye icon */
     border: 2px solid var(--border);
     border-radius: 10px;
     font-size: 15px;
@@ -270,19 +274,32 @@ body {
     box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
 }
 
+/* ✅ FIX: Eye toggle button — properly centered inside input */
 .toggle-password {
     position: absolute;
-    right: 16px;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
     background: none;
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
     padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     transition: var(--transition);
+    z-index: 1;
 }
 
 .toggle-password:hover {
     color: var(--primary);
+}
+
+.toggle-password i {
+    font-size: 15px;
+    pointer-events: none;
 }
 
 .form-hint {

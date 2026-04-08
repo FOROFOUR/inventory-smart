@@ -108,7 +108,8 @@ tbody td{padding:13px 16px;font-size:.875rem;color:#334155;vertical-align:middle
 .pw-confirm-info i{font-size:1.4rem;color:#f59e0b;flex-shrink:0;}
 .pw-confirm-info p{font-size:.84rem;color:#92400e;line-height:1.5;margin:0;}
 .pw-confirm-info strong{color:#78350f;}
-.pw-error{display:none;font-size:.8rem;color:#be123c;margin-top:6px;display:flex;align-items:center;gap:5px;}
+/* AYOS — tanggalin ang duplicate display:flex */
+.pw-error{display:none;font-size:.8rem;color:#be123c;margin-top:6px;align-items:center;gap:5px;}
 .pw-error.show{display:flex;}
 
 .form-group{margin-bottom:18px;}
