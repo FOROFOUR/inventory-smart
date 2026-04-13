@@ -202,6 +202,34 @@ try {
     $logStmt->bind_param("ss", $user_name, $log_desc);
     $logStmt->execute();
 
+        $hist_user_id   = $_SESSION['user_id'];
+    $hist_user_name = $_SESSION['name'] ?? 'Unknown';
+    $source_type    = 'MANUAL';
+ 
+    // Label: "Manual Entry — Dell Latitude 5420" (brand + model if available)
+    $manual_label = trim("$brand $model");
+    $manual_label = $manual_label
+        ? 'Manual Entry — ' . $manual_label
+        : 'Manual Entry';
+ 
+    // Unique token per manual asset (asset_id ensures uniqueness)
+    $manual_token = 'manual_' . $asset_id . '_' . time();
+ 
+    $histStmt = $conn->prepare("
+        INSERT INTO excel_upload_history
+            (source_type, batch_token, filename, uploaded_by, uploaded_by_name,
+             total_rows, valid_rows, invalid_rows, status)
+        VALUES ('MANUAL', ?, ?, ?, ?, 1, 1, 0, 'SUCCESS')
+    ");
+    $histStmt->bind_param(
+        'ssis',
+        $manual_token,
+        $manual_label,
+        $hist_user_id,
+        $hist_user_name
+    );
+    $histStmt->execute();
+
     echo json_encode([
         'success'  => true,
         'message'  => 'Asset added successfully!',

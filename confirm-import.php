@@ -122,6 +122,45 @@ if (is_numeric($condRaw)) {
         }
     }
 
+    $statsStmt = $conn->prepare("
+    SELECT
+        COUNT(*)                          AS total_rows,
+        SUM(is_valid = 1)                 AS valid_rows,
+        SUM(is_valid = 0)                 AS invalid_rows,
+        MAX(created_at)                   AS batch_time
+    FROM asset_staging
+    WHERE session_token = ?
+");
+$statsStmt->bind_param('s', $token);
+$statsStmt->execute();
+$stats = $statsStmt->get_result()->fetch_assoc();
+
+// Retrieve the original filename stored in staging meta
+// (If you store it: add a `filename` column to asset_staging,
+//  OR pass it from the front-end in the confirm request body.)
+// For now we fall back to a generated name.
+$filename = $data['filename'] ?? ('import_' . date('Ymd_His') . '.xlsx');
+
+$uploadedById   = $_SESSION['user_id'];
+$uploadedByName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Unknown';
+
+$histStmt = $conn->prepare("
+    INSERT INTO excel_upload_history
+        (batch_token, filename, uploaded_by, uploaded_by_name,
+         total_rows, valid_rows, invalid_rows, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'SUCCESS')
+");
+$histStmt->bind_param(
+    'ssissii',
+    $token,
+    $filename,
+    $uploadedById,
+    $uploadedByName,
+    $stats['total_rows'],
+    $stats['valid_rows'],
+    $stats['invalid_rows']
+);
+$histStmt->execute();
     // Activity log
     $desc = "Bulk imported $imported asset(s) via Excel upload.";
     if ($failed > 0) $desc .= " $failed row(s) failed.";
@@ -131,10 +170,10 @@ if (is_numeric($condRaw)) {
     $conn->commit();
 
     // Clean up staging rows
-    $delStmt = $conn->prepare("DELETE FROM asset_staging WHERE session_token = ?");
-    $delStmt->bind_param('s', $token);
-    $delStmt->execute();
-    $delStmt->close();
+  $markStmt = $conn->prepare("UPDATE asset_staging SET is_valid = 2 WHERE session_token = ?");
+$markStmt->bind_param('s', $token);
+$markStmt->execute();
+$markStmt->close();
 
     ob_end_clean();
     echo json_encode([

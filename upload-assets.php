@@ -161,6 +161,9 @@ $userName = $user['name'];
 
 <body>
     <?php include 'sidebar.php'; ?>
+    <script>
+    const BASE_URL = '<?php echo rtrim(dirname($_SERVER["PHP_SELF"]), "/"); ?>/';
+</script>
 
     <section class="home">
         <div class="page-container">
@@ -196,6 +199,11 @@ $userName = $user['name'];
                         <i class='bx bxs-file-import'></i>
                         <span>Excel Upload</span>
                     </button>
+            <button class="tab-button" data-tab="history">
+    <i class='bx bx-history'></i>
+    <span>History</span>
+</button>
+
                 </div>
             </div>
 
@@ -497,8 +505,142 @@ $userName = $user['name'];
                     <!-- Action section: either blocked or confirm -->
                     <div id="confirmSection" style="display:none; margin-top:1rem;"></div>
 
+
                 </div><!-- /content-card -->
             </div><!-- /excel-panel -->
+            <div class="tab-panel" id="history-panel">
+                  <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+            <i class='bx bx-history' style="font-size:1.4rem;color:#3b82f6;"></i>
+            <h3 style="margin:0;font-size:1.05rem;font-weight:600;color:#1e293b;">Asset Add History</h3>
+            <span style="background:#eff6ff;color:#2563eb;border-radius:20px;
+                padding:2px 10px;font-size:0.75rem;font-weight:600;">Manual + Excel</span>
+        </div>
+        <button onclick="loadHistory(1)" class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 0.9rem;">
+            <i class='bx bx-refresh'></i> Refresh
+        </button>
+    </div>
+ 
+    <!-- Filters -->
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;
+                padding:1rem;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+ 
+        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:140px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Date From</label>
+            <input type="date" id="hFilterFrom"
+                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;">
+        </div>
+ 
+        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:140px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Date To</label>
+            <input type="date" id="hFilterTo"
+                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;">
+        </div>
+ 
+        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:140px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Source</label>
+            <select id="hFilterSource"
+                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;background:#fff;">
+                <option value="">All Sources</option>
+                <option value="MANUAL">Manual Entry</option>
+                <option value="EXCEL">Excel Upload</option>
+            </select>
+        </div>
+ 
+        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:150px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Uploaded By</label>
+            <select id="hFilterUser"
+                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;background:#fff;">
+                <option value="">All Users</option>
+            </select>
+        </div>
+ 
+        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:2;min-width:180px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Search</label>
+            <input type="text" id="hFilterSearch" placeholder="Brand, model, filename..."
+                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;">
+        </div>
+ 
+        <div style="display:flex;align-items:flex-end;gap:0.5rem;">
+            <button onclick="loadHistory(1)" class="btn btn-primary" style="font-size:0.83rem;padding:0.45rem 1.1rem;">
+                <i class='bx bx-search'></i> Search
+            </button>
+            <button onclick="clearHistoryFilters()" class="btn btn-secondary" style="font-size:0.83rem;padding:0.45rem 0.9rem;">
+                <i class='bx bx-x'></i> Clear
+            </button>
+        </div>
+    </div>
+ 
+    <!-- Table -->
+    <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.83rem;">
+            <thead>
+                <tr style="background:#f3f4f6;">
+                    <th style="padding:0.65rem 0.85rem;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">#</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Source</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Description / Filename</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Added By</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Total</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Valid</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Invalid</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Status</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:left;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Date & Time</th>
+                    <th style="padding:0.65rem 0.85rem;text-align:center;font-weight:600;color:#374151;border-bottom:1px solid #e5e7eb;white-space:nowrap;">Action</th>
+                </tr>
+            </thead>
+            <tbody id="historyTableBody">
+                <tr>
+                    <td colspan="10" style="padding:2rem;text-align:center;color:#9ca3af;">
+                        <i class='bx bx-loader-alt bx-spin' style="font-size:1.5rem;"></i>
+                        <p style="margin:0.5rem 0 0;">Loading history...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+ 
+    <!-- Pagination -->
+    <div id="historyPagination"
+        style="display:flex;align-items:center;justify-content:space-between;
+               flex-wrap:wrap;gap:0.75rem;margin-top:1rem;font-size:0.83rem;color:#6b7280;">
+    </div>
+ 
+</div><!-- /historyCard -->
+ 
+ 
+<!-- ══════════════════════════════════════════════════════════════════════════
+     BATCH / ASSET DETAIL MODAL
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div id="batchModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
+     z-index:9000;overflow-y:auto;padding:2rem 1rem;">
+    <div style="background:#fff;border-radius:14px;max-width:1100px;margin:0 auto;
+                box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+ 
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:1.1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <i class='bx bx-file-blank' style="font-size:1.3rem;color:#3b82f6;"></i>
+                <div>
+                    <h3 id="modalTitle" style="margin:0;font-size:1rem;font-weight:700;color:#1e293b;"></h3>
+                    <p id="modalSubtitle" style="margin:0;font-size:0.78rem;color:#6b7280;"></p>
+                </div>
+            </div>
+            <button onclick="closeBatchModal()"
+                style="background:none;border:none;font-size:1.4rem;color:#64748b;cursor:pointer;padding:0.25rem;">
+                <i class='bx bx-x'></i>
+            </button>
+        </div>
+ 
+        <div style="padding:1.25rem 1.5rem;max-height:75vh;overflow-y:auto;" id="modalBody">
+            <div style="text-align:center;padding:2rem;color:#9ca3af;">
+                <i class='bx bx-loader-alt bx-spin' style="font-size:2rem;"></i>
+                <p style="margin:0.5rem 0 0;">Loading...</p>
+            </div>
+        </div>
+    </div>
+</div>
 
         </div><!-- /page-container -->
     </section>
@@ -790,6 +932,346 @@ $userName = $user['name'];
             }
         }
     </script>
+    <script>
+// ─── Load user filter dropdown ────────────────────────────────────────────────
+(async function loadHistoryUsers() {
+    try {
+        const res  = await fetch('get-upload-history.php?mode=users');
+        const data = await res.json();
+        if (!data.success) return;
+        const sel = document.getElementById('hFilterUser');
+        data.users.forEach(u => {
+            const opt       = document.createElement('option');
+            opt.value       = u.uploaded_by;
+            opt.textContent = u.uploaded_by_name;
+            sel.appendChild(opt);
+        });
+    } catch (_) {}
+})();
+ 
+// ─── Source badge helper ──────────────────────────────────────────────────────
+function sourceBadge(type) {
+    if (type === 'MANUAL') {
+        return `<span style="display:inline-flex;align-items:center;gap:3px;
+            background:#f0fdf4;color:#15803d;border-radius:6px;
+            padding:3px 8px;font-size:0.73rem;font-weight:600;white-space:nowrap;">
+            <i class='bx bx-edit-alt'></i>Manual</span>`;
+    }
+    return `<span style="display:inline-flex;align-items:center;gap:3px;
+        background:#eff6ff;color:#2563eb;border-radius:6px;
+        padding:3px 8px;font-size:0.73rem;font-weight:600;white-space:nowrap;">
+        <i class='bx bxs-file-import'></i>Excel</span>`;
+}
+ 
+function statusBadge(s) {
+    const map = {
+        SUCCESS: ['#dcfce7','#15803d','bx-check-circle'],
+        FAILED:  ['#fee2e2','#b91c1c','bx-error'],
+        BLOCKED: ['#fff7ed','#c2410c','bx-block'],
+    };
+    const [bg, color, icon] = map[s] || ['#f3f4f6','#6b7280','bx-minus'];
+    return `<span style="display:inline-flex;align-items:center;gap:4px;
+        background:${bg};color:${color};border-radius:6px;
+        padding:3px 8px;font-size:0.75rem;font-weight:600;white-space:nowrap;">
+        <i class='bx ${icon}'></i>${s}</span>`;
+}
+ 
+function fmtDate(d) {
+    const dt = new Date(d);
+    return dt.toLocaleDateString('en-PH', { month:'short', day:'numeric', year:'numeric' })
+        + ' ' + dt.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' });
+}
+ 
+// ─── Load history list ────────────────────────────────────────────────────────
+async function loadHistory(page = 1) {
+    const tbody = document.getElementById('historyTableBody');
+    tbody.innerHTML = `<tr><td colspan="10" style="padding:2rem;text-align:center;color:#9ca3af;">
+        <i class='bx bx-loader-alt bx-spin' style="font-size:1.5rem;"></i>
+        <p style="margin:0.5rem 0 0;">Loading...</p></td></tr>`;
+ 
+    const params = new URLSearchParams({
+        page,
+        per_page:    10,
+        date_from:   document.getElementById('hFilterFrom').value,
+        date_to:     document.getElementById('hFilterTo').value,
+        source_type: document.getElementById('hFilterSource').value,
+        uploaded_by: document.getElementById('hFilterUser').value,
+        search:      document.getElementById('hFilterSearch').value,
+    });
+ 
+    try {
+        const res  = await fetch('get-upload-history.php?' + params.toString());
+        const data = await res.json();
+ 
+        if (!data.success) {
+            tbody.innerHTML = `<tr><td colspan="10" style="padding:2rem;text-align:center;color:#ef4444;">
+                Failed to load history.</td></tr>`;
+            return;
+        }
+ 
+        if (!data.data.length) {
+            tbody.innerHTML = `<tr><td colspan="10" style="padding:2.5rem;text-align:center;color:#9ca3af;">
+                <i class='bx bx-inbox' style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
+                No history found.</td></tr>`;
+            renderHistoryPagination(data);
+            return;
+        }
+ 
+        let rows = '';
+        data.data.forEach((h, i) => {
+            const rowNum = (page - 1) * 10 + i + 1;
+            rows += `
+            <tr style="border-bottom:1px solid #f3f4f6;"
+                onmouseover="this.style.background='#f8fafc'"
+                onmouseout="this.style.background=''">
+                <td style="padding:0.6rem 0.85rem;color:#94a3b8;font-weight:600;">${rowNum}</td>
+                <td style="padding:0.6rem 0.85rem;text-align:center;">${sourceBadge(h.source_type)}</td>
+                <td style="padding:0.6rem 0.85rem;">
+                    <div style="display:flex;align-items:center;gap:0.45rem;">
+                        <i class='bx ${h.source_type === 'MANUAL' ? 'bx-edit-alt' : 'bxs-file'}'
+                            style="color:#64748b;font-size:1rem;flex-shrink:0;"></i>
+                        <span style="font-weight:500;color:#1e293b;word-break:break-all;">
+                            ${escHtml(h.filename)}
+                        </span>
+                    </div>
+                </td>
+                <td style="padding:0.6rem 0.85rem;white-space:nowrap;">
+                    <div style="display:flex;align-items:center;gap:0.4rem;">
+                        <i class='bx bx-user' style="color:#94a3b8;"></i>
+                        ${escHtml(h.uploaded_by_name)}
+                    </div>
+                </td>
+                <td style="padding:0.6rem 0.85rem;text-align:center;font-weight:600;">${h.total_rows}</td>
+                <td style="padding:0.6rem 0.85rem;text-align:center;">
+                    <span style="color:#15803d;font-weight:600;">${h.valid_rows}</span>
+                </td>
+                <td style="padding:0.6rem 0.85rem;text-align:center;">
+                    <span style="color:${h.invalid_rows > 0 ? '#b91c1c' : '#9ca3af'};font-weight:600;">
+                        ${h.invalid_rows}
+                    </span>
+                </td>
+                <td style="padding:0.6rem 0.85rem;text-align:center;">${statusBadge(h.status)}</td>
+                <td style="padding:0.6rem 0.85rem;white-space:nowrap;color:#64748b;">${fmtDate(h.imported_at)}</td>
+               <td style="padding:0.6rem 0.85rem;text-align:center;">
+    <button
+        data-token="${escHtml(h.batch_token)}"
+        data-filename="${escHtml(h.filename)}"
+        data-date="${escHtml(fmtDate(h.imported_at))}"
+        data-uploader="${escHtml(h.uploaded_by_name)}"
+        data-source="${escHtml(h.source_type)}"
+        onclick="openBatchModal(
+            this.dataset.token,
+            this.dataset.filename,
+            this.dataset.date,
+            this.dataset.uploader,
+            this.dataset.source
+        )"
+        style="display:inline-flex;align-items:center;gap:4px;
+            background:#eff6ff;color:#2563eb;border:none;border-radius:7px;
+            padding:5px 12px;font-size:0.8rem;font-weight:600;
+            cursor:pointer;white-space:nowrap;font-family:inherit;">
+        <i class='bx bx-show'></i> View
+    </button>
+</td>
+            </tr>`;
+        });
+ 
+        tbody.innerHTML = rows;
+        renderHistoryPagination(data);
+ 
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="10" style="padding:2rem;text-align:center;color:#ef4444;">
+            Error: ${escHtml(err.message)}</td></tr>`;
+    }
+}
+ 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+function renderHistoryPagination(data) {
+    const el = document.getElementById('historyPagination');
+    if (!data.total) { el.innerHTML = ''; return; }
+ 
+    const start = (data.page - 1) * data.per_page + 1;
+    const end   = Math.min(data.page * data.per_page, data.total);
+ 
+    const btnStyle = (disabled, active) => `style="border:1px solid ${active ? '#3b82f6' : '#e5e7eb'};
+        background:${active ? '#3b82f6' : '#fff'};
+        color:${active ? '#fff' : disabled ? '#d1d5db' : '#374151'};
+        border-radius:6px;padding:4px 10px;font-size:0.8rem;
+        cursor:${disabled ? 'not-allowed' : 'pointer'};font-family:inherit;"`;
+ 
+    let pages = '';
+    for (let p = 1; p <= data.total_pages; p++) {
+        if (data.total_pages > 7 && Math.abs(p - data.page) > 2 && p !== 1 && p !== data.total_pages) {
+            if (p === 2 || p === data.total_pages - 1) pages += `<span style="padding:0 4px;">…</span>`;
+            continue;
+        }
+        pages += `<button onclick="loadHistory(${p})" ${btnStyle(false, p === data.page)}>${p}</button>`;
+    }
+ 
+    el.innerHTML = `
+        <span>Showing <strong>${start}–${end}</strong> of <strong>${data.total}</strong> entries</span>
+        <div style="display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+            <button onclick="loadHistory(${data.page - 1})" ${data.page <= 1 ? 'disabled' : ''}
+                ${btnStyle(data.page <= 1, false)}>‹ Prev</button>
+            ${pages}
+            <button onclick="loadHistory(${data.page + 1})" ${data.page >= data.total_pages ? 'disabled' : ''}
+                ${btnStyle(data.page >= data.total_pages, false)}>Next ›</button>
+        </div>`;
+}
+ 
+// ─── Clear filters ────────────────────────────────────────────────────────────
+function clearHistoryFilters() {
+    ['hFilterFrom','hFilterTo','hFilterSource','hFilterUser','hFilterSearch']
+        .forEach(id => document.getElementById(id).value = '');
+    loadHistory(1);
+}
+ 
+// ─── Open detail modal ────────────────────────────────────────────────────────
+async function openBatchModal(token, filename, date, uploader, sourceType) {
+    document.getElementById('batchModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+ 
+    const typeLabel = sourceType === 'MANUAL' ? '🖊 Manual Entry' : '📋 Excel Upload';
+    document.getElementById('modalTitle').textContent    = filename;
+    document.getElementById('modalSubtitle').textContent =
+        `${typeLabel} · Added by ${uploader} · ${date}`;
+ 
+    document.getElementById('modalBody').innerHTML = `
+        <div style="text-align:center;padding:2.5rem;color:#9ca3af;">
+            <i class='bx bx-loader-alt bx-spin' style="font-size:2rem;"></i>
+            <p style="margin:0.5rem 0 0;">Loading details...</p>
+        </div>`;
+ 
+    try {
+        const res  = await fetch(`get-upload-history.php?mode=batch_detail&token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+ 
+        if (!data.success || !data.rows.length) {
+            document.getElementById('modalBody').innerHTML =
+                `<p style="text-align:center;color:#9ca3af;padding:2rem;">No data found.</p>`;
+            return;
+        }
+ 
+        const condBadge = c => {
+            const map = { NEW: ['#dcfce7','#15803d'], USED: ['#fef9c3','#854d0e'] };
+            const [bg, color] = map[c] || ['#f3f4f6','#374151'];
+            return `<span style="background:${bg};color:${color};border-radius:5px;padding:2px 7px;font-size:0.75rem;font-weight:600;">${c||'—'}</span>`;
+        };
+        const statBadge = s => {
+            const map = { WORKING:['#dcfce7','#15803d'], 'FOR CHECKING':['#fef9c3','#854d0e'], 'NOT WORKING':['#fee2e2','#b91c1c'] };
+            const [bg, color] = map[s] || ['#f3f4f6','#374151'];
+            return `<span style="background:${bg};color:${color};border-radius:5px;padding:2px 7px;font-size:0.75rem;font-weight:600;">${s||'—'}</span>`;
+        };
+        const photoLink = (url, n) => {
+            if (!url) return '';
+            // Handle local file paths (manual uploads) vs drive URLs
+            const isLocal = !url.startsWith('http');
+            if (isLocal) {
+                return `<a href="../../${url}" target="_blank" rel="noopener noreferrer"
+                    style="display:inline-flex;align-items:center;gap:3px;color:#374151;
+                    background:#f3f4f6;padding:3px 8px;border-radius:5px;font-size:0.75rem;
+                    font-weight:500;text-decoration:none;margin:2px;">
+                    <i class='bx bx-image'></i>Photo ${n}</a>`;
+            }
+            return `<a href="${escHtml(url)}" target="_blank" rel="noopener noreferrer"
+                style="display:inline-flex;align-items:center;gap:3px;color:#1a73e8;
+                background:#e8f0fe;padding:3px 8px;border-radius:5px;font-size:0.75rem;
+                font-weight:500;text-decoration:none;margin:2px;">
+                <i class='bx bxl-google'></i>Photo ${n}</a>`;
+        };
+ 
+        // Summary strip
+        const totalRows = data.rows.length;
+        const validRows = data.rows.filter(r => r.is_valid == 1).length;
+        const invRows   = totalRows - validRows;
+ 
+        let html = `
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+            ${sourceBadge(data.source_type)}
+            <div style="background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:0.4rem 1rem;
+        font-size:0.85rem;font-weight:600;display:flex;align-items:center;gap:0.4rem;">
+        <i class='bx bx-table'></i> ${totalRows} total
+    </div>
+        </div>
+        <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+            <thead><tr style="background:#f3f4f6;">
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Row</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Category</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Sub-Category</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Brand</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Model</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Serial No.</th>
+                <th style="padding:0.55rem 0.7rem;text-align:center;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Qty</th>
+                <th style="padding:0.55rem 0.7rem;text-align:center;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Cond.</th>
+                <th style="padding:0.55rem 0.7rem;text-align:center;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Status</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Location</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Sub-Loc</th>
+                <th style="padding:0.55rem 0.7rem;text-align:left;border-bottom:1px solid #e5e7eb;font-weight:600;color:#374151;white-space:nowrap;">Photos</th>
+            
+            </tr></thead>
+            <tbody>`;
+ 
+        data.rows.forEach(r => {
+            
+            const photos = [
+                photoLink(r.photo_drive_url_1, 1),
+                photoLink(r.photo_drive_url_2, 2),
+                photoLink(r.photo_drive_url_3, 3),
+            ].filter(Boolean).join('') || '<span style="color:#d1d5db;">—</span>';
+            const notes  = r.is_valid == 1
+                ? '<span style="color:#15803d;font-weight:600;">✓ OK</span>'
+                : `<span style="color:#b91c1c;font-size:0.75rem;">${escHtml(r.error_notes||'')}</span>`;
+ 
+            
+html += `<tr style="border-bottom:1px solid #f3f4f6;"
+                onmouseover="this.style.filter='brightness(0.97)'"
+                onmouseout="this.style.filter=''">
+                <td style="padding:0.5rem 0.7rem;color:#94a3b8;">${r.row_num}</td>
+                <td style="padding:0.5rem 0.7rem;">${escHtml(r.category_name)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;">${escHtml(r.sub_category_name)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;">${escHtml(r.brand)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;">${escHtml(r.model)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;font-family:monospace;font-size:0.78rem;">${escHtml(r.serial_number)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;text-align:center;font-weight:600;">${r.qty}</td>
+                <td style="padding:0.5rem 0.7rem;text-align:center;">${condBadge(r.condition)}</td>
+                <td style="padding:0.5rem 0.7rem;text-align:center;">${statBadge(r.status)}</td>
+                <td style="padding:0.5rem 0.7rem;white-space:nowrap;">${escHtml(r.location)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;white-space:nowrap;">${escHtml(r.sub_location)||'—'}</td>
+                <td style="padding:0.5rem 0.7rem;">${photos}</td>
+                
+            </tr>`;
+        });
+ 
+        html += `</tbody></table></div>`;
+        document.getElementById('modalBody').innerHTML = html;
+ 
+    } catch (err) {
+        document.getElementById('modalBody').innerHTML =
+            `<p style="text-align:center;color:#ef4444;padding:2rem;">Error: ${escHtml(err.message)}</p>`;
+    }
+}
+ 
+function closeBatchModal() {
+    document.getElementById('batchModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+ 
+document.getElementById('batchModal').addEventListener('click', function(e) {
+    if (e.target === this) closeBatchModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBatchModal(); });
+ 
+// ─── Auto-load when Excel tab is clicked ─────────────────────────────────────
+document.querySelectorAll('.tab-button').forEach(btn => {
+    btn.addEventListener('click', function() {
+       if (this.dataset.tab === 'history') setTimeout(() => loadHistory(1), 100);
+    });
+});
+if (document.querySelector('.tab-button[data-tab="history"]')?.classList.contains('active')) {
+    loadHistory(1);
+}
+</script>
 
 </body>
 </html>
