@@ -169,6 +169,15 @@ $where  = [];
 $params = [];
 $types  = '';
 
+$currentUserId = (int)$_SESSION['user_id'];
+$userRole      = $_SESSION['role'] ?? 'EMPLOYEE';
+
+if ($userRole !== 'ADMIN') {
+    $where[]  = 'h.uploaded_by = ?';
+    $params[] = $currentUserId;
+    $types   .= 'i';
+}
+
 if ($dateFrom) {
     $where[]  = 'h.imported_at >= ?';
     $params[] = $dateFrom . ' 00:00:00';
@@ -179,11 +188,7 @@ if ($dateTo) {
     $params[] = $dateTo . ' 23:59:59';
     $types   .= 's';
 }
-if ($uploadedBy) {
-    $where[]  = 'h.uploaded_by = ?';
-    $params[] = (int)$uploadedBy;
-    $types   .= 'i';
-}
+
 if ($search !== '') {
     $where[]  = 'h.filename LIKE ?';
     $params[] = '%' . $search . '%';

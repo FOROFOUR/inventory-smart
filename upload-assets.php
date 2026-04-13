@@ -549,13 +549,28 @@ $userName = $user['name'];
             </select>
         </div>
  
-        <div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:150px;">
-            <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Uploaded By</label>
-            <select id="hFilterUser"
-                style="border:1px solid #e2e8f0;border-radius:7px;padding:0.4rem 0.6rem;font-size:0.85rem;font-family:inherit;background:#fff;">
-                <option value="">All Users</option>
-            </select>
-        </div>
+ <?php if ($_SESSION['role'] === 'ADMIN'): ?>
+<div style="display:flex;flex-direction:column;gap:0.3rem;flex:1;min-width:150px;">
+    <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Uploaded By</label>
+    <select id="hFilterUser" style="
+       padding:0.4rem 0.6rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        color: #374151;
+        background: white;
+        cursor: pointer;
+        outline: none;
+        width: 100%;
+    ">
+        <option value="">All Users</option>
+    </select>
+</div>
+<?php else: ?>
+<select id="hFilterUser" style="display:none;">
+    <option value="">All Users</option>
+</select>
+<?php endif; ?>
  
         <div style="display:flex;flex-direction:column;gap:0.3rem;flex:2;min-width:180px;">
             <label style="font-size:0.78rem;font-weight:600;color:#64748b;">Search</label>
