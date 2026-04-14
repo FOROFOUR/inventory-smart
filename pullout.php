@@ -3,7 +3,11 @@ ob_start();
 include 'sidebar.php';
 
 require_once 'config.php';
-$conn = getDBConnection();
+if (session_status() === PHP_SESSION_NONE) session_start();
+$conn        = getDBConnection();
+$sessionRole = $_SESSION['role']      ?? '';
+$sessionName = $_SESSION['user_name'] ?? ($_SESSION['name'] ?? '');
+$isAdmin     = strtoupper($sessionRole) === 'ADMIN';
 
 $statsQuery  = "SELECT 
     COUNT(*) as total,
@@ -157,6 +161,18 @@ $stats       = $statsResult->fetch_assoc();
                 <option value="">All Locations</option>
             </select>
         </div>
+        <div style="position:relative;">
+            <i class='bx bx-user' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
+            <select id="requestedByFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
+                <option value="">All Requesters</option>
+            </select>
+        </div>
+        <div style="position:relative;">
+            <i class='bx bx-notepad' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
+            <select id="purposeFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
+                <option value="">All Purposes</option>
+            </select>
+        </div>
         <div class="filter-group">
             <button class="btn btn-filter active" data-status="">All</button>
             <button class="btn btn-filter" data-status="PENDING" id="btnPending">
@@ -210,10 +226,22 @@ $stats       = $statsResult->fetch_assoc();
 </div>
 
 <script>
-    let pulloutData     = [];
-    let currentFilter   = '';
-    let currentLocation = '';
-    let currentId       = null;
+    const IS_ADMIN     = <?php echo $isAdmin ? 'true' : 'false'; ?>;
+    const SESSION_NAME = <?php echo json_encode($sessionName); ?>;
+
+    // Hide Requested By filter for non-admins
+    if (!IS_ADMIN) {
+        const rbWrap = document.getElementById('requestedByFilter')?.parentElement;
+        if (rbWrap) rbWrap.style.display = 'none';
+    }
+
+    let pulloutData        = [];
+    let allPulloutData     = [];
+    let currentFilter      = '';
+    let currentLocation    = '';
+    let currentRequestedBy = '';
+    let currentPurpose     = '';
+    let currentId          = null;
 
     function renderStatus(item) {
         const s    = (item.status || '').toUpperCase();
@@ -251,7 +279,12 @@ $stats       = $statsResult->fetch_assoc();
         } catch(e) { console.error('loadLocations:', e); }
     }
 
-    function applyFilters() { currentLocation = document.getElementById('locationFilter').value; loadPullouts(); }
+    function applyFilters() {
+        currentLocation    = document.getElementById('locationFilter').value;
+        currentRequestedBy = document.getElementById('requestedByFilter').value;
+        currentPurpose     = document.getElementById('purposeFilter').value;
+        loadPullouts();
+    }
 
     async function loadPullouts() {
         try {
@@ -259,9 +292,41 @@ $stats       = $statsResult->fetch_assoc();
             const params = new URLSearchParams({ action: 'get_pullouts', search, status: currentFilter, location: currentLocation });
             const res    = await fetch(`pullout_api.php?${params}`);
             const result = await res.json();
-            if (result.success) { pulloutData = result.data; renderTable(); refreshStats(); }
-            else showNotification('Error loading data', 'error');
+            if (result.success) {
+                allPulloutData = result.data;
+                // Non-admin: restrict to own records only
+                const baseData = IS_ADMIN
+                    ? allPulloutData
+                    : allPulloutData.filter(item => (item.requested_by || '') === SESSION_NAME);
+                populateDropdowns(baseData);
+                // Client-side filter for requested_by and purpose
+                pulloutData = baseData.filter(item => {
+                    const matchRB = !currentRequestedBy || (item.requested_by || '') === currentRequestedBy;
+                    const matchP  = !currentPurpose     || cleanPurpose(item.purpose) === currentPurpose;
+                    return matchRB && matchP;
+                });
+                renderTable();
+                refreshStats();
+            } else showNotification('Error loading data', 'error');
         } catch (e) { showNotification('Failed to load data', 'error'); }
+    }
+
+    function populateDropdowns(data) {
+        const rbSel  = document.getElementById('requestedByFilter');
+        const purSel = document.getElementById('purposeFilter');
+
+        const savedRB  = currentRequestedBy;
+        const savedPur = currentPurpose;
+
+        // Requested By
+        const requesters = [...new Set(data.map(d => d.requested_by).filter(Boolean))].sort();
+        rbSel.innerHTML = '<option value="">All Requesters</option>';
+        requesters.forEach(r => { const o = document.createElement('option'); o.value = r; o.textContent = r; if (r === savedRB) o.selected = true; rbSel.appendChild(o); });
+
+        // Purpose
+        const purposes = [...new Set(data.map(d => cleanPurpose(d.purpose)).filter(p => p && p !== '—'))].sort();
+        purSel.innerHTML = '<option value="">All Purposes</option>';
+        purposes.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p.length > 40 ? p.slice(0, 40) + '…' : p; if (p === savedPur) o.selected = true; purSel.appendChild(o); });
     }
 
     async function refreshStats() {
@@ -269,7 +334,9 @@ $stats       = $statsResult->fetch_assoc();
             const res    = await fetch('pullout_api.php?action=get_pullouts&search=&status=');
             const result = await res.json();
             if (!result.success) return;
-            const all     = result.data;
+            const all     = IS_ADMIN
+                ? result.data
+                : result.data.filter(r => (r.requested_by || '') === SESSION_NAME);
             const pending = all.filter(r => r.status === 'PENDING').length;
             document.getElementById('statTotal').textContent    = all.length;
             document.getElementById('statPending').textContent  = pending;

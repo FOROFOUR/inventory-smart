@@ -4,8 +4,11 @@ require_once 'config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 
-$conn      = getDBConnection();
-$user_name = $_SESSION['name'] ?? 'Admin';
+$conn        = getDBConnection();
+$user_name   = $_SESSION['name'] ?? 'Admin';
+$sessionRole = $_SESSION['role'] ?? '';
+$sessionName = $_SESSION['name'] ?? '';
+$isAdmin     = strtoupper($sessionRole) === 'ADMIN';
 
 // =============================================================================
 // POST HANDLERS
@@ -229,6 +232,13 @@ $sql    = "SELECT p.*, a.brand, a.model, a.serial_number, c.name AS category_nam
            WHERE p.status = 'RELEASED'";
 $params = []; $types = '';
 
+// Non-admin: show only their own requests
+if (!$isAdmin) {
+    $sql    .= " AND p.requested_by = ?";
+    $params[] = $sessionName;
+    $types   .= 's';
+}
+
 if ($search !== '') {
     $sql    .= " AND (a.brand LIKE ? OR a.model LIKE ? OR p.requested_by LIKE ? OR p.from_location LIKE ? OR p.to_location LIKE ?)";
     $l       = "%$search%";
@@ -249,8 +259,24 @@ $rows   = [];
 while ($r = $result->fetch_assoc()) $rows[] = $r;
 $stmt->close();
 
-$totalReleased = (int) $conn->query("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RELEASED'")->fetch_row()[0];
-$totalReceived = (int) $conn->query("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RECEIVED'")->fetch_row()[0];
+$totalReleased = $isAdmin
+    ? (int) $conn->query("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RELEASED'")->fetch_row()[0]
+    : (int) $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RELEASED' AND requested_by = ?")->bind_param('s', $sessionName) + 0;
+
+$totalReceived = $isAdmin
+    ? (int) $conn->query("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RECEIVED'")->fetch_row()[0]
+    : (int) $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RECEIVED' AND requested_by = ?")->bind_param('s', $sessionName) + 0;
+
+// Proper counts for non-admin using prepared statements
+if (!$isAdmin) {
+    $stRel = $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RELEASED' AND requested_by = ?");
+    $stRel->bind_param('s', $sessionName); $stRel->execute();
+    $totalReleased = (int) $stRel->get_result()->fetch_row()[0]; $stRel->close();
+
+    $stRec = $conn->prepare("SELECT COUNT(*) FROM pull_out_transactions WHERE status = 'RECEIVED' AND requested_by = ?");
+    $stRec->bind_param('s', $sessionName); $stRec->execute();
+    $totalReceived = (int) $stRec->get_result()->fetch_row()[0]; $stRec->close();
+}
 
 $locRows   = $conn->query("SELECT DISTINCT TRIM(SUBSTRING_INDEX(loc, ' / ', 1)) AS main_loc FROM (SELECT to_location AS loc FROM pull_out_transactions WHERE to_location IS NOT NULL AND to_location != '' AND status = 'RELEASED') x ORDER BY main_loc");
 $locations = [];

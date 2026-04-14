@@ -36,6 +36,20 @@ try {
         case 'get_asset_transfers':   getAssetTransfers($conn);     break;
         case 'delete_asset_image':    deleteAssetImage($conn);      break;
         case 'add_asset_image':       addAssetImage($conn);         break;
+        case 'get_locations':  getLocations($conn);  break;
+case 'add_location':   addLocation($conn);   break;
+case 'get_requesters': getRequesters($conn); break;
+case 'get_locations':
+    $stmt = $conn->prepare("SELECT name FROM locations ORDER BY name ASC");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $locations = [];
+    while ($row = $result->fetch_assoc()) {
+        $locations[] = $row;
+    }
+    echo json_encode(['success' => true, 'data' => $locations]);
+    exit;
+        
         default: echo json_encode(['success' => false, 'error' => 'Invalid action']);
     }
 } catch (Exception $e) {
@@ -575,4 +589,76 @@ function addAssetImage($conn)
     } catch (Exception $e) {
         echo json_encode(['success'=>false,'error'=>'addAssetImage error: '.$e->getMessage()]);
     }
+}
+
+// =============================================================================
+// GET LOCATIONS
+// =============================================================================
+function getLocations($conn) {
+    try {
+        $result = $conn->query(
+            "SELECT name FROM locations WHERE is_active = 1 ORDER BY name"
+        );
+        $data = [];
+        while ($row = $result->fetch_assoc()) $data[] = $row['name'];
+        echo json_encode(['success' => true, 'data' => $data]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+function getRequesters($conn) {
+    try {
+        $result = $conn->query(
+            "SELECT name FROM users WHERE status = 'ACTIVE' ORDER BY name"
+        );
+        $data = [];
+        while ($row = $result->fetch_assoc()) $data[] = $row['name'];
+        echo json_encode(['success' => true, 'data' => $data]);
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    }
+}
+
+// =============================================================================
+// ADD LOCATION (admin only)
+// =============================================================================
+function addLocation($conn) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'error' => 'Invalid method']); return;
+    }
+    if (strtoupper($_SESSION['role'] ?? '') !== 'ADMIN') {
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']); return;
+    }
+    $data = json_decode(file_get_contents('php://input'), true);
+    $name = trim($data['name'] ?? '');
+    if (empty($name)) {
+        echo json_encode(['success' => false, 'error' => 'Location name required']); return;
+    }
+
+    // Duplicate check
+    $chk = $conn->prepare("SELECT id FROM locations WHERE name = ? LIMIT 1");
+    $chk->bind_param('s', $name);
+    $chk->execute();
+    if ($chk->get_result()->fetch_assoc()) {
+        echo json_encode(['success' => false, 'error' => 'Location already exists']); return;
+    }
+
+    $ins = $conn->prepare(
+        "INSERT INTO locations (name, is_active, created_at) VALUES (?, 1, NOW())"
+    );
+    $ins->bind_param('s', $name);
+    if (!$ins->execute()) {
+        echo json_encode(['success' => false, 'error' => 'Failed to save']); return;
+    }
+
+    $userName = $_SESSION['name'] ?? 'Admin';
+    $log  = $conn->prepare(
+        "INSERT INTO activity_logs (user_name, action, description) VALUES (?, 'ADD_LOCATION', ?)"
+    );
+    $desc = "Added new location: $name";
+    $log->bind_param('ss', $userName, $desc);
+    $log->execute();
+
+    echo json_encode(['success' => true, 'message' => "Location '$name' added."]);
 }

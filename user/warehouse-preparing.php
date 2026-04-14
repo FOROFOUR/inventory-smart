@@ -541,7 +541,7 @@ $notStarted = count(array_filter($rows, fn($r) => ($r['prep_step'] ?? 0) === 0))
             <hr class="divider">
             <div class="form-group">
                 <label>Released By <span style="color:var(--red)">*</span></label>
-                <input type="text" id="releaseReleasedBy" placeholder="Name of person releasing the asset">
+                <input type="text" id="releaseReleasedBy" placeholder="Name of person releasing the asset" readonly style="background:#f4f6f9;cursor:not-allowed;color:#555;">
             </div>
             <div class="form-group">
                 <label><i class='bx bx-truck' style="vertical-align:middle;margin-right:3px;"></i> Delivered By</label>
@@ -557,6 +557,7 @@ $notStarted = count(array_filter($rows, fn($r) => ($r['prep_step'] ?? 0) === 0))
 
 <script>
 const STEP_LABELS = ['Not Started', 'Located', 'Checked', 'Packed', 'Ready to Release'];
+const currentUserName = <?php echo json_encode($user_name); ?>;
 let currentViewId  = null;
 let cachedDetails  = {};
 
@@ -707,7 +708,7 @@ function openReleaseFromView() {
 // ── RELEASE MODAL ────────────────────────────────────────────────────────────
 async function openRelease(id) {
     document.getElementById('releaseId').value          = id;
-    document.getElementById('releaseReleasedBy').value  = '';
+    document.getElementById('releaseReleasedBy').value  = currentUserName;
     document.getElementById('releaseDeliveredBy').value = '';
     document.getElementById('releaseAssetName').textContent    = 'Loading...';
     document.getElementById('releaseAssetType').textContent    = '';

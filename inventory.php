@@ -1,6 +1,8 @@
 <?php
 ob_start();
 include 'sidebar.php';
+if (session_status() === PHP_SESSION_NONE) session_start();
+$isAdmin = strtoupper($_SESSION['role'] ?? '') === 'ADMIN';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -300,6 +302,13 @@ include 'sidebar.php';
                 <i class='bx bx-map-pin' style="position:absolute;right:.75rem;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;"></i>
                 <div class="custom-dropdown" id="locPanelDropdown"></div>
             </div>
+            <?php if ($isAdmin): ?>
+            <button onclick="openAddLocationModal()"
+                class="btn btn-primary"
+                style="white-space:nowrap;background:#00b894;border:none;">
+                <i class='bx bx-map-pin'></i> + Add Location
+            </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -435,9 +444,11 @@ include 'sidebar.php';
             <h2><i class='bx bx-transfer-alt'></i> Asset Transfer Request</h2>
             <button class="modal-close" onclick="closeModal('pulloutModal')"><i class='bx bx-x'></i></button>
         </div>
+
         <div class="modal-body">
             <div class="pullout-section">
                 <h3><i class='bx bx-transfer-alt'></i> Fill Transfer Details</h3>
+                
                 <form class="pullout-form" id="pulloutForm">
                     <input type="hidden" name="asset_id" id="modalAssetId">
                     <div class="form-group">
@@ -467,6 +478,7 @@ include 'sidebar.php';
                         </div>
                         <small>Where is the asset going?</small>
                     </div>
+                    
                     <div class="form-group subloc-group">
                         <label>From Sub-Location</label>
                         <input type="text" name="from_sub_location" id="from_sub_location_value" readonly style="background:#f1f2f6;color:var(--text-secondary);cursor:not-allowed;">
@@ -798,12 +810,70 @@ function closeModal(modalId){
 }
 
 // ── Location + Dropdown data ──────────────────────────────────────────────────
-const LOCATIONS=["QC WareHouse","Pulilan WareHouse","CFE","CFE 2","GSI","ENT Vertis","CBTL A30","CBTL FLZ","CBTL TRK","CBTL TR3","CBTL FVW","CBTL UT2","CBTL UTC","NN UTC","CBTL RNG","CBTL GB5","CBTL BHS","CBTL ANE","CBTL ATC","CBTL CLN","CBTL LN2","CBTL GFD","CBTL SMA","NN SMA","CBTL RAO","NN RAO","CBTL SFW","NN SFW","CBTL RPP","CBTL MID","CBTL MPF","CBTL GAL","CBTL KCT","CBTL RGS","CBTL MRQ","NN CLN","CBTL GL2","CBTL CIT","CBTL NUV","CBTL SPK","CBTL SRN","CBTL MAG","CBTL AB1","NN ABA","NN VER","CBTL VER","NN NUV","CBTL HPT","CBTL CAP","CBTL B11","CBTL CBL","CBTL AY2","CBTL AYT","CBTL RGC","CBTL RCY","CBTL SEA","CBTL CRO","CBTL CR2","CBTL SCP","CBTL GML","CBTL ABZ","CBTL LAN","NN EVO","CBTL SMC","CBTL RWL","CBTL STM","NN LCT","CBTL VRT","CBTL RGT","DSY HSS","DSY OPU","NN FIL","CBTL MIT","NN RML","NN EVI","CBTL MCK","CBTL SER","DSY OKA","CBTL MPL","CBTL MOA","NN OKA","NN UPM","CBTL UPM","CBTL NPK","CBTL PDM","CBTL MG2","CBTL MZA","CBTL JAZ","CBTL PQL","NN GWM","CBTL GWM","CBTL GWC","NN HSS","CBTL SGC","CBTL TOL","CBTL AUR","CBTL LPA","CBTL SMB","CBTL PSG","CBTL BWG","CBTL TNZ","CBTL FMM","CBTL SLN","NN LGC","CBTL LGC","CBTL RSJ","CBTL FIL","CBTL NDT","CBTL ACA","CBTL FSH","CBTL CEL","NN RWL","CBTL LAC","CBTL CRK","CBTL MAK","CBTL BTN","CBTL CAU","CBTL HAI","CBTL SSJ","CBTL SEO","CBTL SHW","CBTL MAX","CBTL SMX","NN KLT","NN 3CN","NN GFD","CBTL SLE","CBTL NEO","CBTL SOL","CBTL BIC","NN BIC","NN TOL","CBTL EWM","CBTL CL1","CBTL CL2","CBTL SMP","CBTL TEL","CBTL SMS","CBTL SMD","CBTL SMI","CBTL SMN","CBTL MEG","NN SSR","CBTL SSR","NN SGC","CBTL WML","CBTL ORT","CBTL ADO","CBTL MSB","NN OPU","NN GAL","CBTL SMG","CBTL SPP","CBTL FWI","CBTL ATR","CBTL BSD","CBTL SBD","CBTL CHM","CBTL EB1","CBTL EB2","CBTL LSP","CBTL TEG","CBTL CH2","CBTL AZL","CBTL LKK","CBTL KCC","CBTL KCZ","NN PDM","NN VIA","CBTL SMN-DS","CBTL AOA","CBTL BDO","CBTL BSM","CBTL BUR","CBTL DDP","CBTL DFO","CBTL DLS","CBTL ENB","CBTL KAT","CBTL LAP","CBTL MOR","CBTL OPD","CBTL SAL","CBTL SLX","CBTL SX2","CBTL WTC","CBTL TRG","CBTL UPN","CBTL UST","CBTL VRP","CBTL PHN","CBTL PHL","CBTL SMS-DS","CBTL WFG","CBTL SMM-DS","CBTL MEN","CBTL SSR-DS","CBTL SFW-DS","CBTL SBT-DS","CBTL SNV-DS","CBTL SSJ-DS","CBTL SRS-DS","CBTL STM-DS","CBTL TNZ-DS","CBTL SRO-DS","CBTL WT1","CBTL OLO-DS","CBTL SUC-DS","CBTL CAU-DS","CBTL SMT-DS","CBTL SPP-DS","CBTL DAE-DS","CBTL MAS-DS","CBTL ROX-DS","CBTL MLO-DS","CBTL CLC-DS","CBTL DVO-DS","CBTL MEG-DS","CBTL SEA-DS","CBTL CON-DS","CBTL SMC-DS","CBTL CLK-DS","CBTL TAR-DS","CBTL ILO-DS","CBTL BCD-DS","CBTL LAN-DS","CBTL SLZ-DS","CBTL BAG-DS","CBTL MKT-DS","CBTL MPO-DS","CBTL TUG-DS","CBTL CUB-DS","CBTL BFP-DS","CBTL BIC-DS","CBTL AUR-DS","CBTL MRK-DS","CBTL LOG-DS","CBTL SGC-DS","CBTL MSA-DS","CBTL BWG-DS","CBTL BTN-DS","CBTL TRC-DS","CBTL SBR2-DS","CBTL EST-DS","CBTL TAY-DS","CBTL SPB-DS","CBTL TEL-DS","CBTL BYD-DS","CBTL SEO-DS","CBTL SCP-DS","CBTL SFN-DS","CBTL LUC-DS","CBTL LUN-DS"];
-const PURPOSES=["Consumable","Testing","Installation","Setup","Deployment","Defective","Service Unit","Buffer"];
-const REQUESTERS=["Allen","Arbie","Arwin","Christian","Darwin","Don","Dyzel","Gerr","Gheo","Gilbert","Jackie","Jake","JB","JC","Jessica","Jubilee","Lea","Mar","Patrick","Princess","Ricky","Ron","Rai","Toto","Admin"];
-const DROPDOWN_CONFIG={from:{data:LOCATIONS,searchId:'from_search',valueId:'from_location_value',dropdownId:'from_dropdown'},to:{data:LOCATIONS,searchId:'to_search',valueId:'to_location_value',dropdownId:'to_dropdown'},purpose:{data:PURPOSES,searchId:'purpose_search',valueId:'purpose_value',dropdownId:'purpose_dropdown'},requested_by:{data:REQUESTERS,searchId:'requested_by_search',valueId:'requested_by_value',dropdownId:'requested_by_dropdown'}};
 
-function buildDropdown(key){const cfg=DROPDOWN_CONFIG[key];const dd=document.getElementById(cfg.dropdownId);const term=document.getElementById(cfg.searchId).value.toLowerCase().trim();const matches=cfg.data.filter(v=>v.toLowerCase().includes(term));dd.innerHTML='';if(!matches.length){dd.innerHTML='<div class="dropdown-item no-match">No results found</div>';}else{matches.forEach(val=>{const item=document.createElement('div');item.className='dropdown-item';item.textContent=val;item.onmousedown=()=>selectDropdownItem(key,val);dd.appendChild(item);});}}
+// ── Dynamic Data from Database ───────────────────────────────────────────────
+let LOCATIONS  = [];
+let REQUESTERS = [];
+const PURPOSES  = ["Consumable","Testing","Installation","Setup","Deployment","Defective","Service Unit","Buffer"]; // Pwede mo rin gawing dynamic kung gusto
+
+// Load Locations from DB
+async function loadLocations() {
+    try {
+        const res = await fetch('inventory_api.php?action=get_locations');
+        const result = await res.json();
+        if (result.success) {
+            LOCATIONS = result.data || [];
+            // Refresh location panel after loading
+            buildLocPanelDropdown(document.getElementById('locationSearchInput').value || '');
+        }
+    } catch(e) {
+        console.error("Failed to load locations", e);
+    }
+}
+
+// Load Requesters (Requested By)
+async function loadRequesters() {
+    try {
+        const res = await fetch('inventory_api.php?action=get_requesters');
+        const result = await res.json();
+        if (result.success) {
+            REQUESTERS = result.data || [];
+        }
+    } catch(e) {
+        console.error("Failed to load requesters", e);
+    }
+}
+
+const DROPDOWN_CONFIG = {
+    from:       { data: () => LOCATIONS,  searchId: 'from_search',      valueId: 'from_location_value', dropdownId: 'from_dropdown' },
+    to:         { data: () => LOCATIONS,  searchId: 'to_search',        valueId: 'to_location_value',   dropdownId: 'to_dropdown' },
+    purpose:    { data: () => PURPOSES,   searchId: 'purpose_search',   valueId: 'purpose_value',       dropdownId: 'purpose_dropdown' },
+    requested_by:{ data: () => REQUESTERS,searchId: 'requested_by_search',valueId:'requested_by_value', dropdownId:'requested_by_dropdown' }
+};
+
+function buildDropdown(key) {
+    const cfg = DROPDOWN_CONFIG[key];
+    const dd = document.getElementById(cfg.dropdownId);
+    const term = document.getElementById(cfg.searchId).value.toLowerCase().trim();
+    
+    // Kunin ang latest data (dahil maaaring function na)
+    let data = typeof cfg.data === 'function' ? cfg.data() : cfg.data;
+    
+    const matches = data.filter(v => v.toLowerCase().includes(term));
+    
+    dd.innerHTML = '';
+    if (!matches.length) {
+        dd.innerHTML = '<div class="dropdown-item no-match">No results found</div>';
+    } else {
+        matches.forEach(val => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.textContent = val;
+            item.onmousedown = () => selectDropdownItem(key, val);
+            dd.appendChild(item);
+        });
+    }
+}
 function filterDropdown(key){buildDropdown(key);document.getElementById(DROPDOWN_CONFIG[key].valueId).value='';document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='block';}
 function showDropdown(key){buildDropdown(key);document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='block';}
 function hideDropdown(key){setTimeout(()=>{document.getElementById(DROPDOWN_CONFIG[key].dropdownId).style.display='none';if(!document.getElementById(DROPDOWN_CONFIG[key].valueId).value)document.getElementById(DROPDOWN_CONFIG[key].searchId).value='';},200);}
@@ -894,7 +964,11 @@ document.getElementById('subcategoryFilter').addEventListener('change', loadInve
 document.getElementById('searchInput').addEventListener('input',function(){renderInventoryTable();clearTimeout(window._searchTimer);window._searchTimer=setTimeout(loadInventory,300);});
 document.getElementById('statusFilter').addEventListener('change',loadInventory);
 document.querySelectorAll('.modal-overlay').forEach(overlay=>{overlay.addEventListener('click',function(e){if(e.target===this)closeModal(this.id);});});
-document.addEventListener('DOMContentLoaded',function(){loadCategories();loadInventory();});
+document.addEventListener('DOMContentLoaded', async function(){
+    loadCategories();
+    await Promise.all([loadLocations(), loadRequesters()]);  // sabay na i-load
+    loadInventory();
+});
 
 // ── Beginning Balance preview ─────────────────────────────────────────────────
 let _editReleasedCount=0,_editReturnedCount=0;
@@ -908,6 +982,213 @@ style.textContent=`
 `;
 document.head.appendChild(style);
 </script>
+
+<!-- ══════════════════════════════════════════════════════════════
+     Add Location Modal (Admin only)
+══════════════════════════════════════════════════════════════ -->
+<?php if ($isAdmin): ?>
+<div id="addLocModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+     z-index:99999;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:420px;
+                padding:2rem;box-shadow:0 20px 60px rgba(0,0,0,0.3);margin:1rem;
+                animation:slideUp .3s ease;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="margin:0;font-size:1.1rem;font-weight:700;display:flex;align-items:center;gap:0.5rem;">
+                <i class='bx bx-map-pin' style="color:#00b894;"></i> Add New Location
+            </h3>
+            <button onclick="closeAddLocationModal()"
+                style="background:none;border:none;font-size:1.5rem;cursor:pointer;
+                       color:#636e72;width:32px;height:32px;border-radius:6px;display:flex;
+                       align-items:center;justify-content:center;">
+                <i class='bx bx-x'></i>
+            </button>
+        </div>
+
+        <!-- Step 1: Admin Password -->
+        <div id="addLocStep1">
+            <p style="font-size:0.875rem;color:#636e72;margin-bottom:1.25rem;
+                      display:flex;align-items:center;gap:0.4rem;">
+                <i class='bx bx-lock-alt' style="color:#e17055;font-size:1.1rem;"></i>
+                Enter your admin password to continue.
+            </p>
+            <div style="margin-bottom:1.25rem;">
+                <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.4rem;">
+                    Admin Password <span style="color:#d63031;">*</span>
+                </label>
+                <input type="password" id="addLocPassword" placeholder="Enter admin password..."
+                    style="width:100%;padding:0.75rem;border:2px solid #dfe6e9;border-radius:8px;
+                           font-family:'Space Grotesk',sans-serif;font-size:0.9rem;outline:none;
+                           transition:border-color .2s;"
+                    onfocus="this.style.borderColor='#00b894'"
+                    onblur="this.style.borderColor='#dfe6e9'"
+                    onkeydown="if(event.key==='Enter') verifyLocPassword()">
+                <small id="addLocPwError"
+                    style="color:#d63031;display:none;margin-top:0.4rem;font-size:0.82rem;">
+                    <i class='bx bx-error-circle'></i> Incorrect password. Try again.
+                </small>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button onclick="closeAddLocationModal()"
+                    style="padding:0.7rem 1.25rem;background:#f8f9fa;border:2px solid #dfe6e9;
+                           border-radius:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+                           font-size:0.9rem;font-weight:600;color:#2d3436;">
+                    Cancel
+                </button>
+                <button onclick="verifyLocPassword()" id="addLocVerifyBtn"
+                    style="padding:0.7rem 1.25rem;background:#00b894;color:white;border:none;
+                           border-radius:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+                           font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:0.4rem;">
+                    <i class='bx bx-check-shield'></i> Verify
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Enter new location name -->
+        <div id="addLocStep2" style="display:none;">
+            <p style="font-size:0.875rem;color:#00b894;font-weight:600;margin-bottom:1.25rem;
+                      display:flex;align-items:center;gap:0.4rem;">
+                <i class='bx bx-check-circle'></i> Verified! Enter the new location name.
+            </p>
+            <div style="margin-bottom:1.25rem;">
+                <label style="font-size:0.85rem;font-weight:600;display:block;margin-bottom:0.4rem;">
+                    Location Name <span style="color:#d63031;">*</span>
+                </label>
+                <input type="text" id="addLocName" placeholder="e.g., Warehouse B, Office 3..."
+                    style="width:100%;padding:0.75rem;border:2px solid #dfe6e9;border-radius:8px;
+                           font-family:'Space Grotesk',sans-serif;font-size:0.9rem;outline:none;
+                           transition:border-color .2s;"
+                    onfocus="this.style.borderColor='#00b894'"
+                    onblur="this.style.borderColor='#dfe6e9'"
+                    onkeydown="if(event.key==='Enter') saveNewLocation()">
+                <small id="addLocNameError"
+                    style="color:#d63031;display:none;margin-top:0.4rem;font-size:0.82rem;"></small>
+            </div>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+                <button onclick="closeAddLocationModal()"
+                    style="padding:0.7rem 1.25rem;background:#f8f9fa;border:2px solid #dfe6e9;
+                           border-radius:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+                           font-size:0.9rem;font-weight:600;color:#2d3436;">
+                    Cancel
+                </button>
+                <button onclick="saveNewLocation()" id="addLocSaveBtn"
+                    style="padding:0.7rem 1.25rem;background:#00b894;color:white;border:none;
+                           border-radius:8px;cursor:pointer;font-family:'Space Grotesk',sans-serif;
+                           font-size:0.9rem;font-weight:600;display:inline-flex;align-items:center;gap:0.4rem;">
+                    <i class='bx bx-save'></i> Save Location
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let _locVerified = false;
+
+function openAddLocationModal() {
+    _locVerified = false;
+    document.getElementById('addLocPassword').value       = '';
+    document.getElementById('addLocPwError').style.display   = 'none';
+    document.getElementById('addLocStep1').style.display     = 'block';
+    document.getElementById('addLocStep2').style.display     = 'none';
+    document.getElementById('addLocNameError').style.display = 'none';
+    const modal = document.getElementById('addLocModal');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('addLocPassword').focus(), 150);
+}
+
+function closeAddLocationModal() {
+    document.getElementById('addLocModal').style.display = 'none';
+}
+
+async function verifyLocPassword() {
+    const pw  = document.getElementById('addLocPassword').value.trim();
+    const btn = document.getElementById('addLocVerifyBtn');
+    const err = document.getElementById('addLocPwError');
+    if (!pw) { err.style.display = 'block'; return; }
+
+    btn.disabled  = true;
+    btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Verifying...";
+    err.style.display = 'none';
+
+    try {
+        const res    = await fetch('inventory_api.php?action=verify_admin_password', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ password: pw })
+        });
+        const result = await res.json();
+
+        if (result.success) {
+            _locVerified = true;
+            document.getElementById('addLocStep1').style.display = 'none';
+            document.getElementById('addLocStep2').style.display = 'block';
+            if (document.getElementById('addLocName')) {
+                document.getElementById('addLocName').value = '';
+                setTimeout(() => document.getElementById('addLocName').focus(), 100);
+            }
+        } else {
+            err.style.display = 'block';
+        }
+    } catch(e) {
+        err.style.display = 'block';
+    }
+
+    btn.disabled  = false;
+    btn.innerHTML = "<i class='bx bx-check-shield'></i> Verify";
+}
+
+async function saveNewLocation() {
+    if (!_locVerified) return;
+    const name    = document.getElementById('addLocName').value.trim();
+    const errEl   = document.getElementById('addLocNameError');
+    const saveBtn = document.getElementById('addLocSaveBtn');
+
+    errEl.style.display = 'none';
+    if (!name) {
+        errEl.textContent   = 'Please enter a location name.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    saveBtn.disabled  = true;
+    saveBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Saving...";
+
+    try {
+        const res    = await fetch('inventory_api.php?action=add_location', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ name })
+        });
+        const result = await res.json();
+
+       if (result.success) {
+    closeAddLocationModal();
+    showNotification(`Location "${name}" added successfully!`, 'success');
+    
+    // Refresh locations
+    await loadLocations();
+    loadInventory();   // para mag-refresh din ang table
+
+        } else {
+            errEl.textContent   = result.error || 'Failed to save location.';
+            errEl.style.display = 'block';
+        }
+    } catch(e) {
+        errEl.textContent   = 'Error saving location.';
+        errEl.style.display = 'block';
+    }
+
+    saveBtn.disabled  = false;
+    saveBtn.innerHTML = "<i class='bx bx-save'></i> Save Location";
+}
+
+// Close on backdrop click
+document.getElementById('addLocModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddLocationModal();
+});
+</script>
+<?php endif; ?>
+
 </body>
 </html>
 <?php ob_end_flush(); ?>
