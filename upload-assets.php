@@ -46,6 +46,234 @@ $userName = $user['name'];
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        /* ── RESPONSIVE: Tablet (≤1024px) ── */
+        @media (max-width: 1024px) {
+            .home {
+                left: 0;
+                width: 100%;
+                padding: 1.25rem;
+            }
+
+            .page-header-section {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+
+            .header-stats {
+                width: 100%;
+            }
+        }
+
+        /* ── RESPONSIVE: Mobile (≤768px) ── */
+        @media (max-width: 768px) {
+            .home {
+                left: 0;
+                width: 100%;
+                padding: 1rem;
+                min-height: unset;
+            }
+
+            /* Page header */
+            .page-header-section {
+                flex-direction: column !important;
+                gap: 0.75rem;
+            }
+
+            .header-content {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .header-icon {
+                width: 38px !important;
+                height: 38px !important;
+                font-size: 1.2rem !important;
+            }
+
+            .header-text h1 {
+                font-size: 1.2rem !important;
+            }
+
+            /* Tabs */
+            .tabs-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                gap: 0.25rem !important;
+            }
+
+            .tabs-container::-webkit-scrollbar { display: none; }
+
+            .tab-button {
+                white-space: nowrap;
+                font-size: 0.8rem !important;
+                padding: 0.5rem 0.85rem !important;
+            }
+
+            /* Form fields stack to 1 column */
+            .form-row {
+                grid-template-columns: 1fr !important;
+            }
+
+            .form-field {
+                min-width: unset !important;
+            }
+
+            /* Image upload grid */
+            .image-upload-grid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+                gap: 0.5rem !important;
+            }
+
+            .upload-box {
+                min-height: 90px !important;
+            }
+
+            /* Content card padding */
+            .content-card {
+                padding: 1rem !important;
+                border-radius: 10px !important;
+            }
+
+            /* Excel guide steps */
+            .excel-guide {
+                flex-direction: column !important;
+            }
+
+            .guide-step {
+                flex-direction: row !important;
+                gap: 0.75rem !important;
+            }
+
+            /* Form actions buttons */
+            .form-actions {
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+
+            .form-actions .btn {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+
+            .upload-actions {
+                flex-direction: column !important;
+            }
+
+            .upload-actions .btn {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+
+            /* History panel filters */
+            #history-panel > div[style*="display:flex"] {
+                flex-direction: column !important;
+            }
+
+            /* History table - horizontal scroll */
+            #history-panel table {
+                min-width: 700px;
+            }
+
+            /* Confirm box */
+            .confirm-box {
+                flex-direction: column !important;
+            }
+
+            .confirm-info {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.5rem !important;
+            }
+
+            .confirm-actions {
+                width: 100%;
+                flex-direction: column !important;
+            }
+
+            .confirm-actions .btn {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+
+            /* Batch modal */
+            #batchModal {
+                padding: 0.5rem !important;
+            }
+
+            #batchModal > div {
+                border-radius: 10px !important;
+                margin: 0 !important;
+            }
+
+            #batchModal > div > div:last-child {
+                max-height: 80vh !important;
+                padding: 1rem !important;
+            }
+
+            /* Summary stats */
+            .preview-summary {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .summary-stat {
+                font-size: 0.8rem !important;
+                padding: 0.4rem 0.75rem !important;
+            }
+
+            /* Drop zone */
+            .file-drop-zone {
+                padding: 1.5rem 1rem !important;
+            }
+
+            .drop-zone-content i {
+                font-size: 2.5rem !important;
+            }
+
+            .drop-zone-content h3 {
+                font-size: 1rem !important;
+            }
+
+            /* Header stat */
+            .stat-item {
+                flex-direction: row !important;
+                gap: 0.4rem !important;
+                align-items: center !important;
+            }
+        }
+
+        /* ── RESPONSIVE: Small phones (≤480px) ── */
+        @media (max-width: 480px) {
+            .home {
+                padding: 0.75rem;
+            }
+
+            .header-text h1 {
+                font-size: 1rem !important;
+            }
+
+            .tab-button span {
+                display: none;
+            }
+
+            .tab-button {
+                padding: 0.5rem 0.75rem !important;
+                font-size: 1.1rem !important;
+            }
+
+            .image-upload-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+            }
+
+            .alert {
+                font-size: 0.85rem !important;
+                padding: 0.75rem 1rem !important;
+            }
+        }
+
         .preview-table-wrap {
             overflow-x: auto;
             margin-top: 1rem;
@@ -511,8 +739,8 @@ $userName = $user['name'];
             <div class="tab-panel" id="history-panel">
                   <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;
-                flex-wrap:wrap;gap:1rem;margin-bottom:1.25rem;">
-        <div style="display:flex;align-items:center;gap:0.6rem;">
+                flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;">
+        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
             <i class='bx bx-history' style="font-size:1.4rem;color:#3b82f6;"></i>
             <h3 style="margin:0;font-size:1.05rem;font-weight:600;color:#1e293b;">Asset Add History</h3>
             <span style="background:#eff6ff;color:#2563eb;border-radius:20px;
@@ -629,9 +857,9 @@ $userName = $user['name'];
      BATCH / ASSET DETAIL MODAL
      ══════════════════════════════════════════════════════════════════════════ -->
 <div id="batchModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);
-     z-index:9000;overflow-y:auto;padding:2rem 1rem;">
+     z-index:9000;overflow-y:auto;padding:clamp(0.5rem,3vw,2rem) clamp(0.5rem,2vw,1rem);">
     <div style="background:#fff;border-radius:14px;max-width:1100px;margin:0 auto;
-                box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;">
+                box-shadow:0 20px 60px rgba(0,0,0,0.25);overflow:hidden;width:100%;">
  
         <div style="display:flex;align-items:center;justify-content:space-between;
                     padding:1.1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f8fafc;">
@@ -648,7 +876,7 @@ $userName = $user['name'];
             </button>
         </div>
  
-        <div style="padding:1.25rem 1.5rem;max-height:75vh;overflow-y:auto;" id="modalBody">
+        <div style="padding:1.25rem 1.5rem;max-height:min(75vh, 600px);overflow-y:auto;" id="modalBody">
             <div style="text-align:center;padding:2rem;color:#9ca3af;">
                 <i class='bx bx-loader-alt bx-spin' style="font-size:2rem;"></i>
                 <p style="margin:0.5rem 0 0;">Loading...</p>
@@ -662,6 +890,43 @@ $userName = $user['name'];
 
     <script src="js/upload-asses.js"></script>
     <script>
+        // ── Sidebar collapse responsive sync ─────────────────────────────────
+        (function syncSidebarState() {
+            const isMobile = window.innerWidth <= 768;
+            const homeEl   = document.querySelector('.home');
+            if (!homeEl) return;
+
+            if (isMobile) {
+                homeEl.style.left  = '0';
+                homeEl.style.width = '100%';
+            }
+
+            // Watch for sidebar toggle class changes (if sidebar.php uses body class or sidebar class)
+            const observer = new MutationObserver(() => {
+                if (window.innerWidth <= 768) return; // skip on mobile; CSS handles it
+                const sidebar = document.querySelector('.sidebar');
+                if (!sidebar) return;
+                const isCollapsed = sidebar.classList.contains('close') || sidebar.classList.contains('collapsed');
+                homeEl.style.left  = isCollapsed ? '78px' : '260px';
+                homeEl.style.width = isCollapsed ? 'calc(100% - 78px)' : 'calc(100% - 260px)';
+            });
+
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+
+            // Also handle window resize
+            window.addEventListener('resize', () => {
+                if (window.innerWidth <= 768) {
+                    homeEl.style.left  = '0';
+                    homeEl.style.width = '100%';
+                } else {
+                    const sb = document.querySelector('.sidebar');
+                    const collapsed = sb && (sb.classList.contains('close') || sb.classList.contains('collapsed'));
+                    homeEl.style.left  = collapsed ? '78px' : '260px';
+                    homeEl.style.width = collapsed ? 'calc(100% - 78px)' : 'calc(100% - 260px)';
+                }
+            });
+        })();
         // ── Hidden tracking type ──────────────────────────────────────────────
         document.querySelectorAll('input[name="tracking_type"]').forEach(el => el.removeAttribute('required'));
         const trackingInput = document.createElement('input');

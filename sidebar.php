@@ -392,7 +392,98 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
     .npill.pending  { background: #fef3cd; color: #d68910; }
     .npill.prep     { background: #e8d5f5; color: #7d3c98; }
     .npill.released { background: #d5f5e3; color: #1e8449; }
+
+    /* ── MOBILE HAMBURGER BUTTON ── */
+    .mobile-menu-btn {
+        display: none;
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 9999;
+        background: #fff;
+        border: none;
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 12px rgba(0,0,0,.15);
+        transition: box-shadow .2s;
+    }
+    .mobile-menu-btn:hover { box-shadow: 0 4px 18px rgba(0,0,0,.22); }
+    .mobile-menu-btn i { font-size: 1.4rem; color: #2c3e50; }
+
+    /* ── SIDEBAR OVERLAY (mobile) ── */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 8000;
+        backdrop-filter: blur(2px);
+        animation: fadeInOverlay .2s ease;
+    }
+    .sidebar-overlay.active { display: block; }
+
+    @keyframes fadeInOverlay {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
+    /* ── RESPONSIVE: Mobile (≤768px) ── */
+    @media (max-width: 768px) {
+        .mobile-menu-btn { display: flex; }
+
+        /* Sidebar: hidden off-screen, slides in */
+        .sidebar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            z-index: 8500 !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            width: 260px !important;
+        }
+
+        .sidebar.mobile-open {
+            transform: translateX(0) !important;
+        }
+
+        /* Hide the desktop toggle arrow — hamburger handles it */
+        .sidebar .toggle {
+            display: none !important;
+        }
+
+        /* Notification bell stays top-right */
+        .notif-bell-wrap {
+            top: 14px;
+            right: 14px;
+        }
+
+        /* Dropdown fits screen */
+        .notif-dropdown {
+            width: min(320px, calc(100vw - 28px));
+            right: 0;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .notif-dropdown {
+            width: calc(100vw - 28px);
+            right: -14px;
+        }
+    }
 </style>
+
+<!-- ── MOBILE HAMBURGER ────────────────────────────────────────────────── -->
+<button class="mobile-menu-btn" id="mobileMenuBtn" onclick="toggleMobileSidebar()">
+    <i class='bx bx-menu' id="mobileMenuIcon"></i>
+</button>
+
+<!-- ── SIDEBAR OVERLAY ────────────────────────────────────────────────── -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
 
 <!-- ── NOTIFICATION BELL ───────────────────────────────────────────────── -->
 <div class="notif-bell-wrap">
@@ -638,10 +729,51 @@ $totalBell = $pendingCount + $prepCount + $releasedCount;
         document.head.appendChild(favicon);
     })();
 
-    // ── SIDEBAR: Manual toggle only (no hover) ────────────────────────────────
+    // ── SIDEBAR: Desktop toggle (collapse/expand) ─────────────────────────────
     const sidebar = document.querySelector(".sidebar");
     const toggle  = document.querySelector(".toggle");
     toggle.addEventListener("click", () => sidebar.classList.toggle("close"));
+
+    // ── MOBILE SIDEBAR TOGGLE ─────────────────────────────────────────────────
+    function toggleMobileSidebar() {
+        sidebar.classList.contains('mobile-open') ? closeMobileSidebar() : openMobileSidebar();
+    }
+
+    function openMobileSidebar() {
+        sidebar.classList.add('mobile-open');
+        document.getElementById('sidebarOverlay').classList.add('active');
+        document.getElementById('mobileMenuIcon').className = 'bx bx-x';
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileSidebar() {
+        sidebar.classList.remove('mobile-open');
+        document.getElementById('sidebarOverlay').classList.remove('active');
+        document.getElementById('mobileMenuIcon').className = 'bx bx-menu';
+        document.body.style.overflow = '';
+    }
+
+    // Auto-close when nav link is clicked on mobile
+    document.querySelectorAll('.sidebar .nav-link a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) closeMobileSidebar();
+        });
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) closeMobileSidebar();
+    });
+
+    // Reset on resize to desktop
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            sidebar.classList.remove('mobile-open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+            document.getElementById('mobileMenuIcon').className = 'bx bx-menu';
+            document.body.style.overflow = '';
+        }
+    });
 
     // ── NOTIFICATION BELL ─────────────────────────────────────────────────────
     function toggleNotif(e) {
