@@ -176,32 +176,159 @@ while ($lr = $locRows->fetch_assoc()) { if ($lr['main_loc']) $locations[] = $lr[
     --primary: #263dc7; --primary-dark: #2f538a;
     --amber: #f39c12;   --amber-light: #fef9ed;
     --green: #27ae60;   --red: #e74c3c;
-    --purple: #8e44ad;  --info: #3498db;
     --bg: #f4f6f9;      --white: #fff;
     --text: #2c3e50;    --muted: #7f8c8d;
     --border: #e8ecf0;  --shadow: 0 2px 12px rgba(0,0,0,.07);
-    --radius: 12px;
+    --radius: 14px;
 }
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Space Grotesk',sans-serif; }
-body { background: var(--bg); color: var(--text); }
-.content { margin-left: 88px; padding: 2rem; transition: margin-left .3s; }
+body { background: var(--bg); color: var(--text); line-height:1.5; }
+
+.content { 
+    margin-left: 88px; 
+    padding: 1.5rem; 
+    transition: margin-left .3s; 
+    min-height: 100vh; 
+}
 .sidebar:not(.close) ~ .content { margin-left: 260px; }
-.page-header { background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); border-radius: 16px; padding: 2rem 2rem 1.5rem; color: white; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
+
+/* Page Header */
+.page-header { 
+    background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); 
+    border-radius: 16px; 
+    padding: 2rem 1.75rem; 
+    color: white; 
+    margin-bottom: 1.5rem; 
+    position: relative; 
+    overflow: hidden; 
+}
+.page-header h1 { 
+    font-size: 1.85rem; 
+    font-weight:700; 
+    display:flex; 
+    align-items:center; 
+    gap:.6rem; 
+}
+
+/* Stats */
+.stats-row { 
+    display:grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); 
+    gap:1rem; 
+    margin-bottom:1.75rem; 
+}
+.stat-card { 
+    background:var(--white); 
+    border-radius:var(--radius); 
+    padding:1.25rem; 
+    box-shadow:var(--shadow); 
+    display:flex; 
+    align-items:center; 
+    gap:1rem; 
+}
+
+/* Filters */
+.filters { 
+    background:var(--white); 
+    border-radius:var(--radius); 
+    padding:1.25rem; 
+    box-shadow:var(--shadow); 
+    display:flex; 
+    gap:1rem; 
+    flex-wrap:wrap; 
+    align-items:center; 
+    margin-bottom:1.5rem; 
+}
+.search-wrap { position:relative; flex:1; min-width:220px; }
+.search-wrap input { padding-left:2.5rem; width:100%; padding:.75rem 1rem; border:1.5px solid var(--border); border-radius:8px; }
+.search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--muted); }
+
+/* Table */
+.table-wrap { 
+    background:var(--white); 
+    border-radius:var(--radius); 
+    box-shadow:var(--shadow); 
+    overflow:hidden; 
+}
+.table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+table { 
+    width:100%; 
+    min-width:980px; 
+    border-collapse:collapse; 
+    font-size:.87rem; 
+}
+thead th { 
+    padding:1rem .85rem; 
+    background:linear-gradient(135deg,#2d3436 0%,#34495e 100%); 
+    color:white; 
+    text-align:left; 
+    font-size:.78rem; 
+    text-transform:uppercase; 
+    letter-spacing:.5px; 
+    white-space:nowrap; 
+}
+tbody td { padding:.9rem .85rem; vertical-align:middle; }
+
+/* Modals */
+.modal-overlay { 
+    display:none; 
+    position:fixed; 
+    inset:0; 
+    background:rgba(0,0,0,.6); 
+    backdrop-filter:blur(5px); 
+    z-index:9999; 
+    align-items:center; 
+    justify-content:center; 
+    padding:1rem; 
+}
+.modal-overlay.active { display:flex; }
+.modal { 
+    background:var(--white); 
+    border-radius:16px; 
+    width:100%; 
+    max-width:680px; 
+    max-height:92vh; 
+    overflow-y:auto; 
+    box-shadow:0 20px 60px rgba(0,0,0,.3); 
+}
+.modal-wide { max-width:720px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .content { margin-left:0 !important; padding:1rem; }
+    .page-header { padding:1.75rem 1.5rem; }
+    .page-header h1 { font-size:1.65rem; }
+    
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    
+    .filters { 
+        flex-direction:column; 
+        align-items:stretch; 
+    }
+    .search-wrap { min-width:100%; }
+    
+    .actions { flex-direction:column; gap:.5rem; }
+    .btn { width:100%; justify-content:center; }
+}
+
+@media (max-width: 480px) {
+    table { font-size:.82rem; }
+    thead th, tbody td { padding:.8rem .6rem; }
+}
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Space Grotesk',sans-serif; }
+
+
+
 .page-header::before { content:''; position:absolute; top:-50%; right:-5%; width:300px; height:300px; background:rgba(255,255,255,.08); border-radius:50%; }
-.page-header h1 { font-size:1.6rem; font-weight:700; position:relative; z-index:1; display:flex; align-items:center; gap:.6rem; }
 .page-header p  { font-size:.9rem; opacity:.85; margin-top:.25rem; position:relative; z-index:1; }
-.stats-row { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:1.5rem; }
-.stat-card { background:var(--white); border-radius:var(--radius); padding:1.25rem 1.5rem; box-shadow:var(--shadow); display:flex; align-items:center; gap:1rem; }
 .stat-icon { width:46px; height:46px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
 .stat-icon.amber { background:#fef3cd; color:var(--amber); }
 .stat-icon.blue  { background:#d6eaf8; color:var(--info); }
 .stat-value { font-size:1.6rem; font-weight:700; line-height:1; }
 .stat-label { font-size:.75rem; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.5px; }
-.filters { background:var(--white); border-radius:var(--radius); padding:1rem 1.25rem; box-shadow:var(--shadow); display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; margin-bottom:1.25rem; }
 .filters input, .filters select { border:1.5px solid var(--border); border-radius:8px; padding:.6rem 1rem; font-family:'Space Grotesk',sans-serif; font-size:.875rem; color:var(--text); outline:none; background:white; transition:border-color .2s; }
 .filters input:focus, .filters select:focus { border-color:var(--primary); }
-.search-wrap { position:relative; flex:1; min-width:220px; }
-.search-wrap input { padding-left:2.4rem; width:100%; }
+
 .search-wrap i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted); }
 .btn { padding:.6rem 1.2rem; border:none; border-radius:8px; font-family:'Space Grotesk',sans-serif; font-size:.875rem; font-weight:600; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:.4rem; }
 .btn-primary  { background:var(--primary); color:white; }
@@ -218,14 +345,12 @@ body { background: var(--bg); color: var(--text); }
 .btn-export:hover { background:#138d75; }
 .btn-view     { background:#2980b9; color:white; }
 .btn-view:hover { background:#2471a3; }
-.table-wrap { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
-.table-wrap .table-scroll { overflow-x:auto; }
+
 table { width:100%; border-collapse:collapse; font-size:.85rem; }
 thead { background:linear-gradient(135deg,#2d3436 0%,#34495e 100%); color:white; }
-thead th { padding:.9rem .85rem; text-align:left; font-size:.78rem; text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; }
 tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
 tbody tr:hover { background:#f8f9ff; }
-tbody td { padding:.85rem .85rem; vertical-align:middle; }
+
 .asset-cell .brand { font-weight:600; }
 .asset-cell .model  { font-size:.8rem; color:var(--muted); }
 .asset-cell .serial { font-size:.76rem; background:#f1f2f6; padding:1px 6px; border-radius:4px; font-family:monospace; color:var(--muted); display:inline-block; margin-top:2px; }
@@ -237,9 +362,7 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
 .empty-state i { font-size:3.5rem; opacity:.25; display:block; margin-bottom:.75rem; }
 
 /* ── MODALS ── */
-.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); z-index:9999; align-items:center; justify-content:center; }
-.modal-overlay.active { display:flex; }
-.modal { background:var(--white); border-radius:16px; width:95%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); animation:slideUp .25s ease; }
+
 .modal.modal-wide { max-width:680px; }
 @keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
 .modal-header { padding:1.25rem 1.5rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:2; background:white; }
@@ -289,42 +412,68 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
 </style>
 </head>
 <body>
-
 <?php include 'sidebar.php'; ?>
+
 <div class="content">
     <div class="page-header">
         <h1><i class='bx bx-box'></i> Incoming Transfer Requests</h1>
         <p>Review, edit, confirm or cancel pending asset transfer requests</p>
     </div>
+
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-icon amber"><i class='bx bx-time-five'></i></div>
-            <div><div class="stat-value" id="statPending"><?php echo $totalPending; ?></div><div class="stat-label">Pending</div></div>
+            <div class="stat-icon" style="background:#fef3cd;color:var(--amber);"><i class='bx bx-time-five'></i></div>
+            <div>
+                <div class="stat-value" id="statPending"><?php echo $totalPending; ?></div>
+                <div class="stat-label">Pending Requests</div>
+            </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon blue"><i class='bx bx-map-pin'></i></div>
-            <div><div class="stat-value"><?php echo count($locations); ?></div><div class="stat-label">Locations</div></div>
+            <div class="stat-icon" style="background:#d6eaf8;color:var(--info);"><i class='bx bx-map-pin'></i></div>
+            <div>
+                <div class="stat-value"><?php echo count($locations); ?></div>
+                <div class="stat-label">Active Locations</div>
+            </div>
         </div>
     </div>
-    <div class="filters">
-        <div class="search-wrap"><i class='bx bx-search'></i><input type="text" id="searchInput" placeholder="Search asset, requester, location..." value="<?php echo htmlspecialchars($search); ?>"></div>
-        <input type="date" id="dateInput" value="<?php echo htmlspecialchars($dateFilter); ?>">
-        <select id="locSelect">
+
+
+<div class="filters">
+        <div class="search-wrap">
+            <i class='bx bx-search'></i>
+            <input type="text" id="searchInput" placeholder="Search asset, requester, location..." value="<?php echo htmlspecialchars($search); ?>">
+        </div>
+        <input type="date" id="dateInput" value="<?php echo htmlspecialchars($dateFilter); ?>" style="padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;">
+        
+        <select id="locSelect" style="padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;">
             <option value="">All Locations</option>
             <?php foreach ($locations as $loc): ?>
-                <option value="<?php echo htmlspecialchars($loc); ?>" <?php echo $locFilter === $loc ? 'selected' : ''; ?>><?php echo htmlspecialchars($loc); ?></option>
+                <option value="<?php echo htmlspecialchars($loc); ?>" <?php echo $locFilter === $loc ? 'selected' : ''; ?>>
+                    <?php echo htmlspecialchars($loc); ?>
+                </option>
             <?php endforeach; ?>
         </select>
-        <button class="btn btn-export" onclick="exportCSV()"><i class='bx bx-download'></i> Export CSV</button>
+
+        <button class="btn btn-export" onclick="exportCSV()" style="background:#16a085;color:white;">
+            <i class='bx bx-download'></i> Export CSV
+        </button>
     </div>
+
     <div class="table-wrap">
         <div class="table-scroll">
             <table id="mainTable">
                 <thead>
                     <tr>
-                        <th>#</th><th>Asset</th><th>Type</th><th>Qty</th>
-                        <th>From → To</th><th>Purpose</th><th>Requested By</th>
-                        <th>Date Needed</th><th>Submitted</th><th>Actions</th>
+                        <th>#</th>
+                        <th>Asset</th>
+                        <th>Type</th>
+                        <th>Qty</th>
+                        <th>From → To</th>
+                        <th>Purpose</th>
+                        <th>Requested By</th>
+                        <th>Date Needed</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -334,8 +483,12 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
                     $rows[] = $r;
                     $from = $r['from_location'] ?: '—';
                     $to   = $r['to_location']   ?: ($r['location_received'] ?: '—');
-                    if ($from === '—' && !empty($r['purpose'])) { if (preg_match('/From:\s*(.+?)\s*→/', $r['purpose'], $m)) $from = trim($m[1]); }
-                    if ($to   === '—' && !empty($r['purpose'])) { if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $r['purpose'], $m)) $to = trim($m[1]); }
+                    if ($from === '—' && !empty($r['purpose'])) { 
+                        if (preg_match('/From:\s*(.+?)\s*→/', $r['purpose'], $m)) $from = trim($m[1]); 
+                    }
+                    if ($to   === '—' && !empty($r['purpose'])) { 
+                        if (preg_match('/→\s*To:\s*(.+?)(\s*\[|$)/', $r['purpose'], $m)) $to = trim($m[1]); 
+                    }
                     $purpose = preg_replace('/\s*\[(dest_asset_id|dest):\d+\]/','', $r['purpose'] ?? '');
                     $purpose = trim(preg_replace('/\s*\|?\s*From:\s*.+?→\s*To:\s*.+$/i','', $purpose)) ?: '—';
                 ?>
@@ -363,16 +516,16 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
                     <td style="font-size:.8rem;color:var(--muted);"><?php echo date('M j, Y', strtotime($r['created_at'])); ?></td>
                     <td>
                         <div class="actions">
-                            <button class="btn btn-view"    onclick="openView(<?php echo $r['id']; ?>)"                       title="View Details"><i class='bx bx-show'></i></button>
-                            <button class="btn btn-warning" onclick="openEdit(<?php echo $r['id']; ?>)"                       title="Edit"><i class='bx bx-edit'></i></button>
-                            <button class="btn btn-danger"  onclick="openReject(<?php echo $r['id']; ?>)"                     title="Cancel"><i class='bx bx-x'></i></button>
-                            <button class="btn btn-success" onclick="confirmAction(<?php echo $r['id']; ?>,'confirm')"        title="Confirm"><i class='bx bx-check'></i></button>
+                            <button class="btn btn-view"    onclick="openView(<?php echo $r['id']; ?>)" title="View"><i class='bx bx-show'></i></button>
+                            <button class="btn btn-warning" onclick="openEdit(<?php echo $r['id']; ?>)" title="Edit"><i class='bx bx-edit'></i></button>
+                            <button class="btn btn-danger"  onclick="openReject(<?php echo $r['id']; ?>)" title="Cancel"><i class='bx bx-x'></i></button>
+                            <button class="btn btn-success" onclick="confirmAction(<?php echo $r['id']; ?>,'confirm')" title="Confirm"><i class='bx bx-check'></i></button>
                         </div>
                     </td>
                 </tr>
                 <?php endwhile; ?>
                 <?php if (empty($rows)): ?>
-                <tr><td colspan="10"><div class="empty-state"><i class='bx bx-inbox'></i><p>No pending requests</p></div></td></tr>
+                <tr><td colspan="10"><div class="empty-state"><i class='bx bx-inbox'></i><p>No pending requests found</p></div></td></tr>
                 <?php endif; ?>
                 </tbody>
             </table>
@@ -418,7 +571,6 @@ tbody td { padding:.85rem .85rem; vertical-align:middle; }
         </div>
     </div>
 </div>
-
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
     <div class="modal">

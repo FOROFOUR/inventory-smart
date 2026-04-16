@@ -15,8 +15,7 @@ $conn = getDBConnection();
     <link rel="stylesheet" href="css/style.css">
 
     <style>
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
+      * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --primary:      #695CFE;
             --primary-dark: #3aa896;
@@ -34,24 +33,243 @@ $conn = getDBConnection();
             color: var(--text-primary);
         }
 
-        /* ── Layout ── */
         .content {
             margin-left: 88px;
-            padding: 2rem;
+            padding: 1.5rem;
             transition: margin-left 0.3s ease;
+            min-height: 100vh;
         }
         .sidebar:not(.close) ~ .content { margin-left: 260px; }
 
-        /* ── Page Header ── */
+        /* Page Header */
         .page-header {
             background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%);
-            border-radius: 20px 20px 0 0;
-            padding: 3rem 2rem 2rem;
+            border-radius: 16px;
+            padding: 2rem 1.75rem;
             color: white;
-            box-shadow: 0 8px 24px rgba(72,201,176,0.3);
+            box-shadow: 0 8px 24px rgba(72,201,176,0.25);
+            margin-bottom: 1.75rem;
             position: relative;
             overflow: hidden;
         }
+        .page-header h1 { 
+            font-size: 1.85rem; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 0.6rem; 
+        }
+
+        /* Bulk Actions + Controls */
+        .bulk-actions, .controls-section {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px var(--shadow);
+            margin-bottom: 1.25rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 220px;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.9rem 1rem 0.9rem 3rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+        }
+        .search-box i {
+            position: absolute;
+            left: 1.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        /* Table / Cards */
+        .table-container {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px var(--shadow);
+            overflow: hidden;
+        }
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+        table {
+            width: 100%;
+            min-width: 900px; /* Para magkaroon ng horizontal scroll sa phone */
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        thead th {
+            padding: 1.1rem 1rem;
+            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%);
+            color: white;
+            text-align: left;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qr-preview {
+            width: 72px;
+            height: 72px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .qr-preview:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(105,92,254,0.25);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content { 
+                margin-left: 0 !important; 
+                padding: 1rem; 
+            }
+            .page-header {
+                padding: 1.75rem 1.5rem;
+            }
+            .page-header h1 { font-size: 1.65rem; }
+
+            .bulk-actions, .controls-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .search-box { min-width: 100%; }
+
+            table { min-width: 700px; font-size: 0.85rem; }
+            .qr-preview { width: 64px; height: 64px; }
+        }
+
+        @media (max-width: 480px) {
+            .qr-preview { width: 58px; height: 58px; }
+        }
+
+        /* QR Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+
+        /* Print Instruction Modal */
+        .print-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            z-index: 99999;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .print-modal-overlay.active { display: flex; }
+        .print-modal-box {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+      
+.action-btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.87rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    min-width: 110px;
+    justify-content: center;
+}
+
+.print-btn {
+    background: linear-gradient(135deg, #695CFE, #5448e0);
+    color: white;
+}
+
+.print-btn:hover {
+    background: linear-gradient(135deg, #5448e0, #4338c7);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(105,92,254,0.45);
+}
+
+.download-btn {
+    background: linear-gradient(135deg, #00b894, #00a085);
+    color: white;
+}
+
+.download-btn:hover {
+    background: linear-gradient(135deg, #00a085, #00876e);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,184,148,0.45);
+}
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+    .action-btn {
+        padding: 11px 14px;
+        font-size: 0.85rem;
+        min-width: 48%;           /* Para mag-equal width sa phone */
+        flex: 1;
+    }
+    
+    td:last-child {
+        padding: 14px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .action-btn {
+        min-width: 100%;          /* Full width sa maliit na phone */
+        margin-bottom: 6px;
+    }
+}
+
+        /* ── Page Header ── */
+      
         .page-header::before {
             content: '';
             position: absolute;
@@ -60,7 +278,6 @@ $conn = getDBConnection();
             background: rgba(255,255,255,0.1);
             border-radius: 50%;
         }
-        .page-header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; position: relative; z-index: 1; }
         .page-header p  { font-size: 1.1rem; opacity: 0.95; position: relative; z-index: 1; }
 
         /* ── Network badge ── */
@@ -119,18 +336,8 @@ $conn = getDBConnection();
             box-shadow: 0 2px 8px var(--shadow);
             border-top: 1px solid var(--border);
         }
-        .search-box { flex: 1; min-width: 250px; position: relative; }
-        .search-box input {
-            width: 100%;
-            padding: 0.875rem 1rem 0.875rem 3rem;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
+     
         .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(105,92,254,0.1); }
-        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1.2rem; }
 
         /* ── Buttons ── */
         .btn {
@@ -162,48 +369,14 @@ $conn = getDBConnection();
         }
 
         /* ── Table ── */
-        .table-container {
-            background: white;
-            box-shadow: 0 4px 12px var(--shadow);
-            border-radius: 0 0 20px 20px;
-            overflow: hidden;
-        }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; }
+       
+     
         thead { background: linear-gradient(135deg, #2d3436 0%, #34495e 100%); color: white; }
-        thead th { padding: 1.25rem 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
         tbody tr { border-bottom: 1px solid var(--border); transition: background 0.2s; }
         tbody tr:hover { background: #f5f3ff; }
-        tbody td { padding: 1rem 1rem; white-space: nowrap; vertical-align: middle; }
 
         .qr-cell { text-align: center; }
-        .qr-preview {
-            width: 80px; height: 80px;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            padding: 3px;
-            background: white;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .qr-preview:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(105,92,254,0.2); }
-
-        .print-btn {
-            padding: 0.5rem 1rem;
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .print-btn:hover { background: #5448e0; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(105,92,254,0.3); }
+       
 
         /* Status badges */
         .status-badge {
@@ -252,27 +425,8 @@ $conn = getDBConnection();
         }
 
         /* ── QR Modal ── */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(3px);
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: white;
-            border-radius: 20px;
-            padding: 2rem;
-            text-align: center;
-            max-width: 340px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
-        }
+      
+     
         .modal-box h3 { font-size: 1rem; margin-bottom: 0.25rem; }
         .modal-box p  { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; }
         .modal-box canvas { margin: 0 auto 1rem; border: 2px solid var(--border); border-radius: 10px; padding: 8px; }
@@ -390,17 +544,7 @@ $conn = getDBConnection();
             white-space: normal;
         }
     /* ── Print Instruction Modal ── */
-    .print-modal-overlay {
-        display: none; position: fixed; inset: 0;
-        background: rgba(0,0,0,0.6); z-index: 99999;
-        align-items: center; justify-content: center;
-    }
-    .print-modal-overlay.active { display: flex; }
-    .print-modal-box {
-        background: white; border-radius: 16px; padding: 2rem;
-        max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        text-align: center;
-    }
+   
     .print-modal-box h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: #2d3436; }
     .print-modal-box p { font-size: 0.85rem; color: #636e72; margin-bottom: 1.2rem; }
     .print-steps {
@@ -418,24 +562,21 @@ $conn = getDBConnection();
 
     <!-- Page Header -->
     <div class="page-header">
-        <h1><i class='bx bx-qr' style="vertical-align:middle;margin-right:0.5rem;"></i>Generate QR</h1>
+        <h1><i class='bx bx-qr' style="vertical-align:middle;margin-right:0.5rem;"></i> Generate QR</h1>
         <p>Scan any QR code to instantly view asset details on your phone or tablet.</p>
-        <div class="network-badge">
-            <span class="dot"></span>
-            LAN: <span id="currentIP"></span> • Same Wi-Fi required to scan
-        </div>
+        
     </div>
 
     <!-- Bulk Actions -->
     <div class="bulk-actions">
-        <label>
+        <label style="display:flex;align-items:center;gap:0.5rem;font-weight:500;cursor:pointer;">
             <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
             Select All
         </label>
-        <button class="btn btn-primary" onclick="printSelectedQR()">
+        <button class="btn btn-primary" onclick="printSelectedQR()" style="padding:0.85rem 1.5rem;">
             <i class='bx bx-printer'></i> Print Selected
         </button>
-        <span class="selected-count" id="selectedCount">0 selected</span>
+        <span class="selected-count" id="selectedCount" style="margin-left:auto;font-size:0.88rem;color:var(--text-secondary);">0 selected</span>
     </div>
 
     <!-- Controls -->
@@ -444,7 +585,7 @@ $conn = getDBConnection();
             <i class='bx bx-search'></i>
             <input type="text" id="searchInput" placeholder="Search by asset, brand, model...">
         </div>
-        <select id="categoryFilter" class="btn btn-filter">
+        <select id="categoryFilter" style="padding:0.85rem 1rem;border:2px solid var(--border);border-radius:10px;font-size:0.93rem;">
             <option value="">All Categories</option>
         </select>
     </div>
@@ -457,9 +598,9 @@ $conn = getDBConnection();
                     <tr>
                         <th style="width:40px;"></th>
                         <th>Asset / Category</th>
-                        <th>Brand / Model & Serial</th>
+                        <th>Brand / Model</th>
                         <th>Status</th>
-                        <th>QR URL</th>
+                         <th>QR URL</th>
                         <th>QR Preview</th>
                         <th>Action</th>
                     </tr>
@@ -488,36 +629,37 @@ $conn = getDBConnection();
 <!-- Print Instruction Modal -->
 <div class="print-modal-overlay" id="printInstructModal">
     <div class="print-modal-box">
-        <h3><i class='bx bx-printer' style="color:#695CFE"></i> Before You Print</h3>
-        <p>Para mawala ang header/footer at page number, sundan ang steps na ito:</p>
-        <div class="print-steps">
-            1. Sa print dialog, hanapin ang <b>More settings</b> o <b>Options</b><br>
-            2. I-uncheck ang <b>Headers and footers</b><br>
-            3. I-set ang <b>Margins</b> sa <b>None</b><br>
-            4. Pindutin ang <b>Print</b>
+        <h3><i class='bx bx-printer' style="color:#695CFE"></i> Before Printing</h3>
+        <p>Please follow these steps to get clean QR labels:</p>
+        <div style="background:#f5f3ff;border-radius:10px;padding:1rem;text-align:left;margin:1rem 0;font-size:0.85rem;">
+            1. In print dialog, go to <strong>More settings</strong><br>
+            2. Uncheck <strong>Headers and footers</strong><br>
+            3. Set <strong>Margins</strong> to <strong>None</strong><br>
+            4. Click <strong>Print</strong>
         </div>
-        <div class="print-modal-btns">
-            <button class="btn btn-primary" id="proceedPrintBtn">
+        <div style="display:flex;gap:1rem;justify-content:center;">
+            <button class="btn btn-primary" id="proceedPrintBtn" style="padding:0.85rem 1.5rem;">
                 <i class='bx bx-printer'></i> Proceed to Print
             </button>
-            <button class="btn btn-filter" onclick="document.getElementById('printInstructModal').classList.remove('active')">
+            <button class="btn btn-outline" onclick="document.getElementById('printInstructModal').classList.remove('active')">
                 Cancel
             </button>
         </div>
     </div>
 </div>
 
-<!-- QR Modal -->
-<div class="modal-overlay" id="qrModal" onclick="closeModal(event)">
+<!-- QR Preview Modal -->
+<div class="modal-overlay" id="qrModal">
     <div class="modal-box">
-        <button class="modal-close" onclick="document.getElementById('qrModal').classList.remove('active')">
-            <i class='bx bx-x'></i>
+        <button onclick="document.getElementById('qrModal').classList.remove('active')" 
+                style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.8rem;cursor:pointer;color:#636e72;">
+            ×
         </button>
         <h3 id="modalTitle">Asset QR Code</h3>
-        <p id="modalSub">Scan to view asset details</p>
-        <canvas id="modalCanvas"></canvas>
-        <div class="modal-url" id="modalUrl"></div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="printModalQR()">
+        <p id="modalSub" style="margin:0.5rem 0 1rem;color:var(--text-secondary);"></p>
+        <canvas id="modalCanvas" style="max-width:100%;height:auto;"></canvas>
+        <div class="modal-url" id="modalUrl" style="margin:1rem 0;padding:0.75rem;background:#f5f3ff;border-radius:8px;font-size:0.78rem;word-break:break-all;"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="printModalQR()">
             <i class='bx bx-printer'></i> Print This QR
         </button>
     </div>
@@ -608,15 +750,21 @@ function renderTable() {
                      width="80"
                      onclick="openModal(${asset.id})">
             </td>
-            <td>
-                <button class="print-btn" onclick="printSingleQR(${asset.id})">
-                    <i class='bx bx-printer'></i> Print
-                </button>
-                <button class="print-btn" style="margin-left:5px;"
-                    onclick="downloadQR(${asset.id})">
-                    <i class='bx bx-download'></i> Download
-                </button>
-            </td>`;
+         <td style="text-align:center; padding:12px 8px;">
+    <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button onclick="printSingleQR(${asset.id})" 
+                class="action-btn print-btn">
+            <i class='bx bx-printer'></i> 
+            <span>Print</span>
+        </button>
+        
+        <button onclick="downloadQR(${asset.id})" 
+                class="action-btn download-btn">
+            <i class='bx bx-download'></i> 
+            <span>Download</span>
+        </button>
+    </div>
+</td>`;
 
         tbody.appendChild(row);
     });

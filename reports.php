@@ -15,11 +15,7 @@ $conn = getDBConnection();
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --primary: #6c5ce7;
@@ -34,7 +30,7 @@ $conn = getDBConnection();
             --text-primary: #2d3436;
             --text-secondary: #636e72;
             --border: #dfe6e9;
-            --shadow: rgba(0, 0, 0, 0.08);
+            --shadow: rgba(0,0,0,0.08);
         }
 
         body {
@@ -45,30 +41,213 @@ $conn = getDBConnection();
 
         .content {
             margin-left: 88px;
-            padding: 2rem;
+            padding: 1.5rem;
             transition: margin-left 0.3s ease;
+            min-height: 100vh;
         }
+        .sidebar:not(.close)~.content { margin-left: 260px; }
 
-        .sidebar:not(.close)~.content {
-            margin-left: 260px;
-        }
-
+        /* Page Header */
         .page-header {
             background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border-radius: 16px;
-            padding: 2rem;
-            margin-bottom: 2rem;
+            padding: 2rem 1.75rem;
+            margin-bottom: 1.75rem;
             color: white;
             box-shadow: 0 8px 24px rgba(108, 92, 231, 0.3);
         }
-
         .page-header h1 {
-            font-size: 2rem;
+            font-size: 1.85rem;
             font-weight: 700;
-            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
+        }
+
+        /* Report Selector */
+        .report-selector {
+            background: white;
+            border-radius: 14px;
+            padding: 1.75rem;
+            margin-bottom: 1.75rem;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .report-types {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+
+        .report-type-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .report-type-card:hover {
+            border-color: var(--primary);
+            background: rgba(108, 92, 231, 0.05);
+        }
+        .report-type-card.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .report-type-card i {
+            font-size: 2.4rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        /* Filters */
+        .filters-section {
+            background: white;
+            border-radius: 14px;
+            padding: 1.75rem;
+            margin-bottom: 1.75rem;
+            box-shadow: 0 2px 10px var(--shadow);
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .filter-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .filter-group select,
+        .filter-group input {
+            padding: 0.85rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.92rem;
+        }
+        .filter-group select:focus,
+        .filter-group input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108,92,231,0.1);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 0.9rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.93rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .btn-secondary { background: var(--bg-main); color: var(--text-primary); border: 2px solid var(--border); }
+        .btn-secondary:hover { border-color: var(--primary); }
+        .btn-success { background: var(--success); color: white; }
+
+        /* Report Preview */
+        .report-preview {
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px var(--shadow);
+            overflow: hidden;
+            display: none;
+        }
+        .report-preview.active { display: block; }
+
+        .report-header {
+            padding: 2rem 1.75rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid var(--border);
+            text-align: center;
+        }
+
+        .report-meta {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        thead {
+            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%);
+            color: white;
+        }
+        thead th {
+            padding: 1.1rem 1rem;
+            text-align: left;
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        tbody td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content { margin-left: 0 !important; padding: 1rem; }
+            .page-header { padding: 1.75rem 1.5rem; }
+            .page-header h1 { font-size: 1.65rem; }
+
+            .report-types { grid-template-columns: 1fr; }
+            .filters-grid { grid-template-columns: 1fr; }
+            .filter-actions { justify-content: center; }
+
+            .report-meta { gap: 1rem; font-size: 0.85rem; }
+            .summary-cards { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+        }
+
+        @media (max-width: 480px) {
+            .summary-cards { grid-template-columns: 1fr; }
+        }
+
+        /* Print Styles (kept and improved) */
+        @media print {
+            .sidebar, .page-header, .report-selector, .filters-section, .filter-actions, .btn {
+                display: none !important;
+            }
+            body { background: white !important; }
+            .report-preview { box-shadow: none !important; display: block !important; }
+            /* Your existing print styles remain here */
         }
 
         .page-header h1 i {
@@ -80,46 +259,7 @@ $conn = getDBConnection();
             font-size: 1rem;
         }
 
-        .report-selector {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 8px var(--shadow);
-        }
-
-        .report-types {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .report-type-card {
-            padding: 1.5rem;
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-align: center;
-        }
-
-        .report-type-card:hover {
-            border-color: var(--primary);
-            background: rgba(108, 92, 231, 0.05);
-        }
-
-        .report-type-card.active {
-            border-color: var(--primary);
-            background: var(--primary);
-            color: white;
-        }
-
-        .report-type-card i {
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-            display: block;
-        }
+   
 
         .report-type-card h3 {
             font-size: 1.1rem;
@@ -131,117 +271,9 @@ $conn = getDBConnection();
             opacity: 0.8;
         }
 
-        .filters-section {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 8px var(--shadow);
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .filter-group label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .filter-group select,
-        .filter-group input {
-            padding: 0.75rem;
-            border: 2px solid var(--border);
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.9rem;
-            transition: all 0.3s;
-        }
-
-        .filter-group select:focus,
-        .filter-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.1);
-        }
-
-        .filter-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-        }
-
-        .btn {
-            padding: 0.875rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--bg-main);
-            color: var(--text-primary);
-            border: 2px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--primary);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
+ 
         .btn-success:hover {
             background: #229954;
-        }
-
-        .report-preview {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px var(--shadow);
-            overflow: hidden;
-            display: none;
-        }
-
-        .report-preview.active {
-            display: block;
-        }
-
-        .report-header {
-            padding: 2rem;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-bottom: 2px solid var(--border);
-            text-align: center;
         }
 
         .report-header h2 {
@@ -250,24 +282,8 @@ $conn = getDBConnection();
             color: var(--primary);
         }
 
-        .report-meta {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-top: 1rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
         .report-body {
             padding: 2rem;
-        }
-
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
         }
 
         .summary-card {
@@ -291,24 +307,8 @@ $conn = getDBConnection();
             color: var(--primary);
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
 
-        thead {
-            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%);
-            color: white;
-        }
-
-        thead th {
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+     
 
         tbody tr {
             border-bottom: 1px solid var(--border);
@@ -318,9 +318,7 @@ $conn = getDBConnection();
             background: var(--bg-main);
         }
 
-        tbody td {
-            padding: 1rem;
-        }
+       
 
         .badge {
             display: inline-block;

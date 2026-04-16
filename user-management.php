@@ -29,16 +29,296 @@ requirePermission('user_management');
 <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
 <link rel="stylesheet" href="css/style.css">
 <style>
-*{box-sizing:border-box;}
-body{font-family:'Poppins',sans-serif;background:#f4f6fb;margin:0;padding:0;overflow-x:hidden;}
+* { box-sizing: border-box; }
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: #f4f6fb;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
 
-.content{margin-left:88px;padding:32px 36px;transition:margin-left .3s ease;min-height:100vh;}
-.sidebar:not(.close)~.content{margin-left:260px;}
+    .content {
+        margin-left: 88px;
+        padding: 1.5rem;
+        transition: margin-left 0.3s ease;
+        min-height: 100vh;
+    }
+    .sidebar:not(.close) ~ .content { margin-left: 260px; }
 
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:22px;border-bottom:1.5px solid #e8ecf3;}
-.page-header-left{display:flex;align-items:center;gap:14px;}
-.page-header-icon{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#4f8ef7,#2563eb);display:flex;align-items:center;justify-content:center;font-size:1.35rem;color:#fff;box-shadow:0 4px 14px rgba(79,142,247,.35);}
-.page-header h1{font-size:1.45rem;font-weight:700;color:#0f172a;margin:0 0 3px;}
+    /* Page Header */
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.75rem;
+        padding-bottom: 1.25rem;
+        border-bottom: 1.5px solid #e8ecf3;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .page-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .page-header-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #4f8ef7, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(79,142,247,.35);
+    }
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    /* Summary Cards */
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+    .summary-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem;
+        border: 1px solid #e8ecf3;
+        box-shadow: 0 2px 10px rgba(15,23,42,.05);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .sc-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    /* Main Card */
+    .main-card {
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid #e8ecf3;
+        box-shadow: 0 2px 12px rgba(15,23,42,.06);
+        overflow: hidden;
+    }
+.card-toolbar {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #fafbfe;
+}
+
+.search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 220px;
+}
+
+.search-wrap input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: #fff;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-select {
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background: #fff;
+    min-width: 140px;
+    cursor: pointer;
+}
+
+.btn-add {
+    padding: 10px 18px;
+    background: linear-gradient(135deg, #4f8ef7, #2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+    transition: all 0.3s ease;
+}
+
+.btn-add:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37,99,235,0.35);
+}
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 768px) {
+    .card-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .search-wrap {
+        min-width: 100%;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    .filter-select {
+        min-width: 100%;
+    }
+    
+    .btn-add {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-toolbar {
+        padding: 1rem;
+    }
+}
+    /* Table */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table {
+        width: 100%;
+        min-width: 850px;
+        border-collapse: collapse;
+    }
+    thead {
+        background: linear-gradient(135deg, #1e293b, #334155);
+    }
+    thead th {
+        padding: 14px 16px;
+        text-align: left;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.15s;
+    }
+    tbody tr:hover { background: #f8faff; }
+    tbody td {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+
+    /* User Info */
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #e8ecf3;
+    }
+
+    /* Action Buttons */
+    .action-btns {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .btn-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.05rem;
+        transition: all 0.2s;
+    }
+
+    /* Modals */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,.65);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #fff;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 540px;
+        box-shadow: 0 20px 60px rgba(15,23,42,.25);
+        max-height: 92vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .summary-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+        .content { margin-left: 0 !important; padding: 1rem; }
+        .page-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+        .card-toolbar { flex-direction: column; align-items: stretch; }
+        .search-wrap { min-width: 100%; }
+        .action-btns { flex-direction: column; gap: 8px; width: 100%; }
+        .btn-icon { width: 100%; }
+        table { min-width: 700px; }
+    }
+
+    @media (max-width: 480px) {
+        .summary-row { grid-template-columns: 1fr; }
+    }
 .page-header p{font-size:.82rem;color:#94a3b8;margin:0;}
 .breadcrumb{font-size:.78rem;color:#94a3b8;display:flex;align-items:center;gap:6px;}
 .breadcrumb span{color:#0f172a;font-weight:500;}
@@ -198,40 +478,48 @@ tbody td{padding:13px 16px;font-size:.875rem;color:#334155;vertical-align:middle
     </div>
   </div>
 
-  <div class="main-card">
-    <div class="card-toolbar">
-      <div class="search-wrap">
+ <div class="main-card">
+  <div class="card-toolbar">
+    <div class="search-wrap">
         <i class='bx bx-search'></i>
         <input type="text" id="searchInput" placeholder="Search by name, username, or email…">
-      </div>
-      <select class="filter-select" id="roleFilter">
-        <option value="">All Roles</option>
-        <option value="ADMIN">Admin</option>
-        <option value="EMPLOYEE">Employee</option>
-        <option value="WAREHOUSE">Warehouse</option>
-      </select>
-      <select class="filter-select" id="statusFilter">
-        <option value="">All Status</option>
-        <option value="ACTIVE">Active</option>
-        <option value="INACTIVE">Inactive</option>
-      </select>
-      <button class="btn-add" onclick="openAddModal()">
-        <i class='bx bx-user-plus'></i> Add User
-      </button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>User</th>
-            <th>Username</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Joined</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+
+    <div class="filter-group">
+        <select class="filter-select" id="roleFilter">
+            <option value="">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="EMPLOYEE">Employee</option>
+            <option value="WAREHOUSE">Warehouse</option>
+        </select>
+        
+        <select class="filter-select" id="statusFilter">
+            <option value="">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+        </select>
+    </div>
+
+    <button class="btn-add" onclick="openAddModal()">
+        <i class='bx bx-user-plus'></i> 
+        <span>Add User</span>
+    </button>
+</div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
         <tbody id="userTableBody">
           <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">
             <i class='bx bx-loader-alt bx-spin' style="font-size:1.5rem;"></i>

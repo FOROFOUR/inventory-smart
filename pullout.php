@@ -36,32 +36,231 @@ $stats       = $statsResult->fetch_assoc();
             --text-primary: #2d3436; --text-secondary: #636e72;
             --border: #dfe6e9; --shadow: rgba(0,0,0,0.08);
         }
-        body { font-family: 'Space Grotesk', sans-serif; background: var(--bg-main); color: var(--text-primary); }
+        body { 
+            font-family: 'Space Grotesk', sans-serif; 
+            background: var(--bg-main); 
+            color: var(--text-primary); 
+        }
+
+        .content { 
+            margin-left: 88px; 
+            padding: 1.5rem; 
+            transition: margin-left 0.3s ease; 
+            min-height: 100vh; 
+        }
+        .sidebar:not(.close) ~ .content { margin-left: 260px; }
+
+        /* Page Header */
+        .page-header { 
+            background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); 
+            border-radius: 16px; 
+            padding: 2rem 1.75rem; 
+            color: white; 
+            box-shadow: 0 8px 24px rgba(31,85,121,0.3); 
+            margin-bottom: 1.75rem;
+        }
+        .page-header h1 { font-size: 2rem; font-weight: 700; }
+        .page-header p { opacity: 0.9; margin-top: 0.4rem; font-size: 1rem; }
+
+        /* Stats Cards */
+        .stats-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+            gap: 1rem; 
+            margin-bottom: 1.75rem; 
+        }
+        .stat-card { 
+            background: white; 
+            padding: 1.5rem 1.25rem; 
+            text-align: center; 
+            border-radius: 14px; 
+            box-shadow: 0 4px 12px var(--shadow); 
+        }
+        .stat-label { 
+            font-size: 0.82rem; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            color: var(--text-secondary); 
+            font-weight: 600; 
+        }
+        .stat-value { 
+            font-size: 2.1rem; 
+            font-weight: 700; 
+            margin-top: 0.5rem; 
+        }
+
+        /* Controls Section */
+        .controls-section { 
+            background: white; 
+            padding: 1.25rem; 
+            border-radius: 14px; 
+            box-shadow: 0 2px 10px var(--shadow); 
+            margin-bottom: 1.5rem; 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 1rem; 
+            align-items: center; 
+        }
+        .search-box { flex: 1; min-width: 220px; position: relative; }
+        .search-box input { 
+            width: 100%; 
+            padding: 0.9rem 1rem 0.9rem 3rem; 
+            border: 2px solid var(--border); 
+            border-radius: 10px; 
+            font-size: 0.95rem; 
+        }
+        .search-box i { 
+            position: absolute; left: 1.1rem; top: 50%; transform: translateY(-50%); 
+            color: var(--text-secondary); 
+        }
+        select {
+            padding: 0.9rem 1rem 0.9rem 2.8rem; 
+            border: 2px solid var(--border); 
+            border-radius: 10px; 
+            font-size: 0.93rem; 
+            background: white; 
+            min-width: 160px;
+        }
+        .filter-group { 
+            display: flex; 
+            gap: 0.6rem; 
+            flex-wrap: wrap; 
+        }
+        .btn { 
+            padding: 0.75rem 1.25rem; 
+            border: none; 
+            border-radius: 10px; 
+            font-size: 0.9rem; 
+            font-weight: 500; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            white-space: nowrap;
+        }
+        .btn-filter { 
+            background: var(--bg-main); 
+            color: var(--text-primary); 
+            border: 2px solid var(--border); 
+        }
+        .btn-filter.active { 
+            background: #695CFE; 
+            color: white; 
+            border-color: #695CFE; 
+        }
+
+        /* Table */
+        .table-container { 
+            background: white; 
+            border-radius: 14px; 
+            box-shadow: 0 4px 12px var(--shadow); 
+            overflow: hidden; 
+        }
+        .table-wrapper { 
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch; 
+        }
+        table { 
+            width: 100%; 
+            min-width: 980px; 
+            border-collapse: collapse; 
+            font-size: 0.88rem; 
+        }
+        thead th { 
+            padding: 1.1rem 0.9rem; 
+            background: linear-gradient(135deg, #2d3436 0%, #34495e 100%); 
+            color: white; 
+            text-align: left; 
+            font-weight: 600; 
+            font-size: 0.79rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            white-space: nowrap; 
+        }
+        tbody tr { border-bottom: 1px solid var(--border); transition: background 0.2s; }
+        tbody tr:hover { background: #f8f9ff; }
+        tbody td { padding: 1rem 0.9rem; }
+
+        /* Modal */
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.65); 
+            backdrop-filter: blur(5px); 
+            z-index: 9999; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 1rem;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal { 
+            background: white; 
+            border-radius: 20px; 
+            width: 100%; 
+            max-width: 780px; 
+            max-height: 95vh; 
+            overflow-y: auto; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.35); 
+        }
+        .modal-header { 
+            padding: 1.5rem 2rem; 
+            background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); 
+            color: white; 
+            border-radius: 20px 20px 0 0; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10; 
+        }
+        .modal-body { padding: 2rem; }
+        .modal-actions { 
+            padding: 1.25rem 2rem; 
+            background: var(--bg-main); 
+            border-top: 2px solid var(--border); 
+            border-radius: 0 0 20px 20px; 
+            display: flex; 
+            gap: 1rem; 
+            justify-content: flex-end; 
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .content { margin-left: 0 !important; padding: 1rem; }
+            .page-header { padding: 1.75rem 1.5rem; }
+            .page-header h1 { font-size: 1.75rem; }
+            
+            .stats-container { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+            .stat-value { font-size: 1.85rem; }
+            
+            .controls-section { 
+                flex-direction: column; 
+                align-items: stretch; 
+            }
+            .search-box, select { min-width: 100%; }
+            
+            .table-wrapper { overflow-x: auto; }
+            table { font-size: 0.83rem; }
+            thead th, tbody td { padding: 0.9rem 0.7rem; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-container { grid-template-columns: 1fr 1fr; }
+        }
         .content { margin-left: 88px; padding: 2rem; transition: margin-left 0.3s ease; }
         .sidebar:not(.close) ~ .content { margin-left: 260px; }
-        .page-header { background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); border-radius: 20px 20px 0 0; padding: 3rem 2rem 2rem; color: white; box-shadow: 0 8px 24px rgba(31,85,121,0.3); position: relative; overflow: hidden; }
         .page-header::before { content: ''; position: absolute; top: -50%; right: -10%; width: 400px; height: 400px; background: rgba(255,255,255,0.1); border-radius: 50%; }
         .page-header h1 { font-size: 2.5rem; font-weight: 700; position: relative; z-index: 1; }
         .page-header p  { font-size: 1.1rem; opacity: 0.9; position: relative; z-index: 1; margin-top: 0.25rem; }
-        .stats-container { background: white; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 2rem; box-shadow: 0 4px 12px var(--shadow); }
-        .stat-card { padding: 2rem; text-align: center; border-right: 1px solid var(--border); transition: all 0.3s; }
         .stat-card:last-child { border-right: none; }
         .stat-card:hover { background: var(--bg-main); transform: translateY(-2px); }
-        .stat-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 0.75rem; font-weight: 600; }
-        .stat-value { font-size: 2.5rem; font-weight: 700; line-height: 1; }
         .stat-card:nth-child(1) .stat-value { color: var(--text-primary); }
         .stat-card:nth-child(2) .stat-value { color: var(--warning); }
         .stat-card:nth-child(3) .stat-value { color: var(--success); }
         .stat-card:nth-child(4) .stat-value { color: var(--info); }
-        .controls-section { background: white; padding: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; box-shadow: 0 2px 8px var(--shadow); }
-        .search-box { flex: 1; min-width: 250px; position: relative; }
         .search-box input { width: 100%; padding: 0.875rem 1rem 0.875rem 3rem; border: 2px solid var(--border); border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; transition: all 0.3s; }
         .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(72,201,176,0.1); }
-        .search-box i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 1.2rem; }
-        .filter-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-        .btn { padding: 0.875rem 1.5rem; border: none; border-radius: 10px; font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; }
-        .btn-filter { background: var(--bg-main); color: var(--text-primary); border: 2px solid var(--border); }
-        .btn-filter.active { background: #695CFE; color: white; border-color: #695CFE; }
+       
         .btn-filter:hover { border-color: var(--primary); }
         .btn-primary   { background: var(--primary); color: white; }
         .btn-primary:hover   { background: var(--primary-dark); transform: translateY(-2px); }
@@ -71,16 +270,11 @@ $stats       = $statsResult->fetch_assoc();
         .btn-danger:hover    { background: #c0392b; transform: translateY(-2px); }
         .btn-secondary { background: var(--bg-main); color: var(--text-primary); }
         .btn-secondary:hover { background: var(--border); }
-        .table-container { background: white; box-shadow: 0 4px 12px var(--shadow); border-radius: 0 0 20px 20px; overflow: hidden; }
-        .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        
         thead { background: linear-gradient(135deg, #2d3436 0%, #34495e 100%); color: white; }
-        thead th { padding: 1.1rem 0.9rem; text-align: left; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        tbody tr { border-bottom: 1px solid var(--border); transition: all 0.2s; cursor: pointer; }
-        tbody tr:hover { background: #f0f4ff; }
         tbody tr.row-ready { border-left: 3px solid #27ae60; }
         tbody tr.row-ready:hover { background: #f0fff4; }
-        tbody td { padding: 1rem 0.9rem; white-space: nowrap; }
+        
         tbody td.wrap { white-space: normal; max-width: 180px; }
         .asset-cell { line-height: 1.4; }
         .asset-main  { font-weight: 600; color: var(--text-primary); }
@@ -105,15 +299,12 @@ $stats       = $statsResult->fetch_assoc();
         .action-btn:hover { background: var(--bg-main); color: var(--primary); transform: scale(1.1); }
         .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-secondary); }
         .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; display: block; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; }
-        .modal-overlay.active { display: flex; }
-        .modal { background: white; border-radius: 20px; max-width: 750px; width: 95%; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
+       
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .modal-header { background: linear-gradient(135deg, #263dc7 0%, var(--primary-dark) 100%); color: white; padding: 1.5rem 2rem; border-radius: 20px 20px 0 0; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 2; }
         .modal-header h2 { font-size: 1.4rem; display: flex; align-items: center; gap: 0.75rem; }
         .modal-close { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; cursor: pointer; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
         .modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
-        .modal-body { padding: 2rem; }
+       
         .modal-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; margin-bottom: 1.75rem; }
         .modal-gallery-item { border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: var(--bg-main); border: 2px solid var(--border); cursor: pointer; transition: all 0.25s; position: relative; }
         .modal-gallery-item:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.15); border-color: var(--primary); }
@@ -130,54 +321,49 @@ $stats       = $statsResult->fetch_assoc();
         .route-display .loc-value { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
         .route-display .arrow-icon { font-size: 1.5rem; color: var(--primary); flex-shrink: 0; }
         .section-divider { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: var(--text-secondary); margin: 1.5rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--border); }
-        .modal-actions { display: flex; gap: 1rem; justify-content: flex-end; padding: 1.25rem 2rem; border-top: 2px solid var(--border); background: var(--bg-main); border-radius: 0 0 20px 20px; position: sticky; bottom: 0; }
         mark { background: #fdcb6e; color: #2d3436; border-radius: 3px; padding: 0 2px; }
-        @media (max-width: 768px) { .content { margin-left: 0; padding: 1rem; } .stats-container { grid-template-columns: 1fr 1fr; } }
+      
     </style>
 </head>
 <body>
-
 <div class="content">
     <div class="page-header">
-        <h1><i class='bx bx-transfer-alt' style="font-size:2.2rem; vertical-align:middle; margin-right:0.5rem;"></i>Asset Transfer Request</h1>
+        <h1><i class='bx bx-transfer-alt' style="font-size:2.1rem;vertical-align:middle;margin-right:0.5rem;"></i>Asset Transfer Request</h1>
         <p>Click any row to view details and update status</p>
     </div>
 
+    <!-- Stats -->
     <div class="stats-container">
-        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="statTotal"><?php echo $stats['total']; ?></div></div>
-        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" id="statPending"><?php echo $stats['pending']; ?></div></div>
-        <div class="stat-card"><div class="stat-label">Received</div><div class="stat-value" id="statReleased"><?php echo $stats['released']; ?></div></div>
-        <div class="stat-card"><div class="stat-label">Returned</div><div class="stat-value" id="statReturned"><?php echo $stats['returned']; ?></div></div>
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="statTotal"><?= $stats['total'] ?></div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value" style="color:var(--warning)" id="statPending"><?= $stats['pending'] ?></div></div>
+        <div class="stat-card"><div class="stat-label">Received</div><div class="stat-value" style="color:var(--success)" id="statReleased"><?= $stats['released'] ?></div></div>
+        <div class="stat-card"><div class="stat-label">Returned</div><div class="stat-value" style="color:var(--info)" id="statReturned"><?= $stats['returned'] ?></div></div>
     </div>
 
+    <!-- Controls -->
     <div class="controls-section">
         <div class="search-box">
             <i class='bx bx-search'></i>
             <input type="text" id="searchInput" placeholder="Search by asset, requester, purpose, location...">
         </div>
-        <div style="position:relative;">
-            <i class='bx bx-map-pin' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
-            <select id="locationFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
-                <option value="">All Locations</option>
-            </select>
-        </div>
-        <div style="position:relative;">
-            <i class='bx bx-user' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
-            <select id="requestedByFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
-                <option value="">All Requesters</option>
-            </select>
-        </div>
-        <div style="position:relative;">
-            <i class='bx bx-notepad' style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-secondary); pointer-events:none; font-size:1.1rem;"></i>
-            <select id="purposeFilter" style="padding:0.875rem 1rem 0.875rem 2.5rem; border:2px solid var(--border); border-radius:10px; font-family:'Space Grotesk',sans-serif; font-size:0.9rem; color:var(--text-primary); background:white; cursor:pointer; outline:none; min-width:180px; appearance:none;" onchange="applyFilters()">
-                <option value="">All Purposes</option>
-            </select>
-        </div>
+        
+        <select id="locationFilter" onchange="applyFilters()">
+            <option value="">All Locations</option>
+        </select>
+
+        <?php if ($isAdmin): ?>
+        <select id="requestedByFilter" onchange="applyFilters()">
+            <option value="">All Requesters</option>
+        </select>
+        <?php endif; ?>
+
+        <select id="purposeFilter" onchange="applyFilters()">
+            <option value="">All Purposes</option>
+        </select>
+
         <div class="filter-group">
             <button class="btn btn-filter active" data-status="">All</button>
-            <button class="btn btn-filter" data-status="PENDING" id="btnPending">
-                Pending <span id="pendingCount" style="display:none; background:var(--warning); color:white; border-radius:20px; padding:1px 8px; font-size:0.75rem; margin-left:2px;"></span>
-            </button>
+            <button class="btn btn-filter" data-status="PENDING" id="btnPending">Pending</button>
             <button class="btn btn-filter" data-status="RELEASED">Received</button>
             <button class="btn btn-filter" data-status="RETURNED">Returned</button>
             <button class="btn btn-filter" data-status="CANCELLED">Cancelled</button>
@@ -195,9 +381,11 @@ $stats       = $statsResult->fetch_assoc();
                         <th>Delivered By</th><th>Received By</th><th>Date Needed</th><th>Status</th>
                     </tr>
                 </thead>
-                <tbody id="pulloutBody">
-                    <tr><td colspan="12"><div class="empty-state"><i class='bx bx-loader-alt bx-spin'></i><p>Loading...</p></div></td></tr>
-                </tbody>
+               <tbody id="pulloutBody">
+                    <tr><td colspan="8" style="padding:3rem;text-align:center;color:var(--text-secondary);">
+                        <i class='bx bx-loader-alt bx-spin' style="font-size:2.5rem;"></i><br><br>Loading transfer requests...
+                    </td></tr>
+                </tbody> 
             </table>
         </div>
     </div>
@@ -208,7 +396,7 @@ $stats       = $statsResult->fetch_assoc();
     <div class="modal">
         <div class="modal-header">
             <h2><i class='bx bx-transfer-alt'></i> Transfer Details</h2>
-            <button class="modal-close" onclick="closeModal()"><i class='bx bx-x'></i></button>
+            <button onclick="closeModal()" style="background:none;border:none;color:white;font-size:1.8rem;cursor:pointer;">×</button>
         </div>
         <div class="modal-body">
             <div class="modal-gallery" id="modalGallery"></div>
@@ -309,6 +497,7 @@ $stats       = $statsResult->fetch_assoc();
                 refreshStats();
             } else showNotification('Error loading data', 'error');
         } catch (e) { showNotification('Failed to load data', 'error'); }
+        console.log("Loading pullouts..."); // Placeholder
     }
 
     function populateDropdowns(data) {

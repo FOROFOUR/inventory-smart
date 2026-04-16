@@ -132,26 +132,195 @@ if (isset($_POST['change_password'])) {
         /* ═══════════════════════════════════════════════════
            BASE & LAYOUT
         ═══════════════════════════════════════════════════ */
-        * { box-sizing: border-box; }
+       * { box-sizing: border-box; }
 
-        /* ── Sidebar offset ── */
-        .content {
-            padding: 0;
-            margin-left: 88px;
-            transition: margin-left 0.3s ease;
-            min-height: 100vh;
-            background: #f4f6fb;
-        }
-
-        .sidebar:not(.close) ~ .content {
-            margin-left: 260px;
+        :root {
+            --primary: #695CFE;
+            --primary-dark: #5448e0;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --bg-main: #f4f6fb;
+            --bg-card: #ffffff;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
         }
 
         body {
-            background: #f4f6fb;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-primary);
+        }
+
+        .content {
+            margin-left: 88px;
+            padding: 1.5rem;
+            transition: margin-left 0.3s ease;
+            min-height: 100vh;
+        }
+        .sidebar:not(.close) ~ .content { margin-left: 260px; }
+
+        .main-content {
+            padding: 1.5rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1.5px solid #e2e8f0;
+        }
+        .page-header h1 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Settings Grid */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 1.75rem;
+        }
+
+        /* Cards */
+        .settings-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 12px var(--shadow);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #fafbfe;
+        }
+        .header-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+        }
+        .card-body { padding: 1.75rem; }
+
+        /* Avatar Section */
+        .avatar-wrapper {
+            text-align: center;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            margin-bottom: 1.5rem;
+        }
+        .avatar-ring {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        .avatar-ring img {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid white;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #695CFE, #5448e0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            cursor: pointer;
+            border: 3px solid white;
+            font-size: 1.1rem;
+            box-shadow: 0 3px 10px rgba(105,92,254,0.4);
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .input-wrap {
+            position: relative;
+        }
+        .input-wrap input {
+            width: 100%;
+            padding: 12px 16px 12px 44px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.95rem;
+        }
+        .input-wrap .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .toggle-pw {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .settings-grid {
+                grid-template-columns: 300px 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content { margin-left: 0 !important; padding: 1rem; }
+            .main-content { padding: 1rem; }
+            .settings-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .avatar-ring img {
+                width: 96px;
+                height: 96px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
         }
 
         .main-content {
@@ -164,14 +333,7 @@ if (isset($_POST['change_password'])) {
         /* ═══════════════════════════════════════════════════
            PAGE HEADER
         ═══════════════════════════════════════════════════ */
-        .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 32px;
-            padding-bottom: 22px;
-            border-bottom: 1.5px solid #e8ecf3;
-        }
+      
         .page-header-left {
             display: flex;
             align-items: center;
@@ -190,13 +352,7 @@ if (isset($_POST['change_password'])) {
             box-shadow: 0 4px 14px rgba(79,142,247,.35);
             flex-shrink: 0;
         }
-        .page-header h1 {
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: #0f172a;
-            margin: 0 0 3px;
-            letter-spacing: -.3px;
-        }
+       
         .page-header p {
             font-size: .82rem;
             color: #94a3b8;
@@ -245,49 +401,14 @@ if (isset($_POST['change_password'])) {
             to   { opacity: 1; transform: translateY(0)    scale(1);   }
         }
 
-        /* ═══════════════════════════════════════════════════
-           GRID
-        ═══════════════════════════════════════════════════ */
-        .settings-grid {
-            display: grid;
-            grid-template-columns: 320px 1fr;
-            gap: 26px;
-            align-items: start;
-        }
+      
 
-        /* ═══════════════════════════════════════════════════
-           CARDS
-        ═══════════════════════════════════════════════════ */
-        .settings-card {
-            background: #fff;
-            border-radius: 18px;
-            border: 1px solid #e8ecf3;
-            box-shadow: 0 1px 4px rgba(15,23,42,.04), 0 4px 24px rgba(15,23,42,.06);
-            overflow: hidden;
-            transition: box-shadow .2s;
-        }
+    
         .settings-card:hover {
             box-shadow: 0 2px 8px rgba(15,23,42,.06), 0 8px 32px rgba(15,23,42,.09);
         }
-        .card-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            background: #fafbfe;
-        }
-        .header-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.15rem;
-            color: #fff;
-            flex-shrink: 0;
-        }
+      
+       
         .card-header h3 {
             font-size: .975rem;
             font-weight: 700;
@@ -301,49 +422,11 @@ if (isset($_POST['change_password'])) {
             margin: 0;
             font-weight: 400;
         }
-        .card-body { padding: 26px 24px; }
 
-        /* ═══════════════════════════════════════════════════
-           AVATAR / PROFILE PIC SECTION
-        ═══════════════════════════════════════════════════ */
-        .avatar-wrapper {
-            text-align: center;
-            padding-bottom: 22px;
-            border-bottom: 1px solid #f1f5f9;
-            margin-bottom: 22px;
-        }
-        .avatar-ring {
-            position: relative;
-            display: inline-block;
-            margin-bottom: 14px;
-        }
-        .avatar-ring img {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #fff;
-            box-shadow: 0 0 0 3px #e8ecf3, 0 8px 28px rgba(15,23,42,.14);
-            display: block;
-        }
-        .avatar-edit-btn {
-            position: absolute;
-            bottom: 2px;
-            right: 2px;
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, #4f8ef7, #2563eb);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            cursor: pointer;
-            border: 2.5px solid #fff;
-            font-size: .95rem;
-            transition: transform .2s, box-shadow .2s;
-            box-shadow: 0 3px 10px rgba(37,99,235,.4);
-        }
+
+    
+      
+      
         .avatar-edit-btn:hover {
             transform: scale(1.12);
             box-shadow: 0 5px 16px rgba(37,99,235,.5);
@@ -433,56 +516,18 @@ if (isset($_POST['change_password'])) {
             grid-template-columns: 1fr 1fr;
             gap: 18px;
         }
-        .form-group { margin-bottom: 20px; }
+    
         .form-group:last-child { margin-bottom: 0; }
 
-        .form-group label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: .75rem;
-            font-weight: 700;
-            color: #64748b;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: .55px;
-        }
         .form-group label i {
             font-size: .9rem;
             color: #94a3b8;
         }
 
-        .input-wrap { position: relative; }
-        .input-wrap .input-icon {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            font-size: 1.05rem;
-            pointer-events: none;
-            transition: color .2s;
-            /* Prevent icon from being selectable / overflowing */
-            z-index: 1;
-        }
+     
+      
         .input-wrap:focus-within .input-icon { color: #4f8ef7; }
 
-        .input-wrap input {
-            width: 100%;
-            padding: 11px 42px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: .88rem;
-            font-family: 'Poppins', sans-serif;
-            color: #0f172a;
-            background: #f8fafc;
-            transition: border-color .2s, box-shadow .2s, background .2s;
-            outline: none;
-            /* Prevent PHP error text spilling out */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
         .input-wrap input:focus {
             border-color: #4f8ef7;
             box-shadow: 0 0 0 3.5px rgba(79,142,247,.14);
@@ -496,17 +541,6 @@ if (isset($_POST['change_password'])) {
         }
         .input-wrap input::placeholder { color: #cbd5e1; }
 
-        .toggle-pw {
-            position: absolute;
-            right: 13px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #94a3b8;
-            cursor: pointer;
-            font-size: 1.05rem;
-            transition: color .2s;
-            z-index: 2;
-        }
         .toggle-pw:hover { color: #4f8ef7; }
 
         /* ═══════════════════════════════════════════════════
@@ -627,11 +661,7 @@ if (isset($_POST['change_password'])) {
                 <p>Manage your profile, security, and personal information</p>
             </div>
         </div>
-        <div class="breadcrumb">
-            <i class='bx bx-home-alt'></i> Home
-            <i class='bx bx-chevron-right'></i>
-            <span>Account Settings</span>
-        </div>
+        
     </div>
 
     <?php if ($successMsg): ?>
